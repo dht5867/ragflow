@@ -1,11 +1,11 @@
 import { useTranslate } from '@/hooks/common-hooks';
-import { DownOutlined, GithubOutlined } from '@ant-design/icons';
+import { DownOutlined } from '@ant-design/icons';
 import { Dropdown, MenuProps, Space } from 'antd';
 import camelCase from 'lodash/camelCase';
 import React from 'react';
 import User from '../user';
 
-import { LanguageList, LanguageMap } from '@/constants/common';
+import { LanguageList } from '@/constants/common';
 import { useChangeLanguage } from '@/hooks/logic-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 import styled from './index.less';
@@ -35,7 +35,7 @@ const RightToolBar = () => {
 
   const items: MenuProps['items'] = LanguageList.map((x) => ({
     key: x,
-    label: <span>{LanguageMap[x as keyof typeof LanguageMap]}</span>,
+    label: <span>{t(camelCase(x))}</span>,
   })).reduce<MenuProps['items']>((pre, cur) => {
     return [...pre!, { type: 'divider' }, cur];
   }, []);
@@ -49,9 +49,9 @@ const RightToolBar = () => {
             <DownOutlined />
           </Space>
         </Dropdown>
-        <Circle>
+        {/* <Circle>
           <GithubOutlined onClick={handleGithubCLick} />
-        </Circle>
+        </Circle> */}
         {/* <Circle>
           <MonIcon />
         </Circle> */}

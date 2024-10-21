@@ -3,8 +3,10 @@ import {
   useDeleteDocument,
   useFetchDocumentInfosByIds,
   useRemoveNextDocument,
+  useRunNextDocument,
   useUploadAndParseDocument,
 } from '@/hooks/document-hooks';
+import kbService from '@/services/knowledge-service';
 import { getExtension } from '@/utils/document-util';
 import { formatBytes } from '@/utils/file-util';
 import {
@@ -19,15 +21,18 @@ import {
   Flex,
   Input,
   List,
+  Popover,
   Space,
   Spin,
   Typography,
   Upload,
   UploadProps,
+  notification,
 } from 'antd';
 import classNames from 'classnames';
 import get from 'lodash/get';
 import {
+  ChangeEvent,
   ChangeEventHandler,
   memo,
   useCallback,
@@ -52,6 +57,11 @@ const getFileIds = (fileList: UploadFile[]) => {
   return ids;
 };
 
+const isUploadError = (file: UploadFile) => {
+  const retcode = get(file, 'response.retcode');
+  return typeof retcode === 'number' && retcode !== 0;
+};
+
 const isUploadSuccess = (file: UploadFile) => {
   const retcode = get(file, 'response.retcode');
   return typeof retcode === 'number' && retcode === 0;
@@ -69,6 +79,7 @@ interface IProps {
   isShared?: boolean;
   showUploadIcon?: boolean;
   createConversationBeforeUploadDocument?(message: string): Promise<any>;
+  onSelect: ChangeEventHandler<HTMLInputElement>;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -91,6 +102,7 @@ const MessageInput = ({
   showUploadIcon = true,
   createConversationBeforeUploadDocument,
   uploadMethod = 'upload_and_parse',
+  onSelect, // 添加 onSelect 回调属性
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -98,8 +110,21 @@ const MessageInput = ({
   const { data: documentInfos, setDocumentIds } = useFetchDocumentInfosByIds();
   const { uploadAndParseDocument } = useUploadAndParseDocument(uploadMethod);
   const conversationIdRef = useRef(conversationId);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const options = [
+    '自由对话',
+    '程序开发',
+    '知识库',
+    '日志分析',
+    'CMDB',
+    '自动化运维',
+  ]; // 选择框的选项
+  const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
+  const [inputValue, setInputValue] = useState(value); // 输入框的值
+  const [placeholderValue, setPlaceholderValue] =
+    useState('随时@小吉, 使用各种能力...'); // 输入框的值
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
@@ -107,11 +132,53 @@ const MessageInput = ({
     }
   };
 
+  // 处理输入框内容改变
+  const handleChangeInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+
+    // 如果输入框的值以 "@" 开头，显示 Popover
+    if (newValue.startsWith('@')) {
+      setPopoverVisible(true);
+    } else {
+      setPopoverVisible(false);
+    }
+    if (onInputChange) {
+      onInputChange(e); // 调用传递的输入改变处理函数
+    }
+  };
+
+  // 当选择一个选项时
+  const handleSelect = (option: ChangeEvent<HTMLInputElement>) => {
+    const newValue = inputValue.replace(/@\S*$/, `@${option} `); // 替换 "@xxxx" 为 "@选中的选项"
+    // setInputValue(newValue);
+    // setPopoverVisible(false);
+    if (onSelect) {
+      onSelect(option); // 调用 onSelect 回调，将选定的值传递给父组件
+    }
+
+    // 使用 Modal 进行提示
+    // 显示成功通知
+    notification.success({
+      message: `你选择了: ${option} 技能`,
+      placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
+    });
+    setPopoverVisible(false);
+
+    // 清空输入框的值
+    setInputValue('');
+    setPlaceholderValue(`@${option}`);
+  };
+
+
   const handleChange: UploadProps['onChange'] = async ({
-    // fileList: newFileList,
+    //fileList: newFileList,
     file,
   }) => {
     let nextConversationId: string = conversationId;
+    console.log('conversationId');
+    console.log(conversationId);
+
     if (createConversationBeforeUploadDocument) {
       const creatingRet = await createConversationBeforeUploadDocument(
         file.name,
@@ -120,6 +187,7 @@ const MessageInput = ({
         nextConversationId = creatingRet.data.id;
       }
     }
+
     setFileList((list) => {
       list.push({
         ...file,
@@ -129,22 +197,108 @@ const MessageInput = ({
       return [...list];
     });
 
+    console.log('start upload');
+
     const ret = await uploadAndParseDocument({
       conversationId: nextConversationId,
       fileList: [file],
     });
+    console.log('complete upload');
     setFileList((list) => {
       const nextList = list.filter((x) => x.uid !== file.uid);
       nextList.push({
         ...file,
         originFileObj: file as any,
         response: ret,
-        percent: 100,
-        status: ret?.retcode === 0 ? 'done' : 'error',
+        percent: 50,
+        status: ret?.retcode === 0 ? 'uploading' : 'error',
       });
+
       return nextList;
     });
+    if (ret?.retcode === 0) {
+      console.log('start parse');
+      const ids = ret.data;
+      console.log(ids);
+      //runDocument(1, ids);
+      setFileList((list) => {
+        const nextList = list.filter((x) => x.uid !== file.uid);
+        nextList.push({
+          ...file,
+          originFileObj: file as any,
+          response: ret,
+          percent: 80,
+          status: ret?.retcode === 0 ? 'uploading' : 'error',
+        });
+        return nextList;
+      });
+      // Start polling document info
+      startPolling(ids);
+    }
   };
+
+  // const getDocumentInfoById = useCallback(
+  //   (id: string) => {
+  //     return documentInfos.find((x) => x.id === id);
+  //   },
+  //   [documentInfos],
+  // );
+
+  const POLLING_INTERVAL = 5000; // Polling every 5 seconds (adjust as necessary)
+
+  const fetchDocumentInfo = async (ids: string[]) => {
+    try {
+      const { data } = await kbService.document_infos({ doc_ids: ids });
+      if (data.retcode === 0) {
+        return data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch document info:', error);
+      return [];
+    }
+  };
+
+  // Start polling function
+  const startPolling = (ids: string[]) => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    intervalRef.current = setInterval(async () => {
+      console.log('startPolling');
+      const data = await fetchDocumentInfo(ids);
+      console.log(data);
+
+      if (data.length > 0 && data[0].progress === 1) {
+        // Stop polling when progress is 1 (complete)
+        clearInterval(intervalRef.current as NodeJS.Timeout);
+        intervalRef.current = null;
+
+        // Update the file status to 'done'
+        setFileList((fileList) => {
+          return fileList.map((file) => {
+            if (getFileId(file) === ids[0]) {
+              return {
+                ...file,
+                percent: 100,
+                status: 'done',
+              };
+            }
+            return file;
+          });
+        });
+      }
+    }, POLLING_INTERVAL);
+  };
+
+  // Cleanup polling on component unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const isUploadingFile = fileList.some((x) => x.status === 'uploading');
 
@@ -198,14 +352,34 @@ const MessageInput = ({
     ) {
       setFileList([]);
     }
-    conversationIdRef.current = conversationId;
+conversationIdRef.current = conversationId;
   }, [conversationId, setFileList]);
 
   return (
-    <Flex gap={20} vertical className={styles.messageInputWrapper}>
+    <Flex vertical className={styles.messageInputWrapper}>
+      <Popover
+        content={
+          <List
+            dataSource={options}
+            renderItem={(item: ChangeEvent<HTMLInputElement>) => (
+              <List.Item
+                onClick={() => handleSelect(item)}
+                style={{ cursor: 'pointer' }}
+              >
+                {item}
+              </List.Item>
+            )}
+          />
+        }
+        title="请选择一个技能"
+        trigger="click"
+        open={popoverVisible}
+        onOpenChange={setPopoverVisible}
+        placement="topLeft"
+      ></Popover>
       <Input
         size="large"
-        placeholder={t('sendPlaceholder')}
+        placeholder={placeholderValue}
         value={value}
         disabled={disabled}
         className={classNames({ [styles.inputWrapper]: fileList.length === 0 })}
@@ -213,12 +387,18 @@ const MessageInput = ({
           <Space>
             {showUploadIcon && (
               <Upload
+                // action={uploadUrl}
+                // fileList={fileList}
                 onPreview={handlePreview}
                 onChange={handleChange}
                 multiple={false}
+                // headers={{ [Authorization]: getAuthorization() }}
+                // data={{ conversation_id: conversationId }}
+                // method="post"
                 onRemove={handleRemove}
                 showUploadList={false}
-                beforeUpload={() => {
+                beforeUpload={(file, fileList) => {
+                  console.log('🚀 ~ beforeUpload:', fileList);
                   return false;
                 }}
               >
@@ -247,7 +427,8 @@ const MessageInput = ({
           </Space>
         }
         onPressEnter={handlePressEnter}
-        onChange={onInputChange}
+        onChange={handleChangeInput}
+        onFocus={() => setPopoverVisible(false)} // 当输入框聚焦时隐藏 Popover
       />
 
       {fileList.length > 0 && (
@@ -273,14 +454,17 @@ const MessageInput = ({
               <List.Item>
                 <Card className={styles.documentCard}>
                   <Flex gap={10} align="center">
-                    {item.status === 'uploading' ? (
+                    {item.status === 'uploading' || !item.response ? (
                       <Spin
                         indicator={
                           <LoadingOutlined style={{ fontSize: 24 }} spin />
                         }
                       />
-                    ) : item.status === 'error' ? (
-                      <InfoCircleOutlined size={30}></InfoCircleOutlined>
+                    ) : !getFileId(item) ? (
+                      <InfoCircleOutlined
+                        size={30}
+                        // width={30}
+                      ></InfoCircleOutlined>
                     ) : (
                       <FileIcon id={id} name={fileName}></FileIcon>
                     )}
@@ -291,7 +475,7 @@ const MessageInput = ({
                       >
                         <b> {fileName}</b>
                       </Text>
-                      {item.status === 'error' ? (
+                      {isUploadError(item) ? (
                         t('uploadFailed')
                       ) : (
                         <>

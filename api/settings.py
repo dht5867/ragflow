@@ -252,3 +252,51 @@ class RetCode(IntEnum, CustomEnum):
     SERVER_ERROR = 500
     FORBIDDEN = 403
     NOT_FOUND = 404
+
+import sys
+DEFAULT_BIND_HOST = "0.0.0.0" if sys.platform != "win32" else "127.0.0.1"
+# httpx 请求默认超时时间（秒）。如果加载模型或对话较慢，出现超时错误，可以适当加大该值。
+HTTPX_DEFAULT_TIMEOUT = 3000.0
+
+# 是否显示详细日志
+log_verbose = False
+
+API_SERVER = {
+    "host": DEFAULT_BIND_HOST,
+    "port": 7861,
+}
+
+# cmdb server
+CMDB_SERVER = {
+    "host": "121.40.167.143",
+    "port": 8090,
+}
+# cmdb chat server
+
+CMDB_CHAT_SERVER = {
+    "host": "127.0.0.1",
+    "port": 8000,
+}
+
+def api_address() -> str:
+
+    host = API_SERVER["host"]
+    if host == "0.0.0.0":
+        host = "127.0.0.1"
+    port = API_SERVER["port"]
+    return f"http://{host}:{port}"
+
+def cmdb_api_address() -> str:
+    host = CMDB_SERVER["host"]
+    if host == "0.0.0.0":
+        host = "127.0.0.1"
+    port = CMDB_SERVER["port"]
+    return f"http://{host}:{port}"
+
+
+def cmdb_chat_address() -> str:
+    host = CMDB_CHAT_SERVER["host"]
+    if host == "0.0.0.0":
+        host = "127.0.0.1"
+    port = CMDB_CHAT_SERVER["port"]
+    return f"http://{host}:{port}"

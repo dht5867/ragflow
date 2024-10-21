@@ -18,8 +18,7 @@ const App: React.FC = () => {
       onClick={toSetting}
       className={styles.clickAvailable}
       src={
-        userInfo.avatar ??
-        'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png'
+        userInfo.avatar ?? 'https://dht5867.oss-cn-hangzhou.aliyuncs.com/ai.png'
       }
     />
   );

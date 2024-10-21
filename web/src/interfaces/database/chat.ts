@@ -73,6 +73,7 @@ export interface Message {
   prompt?: string;
   id?: string;
   audio_binary?: string;
+  selectedSkill: string;
 }
 
 export interface IReference {
@@ -88,6 +89,7 @@ export interface IAnswer {
   prompt?: string;
   id?: string;
   audio_binary?: string;
+  selectedSkill: string;
 }
 
 export interface Docagg {

@@ -15,14 +15,17 @@
 #
 import json
 import re
+import time
 import traceback
 from copy import deepcopy
+from typing import Union
+from api.db.services.cmdb_service import cmdb_chat_stream
 from api.db.services.user_service import UserTenantService
 from flask import request, Response
 from flask_login import login_required, current_user
 
 from api.db import LLMType
-from api.db.services.dialog_service import DialogService, ConversationService, chat, ask
+from api.db.services.dialog_service import DialogService, ConversationService, chat, ask, file_chat, only_chat
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMBundle, TenantService, TenantLLMService
 from api.settings import RetCode, retrievaler
@@ -30,6 +33,7 @@ from api.utils import get_uuid
 from api.utils.api_utils import get_json_result
 from api.utils.api_utils import server_error_response, get_data_error_result, validate_request
 from graphrag.mind_map_extractor import MindMapExtractor
+from api.settings import chat_logger
 
 
 @manager.route('/set', methods=['POST'])
@@ -137,6 +141,25 @@ def list_convsersation():
         return server_error_response(e)
 
 
+def check_error_msg(data: Union[str, dict, list], key: str = "errorMsg") -> str:
+    '''
+    return error message if error occured when requests API
+    '''
+    if isinstance(data, dict):
+        if key in data:
+            return data[key]
+        if "code" in data and data["code"] != 200:
+            return data["msg"]
+    return ""
+
+
+ # 生成答案的装饰器
+def decorate_answer(answer):
+        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
+            answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
+        return {"answer": answer, "reference": {}}
+ 
+ 
 @manager.route('/completion', methods=['POST'])
 @login_required
 @validate_request("conversation_id", "messages")
@@ -146,6 +169,10 @@ def completion():
     #    {"role": "user", "content": "上海有吗？"}
     # ]}
     msg = []
+    chat_logger.info('-------completion----')
+    chat_logger.info(req)
+    prompt = req["prompt"]
+    selectedSkill = req["selectedSkill"]
     for m in req["messages"]:
         if m["role"] == "system":
             continue
@@ -175,17 +202,82 @@ def completion():
                 conv.reference.append(ans["reference"])
             else:
                 conv.reference[-1] = ans["reference"]
-            conv.message[-1] = {"role": "assistant", "content": ans["answer"],
-                                "id": message_id, "prompt": ans.get("prompt", "")}
+            conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
             ans["id"] = message_id
 
         def stream():
             nonlocal dia, msg, req, conv
             try:
-                for ans in chat(dia, msg, True, **req):
-                    fillin_conv(ans)
-                    yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
-                ConversationService.update_by_id(conv.id, conv.to_dict())
+                if selectedSkill=='知识库'  :
+                    for ans in chat(dia, msg, True, **req):
+                        fillin_conv(ans)
+                        yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                elif selectedSkill=='日志分析':
+                    chat_logger.info('-------日志分析----')
+                    for ans in file_chat(dia, msg, True, **req):
+                        fillin_conv(ans)
+                        yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                elif selectedSkill=='CMDB':
+                    chat_logger.info('--------prompt----------')
+                    chat_logger.info(prompt)
+                    answer = ""
+                    result = cmdb_chat_stream(prompt)
+                    chat_logger.info('---------CMDB start----------')
+                    chat_logger.info(result)
+                    for line in result:
+                            if error_msg := check_error_msg(line):  # check whether error occured
+                                chat_logger.error(error_msg)
+                                answer=" 后台服务错误，请重试查询"
+                                ans = decorate_answer(answer)
+                                fillin_conv(ans)
+                                yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                ConversationService.update_by_id(conv.id, conv.to_dict())
+                                break
+                            lines = line.split("\n")
+                            if len(lines)>1:
+                                time.sleep(0.5)
+                                chunk=lines[1]
+                                if len(chunk)>2:
+                                    chat_logger.info(chunk)
+                                    chat_logger.info("chunk-------------------")
+                                    if "data:" in chunk:
+                                        json_data=json.loads(chunk[6:]) 
+                                        chat_logger.info(json_data)
+                                        
+                                    # 检查并打印run_id
+                                        if "run_id" in json_data:
+                                            message_id= json_data['run_id']
+                                            chat_logger.info(f"cmdb message_id: {message_id}")
+                                        if "steps" in json_data:
+                                            answer +=json_data['steps'][0]['action']['log']
+                                            ans = decorate_answer(answer)
+                                            fillin_conv(ans)
+                                            yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                            
+                                         #将output 翻译为中文
+                                        if "output" in json_data:
+                                            answer +=json_data['output']
+                                            ans = decorate_answer(answer)
+                                            fillin_conv(ans)
+                                            yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                            # output= json_data['output']
+                                            # chat_logger.info(output)
+                                            # rr = cmdb_chat_chinese(
+                                            #     f"请翻译 {output}",
+                                            # )
+                                            # chat_logger.info(rr)
+                                            # ch_text=rr["choices"][0]["message"]["content"]
+                                            
+                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                    chat_logger.info('---------CMDB end----------')
+                else:
+                    chat_logger.info('-------chat----')
+                    for ans in only_chat(selectedSkill,dia, msg, True, **req):
+                        yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                        fillin_conv(ans)
+                    ConversationService.update_by_id(conv.id, conv.to_dict())            
             except Exception as e:
                 yield "data:" + json.dumps({"retcode": 500, "retmsg": str(e),
                                             "data": {"answer": "**ERROR**: " + str(e), "reference": []}},

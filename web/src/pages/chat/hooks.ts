@@ -279,7 +279,7 @@ export const useSetConversation = () => {
   return { setConversation };
 };
 
-export const useSelectNextMessages = () => {
+export const useSelectNextMessages = (selectedValue: string) => {
   const {
     ref,
     setDerivedMessages,
@@ -289,7 +289,7 @@ export const useSelectNextMessages = () => {
     removeLatestMessage,
     removeMessageById,
     removeMessagesAfterCurrentMessage,
-  } = useSelectDerivedMessages();
+  } = useSelectDerivedMessages(selectedValue);
   const { data: conversation, loading } = useFetchNextConversation();
   const { data: dialog } = useFetchNextDialog();
   const { conversationId, dialogId, isNew } = useGetChatSearchParams();
@@ -297,11 +297,11 @@ export const useSelectNextMessages = () => {
   const addPrologue = useCallback(() => {
     if (dialogId !== '' && isNew === 'true') {
       const prologue = dialog.prompt_config?.prologue;
-
       const nextMessage = {
         role: MessageType.Assistant,
         content: prologue,
         id: uuid(),
+        selectedSkill: selectedValue,
       } as IMessage;
 
       setDerivedMessages([nextMessage]);
@@ -354,7 +354,10 @@ export const useHandleMessageInputChange = () => {
   };
 };
 
-export const useSendNextMessage = (controller: AbortController) => {
+export const useSendNextMessage = (
+  controller: AbortController,
+  selectedValue: string,
+) => {
   const { setConversation } = useSetConversation();
   const { conversationId, isNew } = useGetChatSearchParams();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
@@ -371,7 +374,7 @@ export const useSendNextMessage = (controller: AbortController) => {
     removeLatestMessage,
     removeMessageById,
     removeMessagesAfterCurrentMessage,
-  } = useSelectNextMessages();
+  } = useSelectNextMessages(selectedValue);
   const { setConversationIsNew, getConversationIsNew } =
     useSetChatRouteParams();
 
@@ -380,16 +383,21 @@ export const useSendNextMessage = (controller: AbortController) => {
       message,
       currentConversationId,
       messages,
+      selectedSkill,
     }: {
       message: Message;
       currentConversationId?: string;
       messages?: Message[];
+      selectedSkill: string;
     }) => {
       const res = await send(
         {
+          prompt: message.content,
+          selectedSkill: selectedSkill,
           conversation_id: currentConversationId ?? conversationId,
           messages: [...(messages ?? derivedMessages ?? []), message],
         },
+
         controller,
       );
 
@@ -413,8 +421,9 @@ export const useSendNextMessage = (controller: AbortController) => {
   const handleSendMessage = useCallback(
     async (message: Message) => {
       const isNew = getConversationIsNew();
+
       if (isNew !== 'true') {
-        sendMessage({ message });
+        sendMessage({ message, selectedSkill: message.selectedSkill });
       } else {
         const data = await setConversation(
           message.content,
@@ -429,6 +438,7 @@ export const useSendNextMessage = (controller: AbortController) => {
             message,
             currentConversationId: id,
             messages: data.data.message,
+            selectedSkill: message.selectedSkill,
           });
         }
       }
@@ -451,6 +461,7 @@ export const useSendNextMessage = (controller: AbortController) => {
   useEffect(() => {
     //  #1289
     if (answer.answer && conversationId && isNew !== 'true') {
+      answer.selectedSkill = selectedValue;
       addNewestAnswer(answer);
     }
   }, [answer, addNewestAnswer, conversationId, isNew]);
@@ -460,11 +471,16 @@ export const useSendNextMessage = (controller: AbortController) => {
       if (trim(value) === '') return;
       const id = uuid();
 
+      console.log('0----' + selectedValue);
+      console.log(documentIds);
+      console.log('1----press enter ');
+
       addNewestQuestion({
         content: value,
         doc_ids: documentIds,
         id,
         role: MessageType.User,
+        selectedSkill: selectedValue,
       });
       if (done) {
         setValue('');
@@ -473,6 +489,7 @@ export const useSendNextMessage = (controller: AbortController) => {
           content: value.trim(),
           role: MessageType.User,
           doc_ids: documentIds,
+          selectedSkill: selectedValue,
         });
       }
     },
@@ -581,24 +598,25 @@ export const useSendButtonDisabled = (value: string) => {
 
 export const useCreateConversationBeforeUploadDocument = () => {
   const { setConversation } = useSetConversation();
-  const { dialogId } = useGetChatSearchParams();
-  const { getConversationIsNew } = useSetChatRouteParams();
+  const { setConversationIsNew } = useSetChatRouteParams();
+  const { dialogId, conversationId, isNew } = useGetChatSearchParams();
 
   const createConversationBeforeUploadDocument = useCallback(
     async (message: string) => {
-      const isNew = getConversationIsNew();
-      if (isNew === 'true') {
-        const data = await setConversation(message, true);
-
-        return data;
+      const data = await setConversation(message, true, conversationId);
+      if (data.retcode === 0) {
+        setConversationIsNew('');
       }
+      return data;
     },
-    [setConversation, getConversationIsNew],
+    [setConversation, conversationId, setConversationIsNew],
   );
 
   return {
-    createConversationBeforeUploadDocument,
     dialogId,
+    createConversationBeforeUploadDocument:
+      isNew === 'true' ? createConversationBeforeUploadDocument : undefined,
   };
 };
+
 //#endregion

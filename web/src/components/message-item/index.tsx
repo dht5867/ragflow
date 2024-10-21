@@ -1,6 +1,6 @@
-import { ReactComponent as AssistantIcon } from '@/assets/svg/assistant.svg';
+import { ReactComponent as AssistantIcon } from '@/assets/svg/ai_bot.svg';
 import { MessageType } from '@/constants/chat';
-import { useSetModalState } from '@/hooks/common-hooks';
+import { useSetModalState, useTranslate } from '@/hooks/common-hooks';
 import { IReference } from '@/interfaces/database/chat';
 import { IChunk } from '@/interfaces/database/knowledge';
 import classNames from 'classnames';
@@ -14,7 +14,16 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography } from 'antd';
+import {
+  Avatar,
+  Button,
+  Flex,
+  List,
+  Popconfirm,
+  Space,
+  Typography,
+} from 'antd';
+import askImage from '../../assets/ask.png'; // 引入本地图片
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
@@ -33,6 +42,7 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   clickDocumentButton?: (documentId: string, chunk: IChunk) => void;
   index: number;
   showLikeButton?: boolean;
+  selectedSkill?: string;
 }
 
 const MessageItem = ({
@@ -46,6 +56,7 @@ const MessageItem = ({
   removeMessageById,
   regenerateMessage,
   showLikeButton = true,
+  selectedSkill,
 }: IProps) => {
   const isAssistant = item.role === MessageType.Assistant;
   const isUser = item.role === MessageType.User;
@@ -54,10 +65,32 @@ const MessageItem = ({
     useFetchDocumentThumbnailsByIds();
   const { visible, hideModal, showModal } = useSetModalState();
   const [clickedDocumentId, setClickedDocumentId] = useState('');
+  const { t } = useTranslate('chat');
 
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
   }, [reference?.doc_aggs]);
+
+  const content = useMemo(() => {
+    let text = item.content;
+    if (text === '') {
+      text = t('searching');
+    }
+    return loading ? text?.concat('~~2$$') : text;
+  }, [item.content, loading, t]);
+
+  const skill = useMemo(() => {
+    console.log('selectedSkill:', selectedSkill); // 合并日志输出
+
+    // 优化条件判断，减少冗余逻辑
+    if (item.selectedSkill && item.selectedSkill.trim() !== '') {
+      return item.selectedSkill;
+    } else if (selectedSkill && selectedSkill.trim() !== '') {
+      return selectedSkill;
+    } else {
+      return '自由对话';
+    }
+  }, [item.selectedSkill, selectedSkill]);
 
   const handleUserDocumentClick = useCallback(
     (id: string) => () => {
@@ -101,13 +134,7 @@ const MessageItem = ({
           })}
         >
           {item.role === MessageType.User ? (
-            <Avatar
-              size={40}
-              src={
-                avatar ??
-                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png'
-              }
-            />
+            <Avatar size={40} src={askImage} />
           ) : (
             <AssistantIcon></AssistantIcon>
           )}
@@ -134,9 +161,10 @@ const MessageItem = ({
                   sendLoading={sendLoading}
                 ></UserGroupButton>
               )}
-
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
+            <b>{isAssistant ? `【${skill || '自由对话'}】` : ''}</b>
+
             <div
               className={
                 isAssistant ? styles.messageText : styles.messageUserText
@@ -148,33 +176,48 @@ const MessageItem = ({
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
+              <div style={{ marginRight: 50 }}>
+                {isAssistant && item.selectedSkill === '自动化运维' && (
+                  <Popconfirm
+                    placement="top"
+                    title="确认"
+                    description="是否执行任务"
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button>确认</Button>
+                  </Popconfirm>
+                )}
+              </div>
             </div>
-            {isAssistant && referenceDocumentList.length > 0 && (
-              <List
-                bordered
-                dataSource={referenceDocumentList}
-                renderItem={(item) => {
-                  return (
-                    <List.Item>
-                      <Flex gap={'small'} align="center">
-                        <FileIcon
-                          id={item.doc_id}
-                          name={item.doc_name}
-                        ></FileIcon>
+            {isAssistant &&
+              referenceDocumentList.length > 0 &&
+              item.selectedSkill === '知识库' && (
+                <List
+                  bordered
+                  dataSource={referenceDocumentList}
+                  renderItem={(item) => {
+                    return (
+                      <List.Item>
+                        <Flex gap={'small'} align="center">
+                          <FileIcon
+                            id={item.doc_id}
+                            name={item.doc_name}
+                          ></FileIcon>
 
-                        <NewDocumentLink
-                          documentId={item.doc_id}
-                          documentName={item.doc_name}
-                          prefix="document"
-                        >
-                          {item.doc_name}
-                        </NewDocumentLink>
-                      </Flex>
-                    </List.Item>
-                  );
-                }}
-              />
-            )}
+                          <NewDocumentLink
+                            documentId={item.doc_id}
+                            documentName={item.doc_name}
+                            prefix="document"
+                          >
+                            {item.doc_name}
+                          </NewDocumentLink>
+                        </Flex>
+                      </List.Item>
+                    );
+                  }}
+                />
+              )}
             {isUser && documentList.length > 0 && (
               <List
                 bordered

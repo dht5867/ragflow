@@ -1,6 +1,7 @@
 import MessageItem from '@/components/message-item';
 import { MessageType } from '@/constants/chat';
 import { Flex, Spin } from 'antd';
+import { useState } from 'react';
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
@@ -19,6 +20,8 @@ import {
 } from '@/hooks/chat-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 import { memo } from 'react';
+import AssistantIntro from './assistant-intro'; // 根据文件路径引入组件
+import RenderIntro from './base-intro'; // 根据文件路径引入组件
 import styles from './index.less';
 
 interface IProps {
@@ -28,6 +31,14 @@ interface IProps {
 const ChatContainer = ({ controller }: IProps) => {
   const { conversationId } = useGetChatSearchParams();
   const { data: conversation } = useFetchNextConversation();
+  const [selectedValue, setSelectedValue] = useState('');
+
+  // 添加处理选择值的回调函数
+  const handleSelect = (value: any) => {
+    console.log('Selected value:', value);
+    setSelectedValue(value); // 更新 selectedValue 状态
+    // 在这里你可以处理选中的值，例如更新状态或进行其他操作
+  };
 
   const {
     value,
@@ -39,7 +50,7 @@ const ChatContainer = ({ controller }: IProps) => {
     handlePressEnter,
     regenerateMessage,
     removeMessageById,
-  } = useSendNextMessage(controller);
+  } = useSendNextMessage(controller, selectedValue);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
@@ -54,39 +65,47 @@ const ChatContainer = ({ controller }: IProps) => {
     <>
       <Flex flex={1} className={styles.chatContainer} vertical>
         <Flex flex={1} vertical className={styles.messageContainer}>
-          <div>
-            <Spin spinning={loading}>
-              {derivedMessages?.map((message, i) => {
-                return (
-                  <MessageItem
-                    loading={
-                      message.role === MessageType.Assistant &&
-                      sendLoading &&
-                      derivedMessages.length - 1 === i
-                    }
-                    key={message.id}
-                    item={message}
-                    nickname={userInfo.nickname}
-                    avatar={userInfo.avatar}
-                    reference={buildMessageItemReference(
-                      {
-                        message: derivedMessages,
-                        reference: conversation.reference,
-                      },
-                      message,
-                    )}
-                    clickDocumentButton={clickDocumentButton}
-                    index={i}
-                    removeMessageById={removeMessageById}
-                    regenerateMessage={regenerateMessage}
-                    sendLoading={sendLoading}
-                  ></MessageItem>
-                );
-              })}
-            </Spin>
-          </div>
+          {derivedMessages.length === 0 ? (
+            // 当没有消息时显示 RenderIntro
+            <RenderIntro selectedValue={selectedValue} />
+          ) : (
+            <div>
+              <Spin spinning={loading}>
+                {derivedMessages?.map((message, i) => {
+                  return (
+                    <MessageItem
+                      loading={
+                        message.role === MessageType.Assistant &&
+                        sendLoading &&
+                        derivedMessages.length - 1 === i
+                      }
+                      key={message.id}
+                      item={message}
+                      nickname={userInfo.nickname}
+                      avatar={userInfo.avatar}
+                      reference={buildMessageItemReference(
+                        {
+                          message: derivedMessages,
+                          reference: conversation.reference,
+                        },
+                        message,
+                      )}
+                      clickDocumentButton={clickDocumentButton}
+                      index={i}
+                      removeMessageById={removeMessageById}
+                      regenerateMessage={regenerateMessage}
+                      sendLoading={sendLoading}
+                      selectedSkill={selectedValue}
+                    ></MessageItem>
+                  );
+                })}
+              </Spin>
+            </div>
+          )}
           <div ref={ref} />
         </Flex>
+        <AssistantIntro />
+
         <MessageInput
           disabled={disabled}
           sendDisabled={sendDisabled}
@@ -98,6 +117,7 @@ const ChatContainer = ({ controller }: IProps) => {
           createConversationBeforeUploadDocument={
             createConversationBeforeUploadDocument
           }
+          onSelect={handleSelect} // 将 handleSelect 回调函数传递给 MessageInput
         ></MessageInput>
       </Flex>
       <PdfDrawer

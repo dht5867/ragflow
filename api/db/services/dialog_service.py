@@ -19,10 +19,9 @@ import json
 import re
 from copy import deepcopy
 from timeit import default_timer as timer
-
-
-from api.db import LLMType, ParserType,StatusEnum
-from api.db.db_models import Dialog, Conversation,DB
+from typing import Optional
+from api.db import LLMType, ParserType
+from api.db.db_models import Dialog, Conversation
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
@@ -32,6 +31,175 @@ from rag.nlp import keyword_extraction
 from rag.nlp.search import index_name
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
+PROMPT_TEMPLATES = {
+    "llm_chat": {
+        "default":
+            '当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”\n'
+            '{{ input }}',
+
+        "with_history":
+            'The following is a friendly conversation between a human and an AI. '
+            'The AI is talkative and provides lots of specific details from its context. '
+            'If the AI does not know the answer to a question, it truthfully says it does not know.\n\n'
+            'Current conversation:\n'
+            '{history}\n'
+            'Human: {input}\n'
+            'AI:',
+
+        "py":
+            '你是一个聪明的代码助手，请你给我写出简单的py代码。 \n'
+            '{{ input }}',
+    },
+
+    "file_base_chat": {
+        "default":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
+            '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{{ knowledge }}</已知信息>\n'
+            '<问题> 作为IT系统日志分析专家，你的任务是分析以下日志并撰写一份详细的报告，报告格式应包括以下内容：'
+            '1. 概述：简要介绍分析的目的和方法。'
+            '2. 日志分析：根据给定的日志内容，分析出潜在的问题、异常或趋势。'
+            '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。特别是对于ORACLE日志，当出现ORA开头的错误码时，尽量找出相关的sql语句和session信息。'
+            '4. 解决方案建议：针对每个问题或异常，提出相应的解决方案，并说明实施步骤和预期效果。'
+            '5. 预防措施建议：为了避免类似问题再次发生，提出一些预防措施或最佳实践建议。'
+            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{{ prompt }}</问题>\n',
+
+
+        "log":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
+            '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{knowledge}</已知信息>\n'
+            '<问题> 作为IT系统日志分析专家，你的任务是分析以下日志并撰写一份详细的报告，报告格式应包括以下内容：'
+            '1. 概述：简要介绍分析的目的和方法。'
+            '2. 日志分析：根据给定的日志内容，分析出潜在的问题、异常或趋势。'
+            '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。特别是对于ORACLE日志，当出现ORA开头的错误码时，尽量找出相关的sql语句和session信息。'
+            '4. 解决方案建议：针对每个问题或异常，提出相应的解决方案，并说明实施步骤和预期效果。'
+            '5. 预防措施建议：为了避免类似问题再次发生，提出一些预防措施或最佳实践建议。'
+            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{prompt}</问题>\n',
+
+
+        "text":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{{ context }}</已知信息>\n'
+            '<问题>{{ question }}</问题>\n',
+
+        "empty":  # 搜不到知识库的时候使用
+            '请你回答我的问题:\n'
+            '{{ question }}\n\n',
+    },
+
+
+
+    "knowledge_base_chat": {
+        "default":
+            '<指令>请根据已知信息，简洁和专业地回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
+            '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{{ knowledge }}</已知信息>\n'
+            '<问题>{{ prompt }}</问题>\n',
+
+
+        "log":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
+            '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{{ knowledge }}</已知信息>\n'
+            '<问题> 作为IT系统日志分析专家，你的任务是分析以下日志并撰写一份详细的报告，报告格式应包括以下内容：'
+            '1. 概述：简要介绍分析的目的和方法。'
+            '2. 日志分析：根据给定的日志内容，分析出潜在的问题、异常或趋势。'
+            '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。特别是对于ORACLE日志，当出现ORA开头的错误码时，尽量找出相关的sql语句和session信息。'
+            '4. 解决方案建议：针对每个问题或异常，提出相应的解决方案，并说明实施步骤和预期效果。'
+            '5. 预防措施建议：为了避免类似问题再次发生，提出一些预防措施或最佳实践建议。'
+            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{{ prompt }}</问题>\n',
+
+
+        "text":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
+            '<已知信息>{{ context }}</已知信息>\n'
+            '<问题>{{ question }}</问题>\n',
+
+        "empty":  # 搜不到知识库的时候使用
+            '请你回答我的问题:\n'
+            '{{ question }}\n\n',
+    },
+
+
+    "search_engine_chat": {
+        "default":
+            '<指令>这是我搜索到的互联网信息，请你根据这些信息进行提取并有调理，简洁的回答问题。'
+            '如果无法从中得到答案，请说 “无法搜索到能回答问题的内容”。 </指令>\n'
+            '<已知信息>{{ context }}</已知信息>\n'
+            '<问题>{{ question }}</问题>\n',
+
+        "search":
+            '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 </指令>\n'
+            '<已知信息>{{ context }}</已知信息>\n'
+            '<问题>{{ question }}</问题>\n',
+    },
+
+
+    "agent_chat": {
+        "default":
+            'Answer the following questions as best you can. If it is in order, you can use some tools appropriately. '
+            'You have access to the following tools:\n\n'
+            '{tools}\n\n'
+            'Use the following format:\n'
+            'Question: the input question you must answer1\n'
+            'Thought: you should always think about what to do and what tools to use.\n'
+            'Action: the action to take, should be one of [{tool_names}]\n'
+            'Action Input: the input to the action\n'
+            'Observation: the result of the action\n'
+            '... (this Thought/Action/Action Input/Observation can be repeated zero or more times)\n'
+            'Thought: I now know the final answer\n'
+            'Final Answer: the final answer to the original input question\n'
+            'Begin!\n\n'
+            'history: {history}\n\n'
+            'Question: {input}\n\n'
+            'Thought: {agent_scratchpad}\n',
+
+        "ChatGLM3":
+            'You can answer using the tools, or answer directly using your knowledge without using the tools. '
+            'Respond to the human as helpfully and accurately as possible.\n'
+            'You have access to the following tools:\n'
+            '{tools}\n'
+            'Use a json blob to specify a tool by providing an action key (tool name) '
+            'and an action_input key (tool input).\n'
+            'Valid "action" values: "Final Answer" or  [{tool_names}]'
+            'Provide only ONE action per $JSON_BLOB, as shown:\n\n'
+            '```\n'
+            '{{{{\n'
+            '  "action": $TOOL_NAME,\n'
+            '  "action_input": $INPUT\n'
+            '}}}}\n'
+            '```\n\n'
+            'Follow this format:\n\n'
+            'Question: input question to answer\n'
+            'Thought: consider previous and subsequent steps\n'
+            'Action:\n'
+            '```\n'
+            '$JSON_BLOB\n'
+            '```\n'
+            'Observation: action result\n'
+            '... (repeat Thought/Action/Observation N times)\n'
+            'Thought: I know what to respond\n'
+            'Action:\n'
+            '```\n'
+            '{{{{\n'
+            '  "action": "Final Answer",\n'
+            '  "action_input": "Final response to human"\n'
+            '}}}}\n'
+            'Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. '
+            'Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation:.\n'
+            'history: {history}\n\n'
+            'Question: {input}\n\n'
+            'Thought: {agent_scratchpad}',
+    }
+}
+def get_prompt_template(type: str, name: str) -> Optional[str]:
+    '''
+    从prompt_config中加载模板内容
+    type: "llm_chat","agent_chat","knowledge_base_chat","search_engine_chat"的其中一种，如果有新功能，应该进行加入。
+    '''
+
+    return PROMPT_TEMPLATES[type].get(name)
 
 
 class DialogService(CommonService):
@@ -126,20 +294,27 @@ def llm_id2llm_type(llm_id):
             if llm_id == llm["llm_name"]:
                 return llm["model_type"].strip(",")[-1]
 
-
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
     st = timer()
+
+    #qwen2.5:14b@Ollama
     tmp = dialog.llm_id.split("@")
+    chat_logger.info('dialog-------')
+    chat_logger.info(dialog)
     fid = None
     llm_id = tmp[0]
     if len(tmp)>1: fid = tmp[1]
-
+    #如果fid为False，则只根据llm_name查询LLMService；
+    #如果fid不为False，则在查询时还会根据fid进行过滤。
     llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    chat_logger.info('llm-------')
+    chat_logger.info(llm)
     if not llm:
         llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
             TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
         if not llm:
+            #
             raise LookupError("LLM(%s) not found" % dialog.llm_id)
         max_tokens = 8192
     else:
@@ -287,6 +462,301 @@ def chat(dialog, messages, stream=True, **kwargs):
         res["audio_binary"] = tts(tts_mdl, answer)
         yield res
 
+
+def file_chat(dialog, messages, stream=True, **kwargs):
+    assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    st = timer()
+    tmp = dialog.llm_id.split("@")
+    fid = None
+    llm_id = tmp[0]
+    if len(tmp)>1: fid = tmp[1]
+
+    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    if not llm:
+        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
+            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
+        if not llm:
+            raise LookupError("LLM(%s) not found" % dialog.llm_id)
+        max_tokens = 8192
+    else:
+        max_tokens = llm[0].max_tokens
+     # TODO
+    #选择的知识库，如果多个日志文件都放在一个知识库里面 如何区分处理
+    kbs = KnowledgebaseService.get_by_ids(dialog.kb_ids)
+    if not kbs:
+            raise LookupError("Can't find this knowledgebase!")
+        #找出名字中包含日志分析的知识库
+    kb=None
+    for log_kb in  kbs:
+            if '日志分析' in log_kb.name:
+                kb=log_kb
+                continue
+    if(kb is None):
+         raise LookupError("please create log knowledgebase!")
+    #直接选择日志分析的知识库
+    dialog.kb_ids= [kb.id]
+    embd_nms = list(set([kb.embd_id]))
+    if len(embd_nms) != 1:
+        yield {"answer": "**ERROR**: Knowledge bases use different embedding models.", "reference": []}
+        return {"answer": "**ERROR**: Knowledge bases use different embedding models.", "reference": []}
+
+    is_kg = all([kb.parser_id == ParserType.KG ])
+    retr = retrievaler if not is_kg else kg_retrievaler
+    chat_logger.info('---------kwargs----')
+    chat_logger.info(kwargs)
+    questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
+    chat_logger.info('---------questions')
+    chat_logger.info(questions)
+
+    attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
+    if "doc_ids" in messages[-1]:
+        attachments = messages[-1]["doc_ids"]
+        for m in messages[:-1]:
+            if "doc_ids" in m:
+                attachments.extend(m["doc_ids"])
+
+    chat_logger.info('---------attachments')
+    chat_logger.info(attachments)
+    embd_mdl = LLMBundle(dialog.tenant_id, LLMType.EMBEDDING, embd_nms[0])
+    if llm_id2llm_type(dialog.llm_id) == "image2text":
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
+    else:
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
+
+    prompt_config = dialog.prompt_config
+    chat_logger.info('---prompt_config-----')
+
+    chat_logger.info(prompt_config)
+
+    field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
+    tts_mdl = None
+    if prompt_config.get("tts"):
+        tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
+    # try to use sql if field mapping is good to go
+    chat_logger.info('---field_map-----')
+    chat_logger.info(field_map)
+    if field_map:
+        chat_logger.info("Use SQL to retrieval:{}".format(questions[-1]))
+        ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
+        if ans:
+            yield ans
+            return
+
+    # for p in prompt_config["parameters"]:
+    #     if p["key"] == "knowledge":
+    #         continue
+    #     if p["key"] not in kwargs and not p["optional"]:
+    #         raise KeyError("Miss parameter: " + p["key"])
+    #     if p["key"] not in kwargs:
+    #         prompt_config["system"] = prompt_config["system"].replace(
+    #             "{%s}" % p["key"], " ")
+    prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')   
+    chat_logger.info('--2222-prompt_config-----')
+
+    chat_logger.info(prompt_config)
+    
+    if len(questions) > 1 and prompt_config.get("refine_multiturn"):
+        questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
+    else:
+        questions = questions[-1:]
+
+    rerank_mdl = None
+    if dialog.rerank_id:
+        rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
+
+    for _ in range(len(questions) // 2):
+        questions.append(questions[-1])
+    if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
+        kbinfos = {"total": 0, "chunks": [], "doc_aggs": []}
+    else:
+        chat_logger.info('---------retrieval---')
+        if prompt_config.get("keyword", False):
+            questions[-1] += keyword_extraction(chat_mdl, questions[-1])
+        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, dialog.tenant_id, dialog.kb_ids, 1, dialog.top_n,
+                                        dialog.similarity_threshold,
+                                        dialog.vector_similarity_weight,
+                                        doc_ids=attachments,
+                                        top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl)
+    knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
+    chat_logger.info('-----knowledges')
+    chat_logger.info(knowledges)
+    chat_logger.info("{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
+    retrieval_tm = timer()
+
+    if not knowledges and prompt_config.get("empty_response"):
+        empty_res = prompt_config["empty_response"]
+        yield {"answer": empty_res, "reference": kbinfos, "audio_binary": tts(tts_mdl, empty_res)}
+        return {"answer": prompt_config["empty_response"], "reference": kbinfos}
+
+    kwargs["knowledge"] = "\n\n------\n\n".join(knowledges)
+   
+    chat_logger.info('-----kwargs')
+    chat_logger.info(kwargs)
+
+    gen_conf = dialog.llm_setting
+
+    msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
+    chat_logger.info('msg---------')
+    chat_logger.info(msg)
+
+
+    msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
+                for m in messages if m["role"] != "system"])
+    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
+    assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
+    prompt = msg[0]["content"]
+    #prompt += "\n\n### Query:\n%s" % " ".join(questions)
+
+
+    chat_logger.info('=====prompt=====')
+
+    chat_logger.info(prompt)
+
+    if "max_tokens" in gen_conf:
+        gen_conf["max_tokens"] = min(
+            gen_conf["max_tokens"],
+            max_tokens - used_token_count)
+
+    def decorate_answer(answer):
+        nonlocal prompt_config, knowledges, kwargs, kbinfos, prompt, retrieval_tm
+        refs = []
+        if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
+            answer, idx = retr.insert_citations(answer,
+                                                       [ck["content_ltks"]
+                                                        for ck in kbinfos["chunks"]],
+                                                       [ck["vector"]
+                                                        for ck in kbinfos["chunks"]],
+                                                       embd_mdl,
+                                                       tkweight=1 - dialog.vector_similarity_weight,
+                                                       vtweight=dialog.vector_similarity_weight)
+            idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
+            recall_docs = [
+                d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
+            if not recall_docs: recall_docs = kbinfos["doc_aggs"]
+            kbinfos["doc_aggs"] = recall_docs
+
+            refs = deepcopy(kbinfos)
+            for c in refs["chunks"]:
+                if c.get("vector"):
+                    del c["vector"]
+
+        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
+            answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
+        done_tm = timer()
+        prompt += "\n\n### Elapsed\n  - Retrieval: %.1f ms\n  - LLM: %.1f ms"%((retrieval_tm-st)*1000, (done_tm-st)*1000)
+        return {"answer": answer, "reference": refs, "prompt": prompt}
+
+    if stream:
+        last_ans = ""
+        answer = ""
+        for ans in chat_mdl.chat_streamly(prompt, msg[1:], gen_conf):
+            answer = ans
+            delta_ans = ans[len(last_ans):]
+            if num_tokens_from_string(delta_ans) < 16:
+                continue
+            last_ans = answer
+            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+        delta_ans = answer[len(last_ans):]
+        if delta_ans:
+            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+        yield decorate_answer(answer)
+    else:
+        answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
+        chat_logger.info("User: {}|Assistant: {}".format(
+            msg[-1]["content"], answer))
+        res = decorate_answer(answer)
+        res["audio_binary"] = tts(tts_mdl, answer)
+        yield res
+
+#文字对话实现        
+def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
+    assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    refs = []
+    # 查询LLM模型服务
+
+    #qwen2.5:14b@Ollama
+    tmp = dialog.llm_id.split("@")
+    chat_logger.info('dialog-------')
+    chat_logger.info(dialog)
+    fid = None
+    llm_id = tmp[0]
+    if len(tmp)>1: fid = tmp[1]
+    #如果fid为False，则只根据llm_name查询LLMService；
+    #如果fid不为False，则在查询时还会根据fid进行过滤。
+    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    chat_logger.info('llm-------')
+    chat_logger.info(llm)
+    if not llm:
+        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
+            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
+        if not llm:
+            #
+            raise LookupError("LLM(%s) not found" % dialog.llm_id)
+        max_tokens = 8192
+    else:
+        max_tokens = llm[0].max_tokens
+    # 确定使用的模型类型
+    if llm_id2llm_type(dialog.llm_id) == "image2text":
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
+    else:
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
+
+    prompt_config = dialog.prompt_config
+ 
+    chat_logger.info('------------only_chat2---------')
+
+    chat_logger.info(prompt_config)
+
+    # 配置提示词的参数
+    if select_skill=='知识库':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'default')
+    elif select_skill=='日志分析':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')
+    else:
+        prompt_config["system"]  = get_prompt_template("llm_chat", 'default')
+   
+  
+    # 准备消息内容
+    gen_conf = dialog.llm_setting
+    msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
+    msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
+                for m in messages if m["role"] != "system"])
+    
+    chat_logger.info('------------only_chat3---------')
+
+    chat_logger.info(gen_conf)
+    # 计算token使用量
+    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
+    assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
+
+    # 调整生成的最大tokens数
+    if "max_tokens" in gen_conf:
+        gen_conf["max_tokens"] = min(
+            gen_conf["max_tokens"],
+            max_tokens - used_token_count)
+
+    # 生成答案的装饰器
+    def decorate_answer(answer):
+        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
+            answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
+        return {"answer": answer, "reference": refs}
+
+    chat_logger.info('---only_chat4--')
+    chat_logger.info(msg)
+    # 根据stream选项处理模型的对话响应
+    if stream:
+        answer = ""
+        chat_logger.info('---only_chat5--')
+        for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], gen_conf):
+            chat_logger.info(ans)
+
+            answer = ans
+            yield {"answer": answer, "reference": {}}
+        yield decorate_answer(answer)
+    else:
+        answer = chat_mdl.chat(msg[0]["content"], msg[1:], gen_conf)
+        chat_logger.info("User: {}|Assistant: {}".format(msg[-1]["content"], answer))
+        yield decorate_answer(answer)
 
 def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
     sys_prompt = "你是一个DBA。你需要这对以下表的字段结构，根据用户的问题列表，写出最后一个问题对应的SQL。"

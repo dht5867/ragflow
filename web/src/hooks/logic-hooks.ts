@@ -1,9 +1,11 @@
 import { Authorization } from '@/constants/authorization';
 import { MessageType } from '@/constants/chat';
 import { LanguageTranslationMap } from '@/constants/common';
+import { Pagination } from '@/interfaces/common';
 import { ResponseType } from '@/interfaces/database/base';
 import { IAnswer, Message } from '@/interfaces/database/chat';
 import { IKnowledgeFile } from '@/interfaces/database/knowledge';
+import { IChangeParserConfigRequestBody } from '@/interfaces/request/document';
 import { IClientConversation, IMessage } from '@/pages/chat/interface';
 import api from '@/utils/api';
 import { getAuthorization } from '@/utils/authorization-util';
@@ -207,7 +209,7 @@ export const useSendMessageWithSse = (
               const val = JSON.parse(value?.data || '');
               const d = val?.data;
               if (typeof d !== 'boolean') {
-                console.info('data:', d);
+                //console.info('data:', d);
                 setAnswer({
                   ...d,
                   conversationId: body?.conversation_id,
@@ -296,7 +298,7 @@ export const useHandleMessageInputChange = () => {
   };
 };
 
-export const useSelectDerivedMessages = () => {
+export const useSelectDerivedMessages = (selectedSkill: string) => {
   const [derivedMessages, setDerivedMessages] = useState<IMessage[]>([]);
 
   const ref = useScrollToBottom(derivedMessages);
@@ -313,6 +315,7 @@ export const useSelectDerivedMessages = () => {
           {
             role: MessageType.Assistant,
             content: answer,
+
             id: buildMessageUuid({ ...message, role: MessageType.Assistant }),
           },
         ];
@@ -336,6 +339,7 @@ export const useSelectDerivedMessages = () => {
           }),
           prompt: answer.prompt,
           audio_binary: answer.audio_binary,
+          selectedSkill: answer.selectedSkill,
         },
       ];
     });
