@@ -5,6 +5,8 @@ import nltk
 import os
 import urllib.request
 
+#if you cannot access HuggingFace, set the HF_ENDPOINT environment variable to use a mirror site:
+#export HF_ENDPOINT=https://hf-mirror.com
 urls = [
     "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb",
 ]

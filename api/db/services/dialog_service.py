@@ -21,7 +21,7 @@ from copy import deepcopy
 from timeit import default_timer as timer
 from typing import Optional
 from api.db import LLMType, ParserType
-from api.db.db_models import Dialog, Conversation
+from api.db.db_models import Dialog, Conversation,DB
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
