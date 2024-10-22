@@ -319,7 +319,7 @@ export default {
       assistantSetting: '助理设置',
       promptEngine: '提示引擎',
       modelSetting: '模型设置',
-      chat: '聊天',
+      chat: '历史会话',
       newChat: '新建聊天',
       send: '发送',
       sendPlaceholder: '消息概要助手...',
