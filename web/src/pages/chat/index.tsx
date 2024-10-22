@@ -1,6 +1,6 @@
 import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
-import { DeleteOutlined, EditOutlined, KeyOutlined } from '@ant-design/icons';
+import { CloudOutlined, DeleteOutlined, EditOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import {
   Avatar,
   Button,
@@ -87,6 +87,11 @@ const Chat = () => {
   } = useSetModalState();
   const { currentRecord, setRecord } = useSetSelectedRecord<IDialog>();
   const [controller, setController] = useState(new AbortController());
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // 添加状态控制侧边栏
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   const handleAppCardEnter = (id: string) => () => {
     handleItemEnter(id);
@@ -98,44 +103,44 @@ const Chat = () => {
 
   const handleShowChatConfigurationModal =
     (dialogId?: string): any =>
-    (info: any) => {
-      info?.domEvent?.preventDefault();
-      info?.domEvent?.stopPropagation();
-      showDialogEditModal(dialogId);
-    };
+      (info: any) => {
+        info?.domEvent?.preventDefault();
+        info?.domEvent?.stopPropagation();
+        showDialogEditModal(dialogId);
+      };
 
   const handleRemoveDialog =
     (dialogId: string): MenuItemProps['onClick'] =>
-    ({ domEvent }) => {
-      domEvent.preventDefault();
-      domEvent.stopPropagation();
-      onRemoveDialog([dialogId]);
-    };
+      ({ domEvent }) => {
+        domEvent.preventDefault();
+        domEvent.stopPropagation();
+        onRemoveDialog([dialogId]);
+      };
 
   const handleShowOverviewModal =
     (dialog: IDialog): any =>
-    (info: any) => {
-      info?.domEvent?.preventDefault();
-      info?.domEvent?.stopPropagation();
-      setRecord(dialog);
-      showOverviewModal();
-    };
+      (info: any) => {
+        info?.domEvent?.preventDefault();
+        info?.domEvent?.stopPropagation();
+        setRecord(dialog);
+        showOverviewModal();
+      };
 
   const handleRemoveConversation =
     (conversationId: string): MenuItemProps['onClick'] =>
-    ({ domEvent }) => {
-      domEvent.preventDefault();
-      domEvent.stopPropagation();
-      onRemoveConversation([conversationId]);
-    };
+      ({ domEvent }) => {
+        domEvent.preventDefault();
+        domEvent.stopPropagation();
+        onRemoveConversation([conversationId]);
+      };
 
   const handleShowConversationRenameModal =
     (conversationId: string): MenuItemProps['onClick'] =>
-    ({ domEvent }) => {
-      domEvent.preventDefault();
-      domEvent.stopPropagation();
-      showConversationRenameModal(conversationId);
-    };
+      ({ domEvent }) => {
+        domEvent.preventDefault();
+        domEvent.stopPropagation();
+        showConversationRenameModal(conversationId);
+      };
 
   const handleDialogCardClick = useCallback(
     (dialogId: string) => () => {
@@ -190,7 +195,7 @@ const Chat = () => {
         onClick: handleShowOverviewModal(dialog),
         label: (
           <Space>
-            <KeyOutlined />
+            <CloudOutlined />
             {t('overview')}
           </Space>
         ),
@@ -230,56 +235,67 @@ const Chat = () => {
 
   return (
     <Flex className={styles.chatWrapper}>
-      <Flex className={styles.chatAppWrapper}>
-        <Flex flex={1} vertical>
-          <Button type="primary" onClick={handleShowChatConfigurationModal()}>
-            {t('createAssistant')}
-          </Button>
-          <Divider></Divider>
-          <Flex className={styles.chatAppContent} vertical gap={10}>
-            <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
-              {dialogList.map((x) => (
-                <Card
-                  key={x.id}
-                  hoverable
-                  className={classNames(styles.chatAppCard, {
-                    [styles.chatAppCardSelected]: dialogId === x.id,
-                  })}
-                  onMouseEnter={handleAppCardEnter(x.id)}
-                  onMouseLeave={handleItemLeave}
-                  onClick={handleDialogCardClick(x.id)}
-                >
-                  <Flex justify="space-between" align="center">
-                    <Space size={15}>
-                      <Avatar src={x.icon} shape={'square'} />
-                      <section>
-                        <b>
-                          <Text
-                            ellipsis={{ tooltip: x.name }}
-                            style={{ width: 130 }}
-                          >
-                            {x.name}
-                          </Text>
-                        </b>
-                        <div>{x.description}</div>
-                      </section>
-                    </Space>
-                    {activated === x.id && (
-                      <section>
-                        <Dropdown menu={{ items: buildAppItems(x) }}>
-                          <ChatAppCube
-                            className={styles.cubeIcon}
-                          ></ChatAppCube>
-                        </Dropdown>
-                      </section>
-                    )}
-                  </Flex>
-                </Card>
-              ))}
-            </Spin>
+      {/* 左边 */}
+      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 300 }}>
+          <Button
+            type="text"
+            icon={isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={toggleSidebar}
+            className={styles.toggleButton}
+          />
+        {!isSidebarCollapsed && (
+
+          <Flex flex={1} vertical>
+            <Button type="primary" onClick={handleShowChatConfigurationModal()}>
+              {t('createAssistant')}
+            </Button>
+            <Divider></Divider>
+            <Flex className={styles.chatAppContent} vertical gap={10}>
+              <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
+                {dialogList.map((x) => (
+                  <Card
+                    key={x.id}
+                    hoverable
+                    className={classNames(styles.chatAppCard, {
+                      [styles.chatAppCardSelected]: dialogId === x.id,
+                    })}
+                    onMouseEnter={handleAppCardEnter(x.id)}
+                    onMouseLeave={handleItemLeave}
+                    onClick={handleDialogCardClick(x.id)}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Space size={15}>
+                        <Avatar src={x.icon} shape={'square'} />
+                        <section>
+                          <b>
+                            <Text
+                              ellipsis={{ tooltip: x.name }}
+                              style={{ width: 130 }}
+                            >
+                              {x.name}
+                            </Text>
+                          </b>
+                          {/* <div>{x.description}</div> */}
+                        </section>
+                      </Space>
+                      {activated === x.id && (
+                        <section>
+                          <Dropdown menu={{ items: buildAppItems(x) }}>
+                            <ChatAppCube
+                              className={styles.cubeIcon}
+                            ></ChatAppCube>
+                          </Dropdown>
+                        </section>
+                      )}
+                    </Flex>
+                  </Card>
+                ))}
+              </Spin>
+            </Flex>
           </Flex>
-        </Flex>
+        )}
       </Flex>
+      {/* 中间 */}
       <Divider type={'vertical'} className={styles.divider}></Divider>
       <Flex className={styles.chatTitleWrapper}>
         <Flex flex={1} vertical>
@@ -347,6 +363,7 @@ const Chat = () => {
         </Flex>
       </Flex>
       <Divider type={'vertical'} className={styles.divider}></Divider>
+      {/* 会话窗口 */}
       <ChatContainer controller={controller}></ChatContainer>
       {dialogEditVisible && (
         <ChatConfigurationModal

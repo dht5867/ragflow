@@ -119,7 +119,6 @@ const MessageInput = ({
     '知识库',
     '日志分析',
     'CMDB',
-    '自动化运维',
   ]; // 选择框的选项
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
@@ -144,7 +143,13 @@ const MessageInput = ({
       setPopoverVisible(false);
     }
     if (onInputChange) {
-      onInputChange(e); // 调用传递的输入改变处理函数
+      if (newValue.startsWith('@')){
+        e.target.value=''
+        onInputChange(e); // 调用传递的输入改变处理函数
+      }else{
+        onInputChange(e); // 调用传递的输入改变处理函数
+      }
+      
     }
   };
 
@@ -300,6 +305,11 @@ const MessageInput = ({
     };
   }, []);
 
+  // 同步外部的 value 到内部的 inputValue
+  useEffect(() => {
+      setInputValue(value);
+  }, [value]);
+  
   const isUploadingFile = fileList.some((x) => x.status === 'uploading');
 
   const handlePressEnter = useCallback(async () => {
