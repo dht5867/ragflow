@@ -175,6 +175,16 @@ const MessageInput = ({
     setPlaceholderValue(`@${option}`);
   };
 
+  const { runDocumentByIds } = useRunNextDocument();
+  const runDocument = useCallback(
+    (run: number,doc_ids: any) => {
+      runDocumentByIds({
+        documentIds: doc_ids,
+        run,
+      });
+    },
+    [runDocumentByIds],
+  );
 
   const handleChange: UploadProps['onChange'] = async ({
     //fileList: newFileList,
@@ -225,7 +235,7 @@ const MessageInput = ({
       console.log('start parse');
       const ids = ret.data;
       console.log(ids);
-      //runDocument(1, ids);
+      runDocument(1, ids);
       setFileList((list) => {
         const nextList = list.filter((x) => x.uid !== file.uid);
         nextList.push({
