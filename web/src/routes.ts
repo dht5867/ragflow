@@ -52,6 +52,8 @@ const routes = [
         path: '/chat',
         component: '@/pages/chat',
       },
+      { path: '/automation', component: '@/pages/automation' },
+
       {
         path: '/user-setting',
         component: '@/pages/user-setting',

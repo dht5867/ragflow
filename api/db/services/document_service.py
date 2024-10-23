@@ -458,19 +458,23 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
 
    #查找助手的所有知识库
     e, dia = DialogService.get_by_id(conv.dialog_id)
-    #kb_id = dia.kb_ids[0]
-    kbs = KnowledgebaseService.get_by_ids(dia.kb_ids)
-    if not kbs:
+    kb_id = dia.kb_ids[0]
+    e, kb = KnowledgebaseService.get_by_id(kb_id)
+    if not e:
         raise LookupError("Can't find this knowledgebase!")
-    #找出名字中包含日志分析的知识库
-    kb=None
-    for log_kb in  kbs:
-        if '日志分析' in log_kb.name:
-            kb=log_kb
-            continue
-    if(kb is None):
-         raise LookupError("please create log knowledgebase!")
-    
+
+    # kbs = KnowledgebaseService.get_by_ids(dia.kb_ids)
+    # if not kbs:
+    #     raise LookupError("Can't find this knowledgebase!")
+    # #找出名字中包含日志分析的知识库
+    # kb=None
+    # for log_kb in  kbs:
+    #     if '日志分析' in log_kb.name:
+    #         kb=log_kb
+    #         continue
+    # if(kb is None):
+    #      raise LookupError("please create log knowledgebase!")
+
     idxnm = search.index_name(kb.tenant_id)
     if not ELASTICSEARCH.indexExist(idxnm):
         ELASTICSEARCH.createIdx(idxnm, json.load(

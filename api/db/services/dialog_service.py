@@ -519,23 +519,26 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     #选择的知识库，如果多个日志文件都放在一个知识库里面 如何区分处理
     kbs = KnowledgebaseService.get_by_ids(dialog.kb_ids)
     if not kbs:
-            raise LookupError("Can't find this knowledgebase!")
-        #找出名字中包含日志分析的知识库
-    kb=None
-    for log_kb in  kbs:
-            if '日志分析' in log_kb.name:
-                kb=log_kb
-                continue
-    if(kb is None):
-         raise LookupError("please create log knowledgebase!")
-    #直接选择日志分析的知识库
-    dialog.kb_ids= [kb.id]
-    embd_nms = list(set([kb.embd_id]))
+           raise LookupError("Can't find this knowledgebase!")
+    embd_nms = list(set([kb.embd_id for kb in kbs]))
+    # if not kbs:
+    #         raise LookupError("Can't find this knowledgebase!")
+    #     #找出名字中包含日志分析的知识库
+    # kb=None
+    # for log_kb in  kbs:
+    #         if '日志分析' in log_kb.name:
+    #             kb=log_kb
+    #             continue
+    # if(kb is None):
+    #      raise LookupError("please create log knowledgebase!")
+    # #直接选择日志分析的知识库
+    # dialog.kb_ids= [kb.id]
+    # embd_nms = list(set([kb.embd_id]))
     if len(embd_nms) != 1:
         yield {"answer": "**ERROR**: Knowledge bases use different embedding models.", "reference": []}
         return {"answer": "**ERROR**: Knowledge bases use different embedding models.", "reference": []}
 
-    is_kg = all([kb.parser_id == ParserType.KG ])
+    is_kg = all([kb.parser_id == ParserType.KG for kb in kbs])
     retr = retrievaler if not is_kg else kg_retrievaler
     chat_logger.info('---------kwargs----')
     chat_logger.info(kwargs)
@@ -598,7 +601,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     rerank_mdl = None
     if dialog.rerank_id:
         rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
-
+    team_id= get_index_id(dialog.tenant_id)
     for _ in range(len(questions) // 2):
         questions.append(questions[-1])
     if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
@@ -607,7 +610,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         chat_logger.info('---------retrieval---')
         if prompt_config.get("keyword", False):
             questions[-1] += keyword_extraction(chat_mdl, questions[-1])
-        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, dialog.tenant_id, dialog.kb_ids, 1, dialog.top_n,
+        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, team_id, dialog.kb_ids, 1, dialog.top_n,
                                         dialog.similarity_threshold,
                                         dialog.vector_similarity_weight,
                                         doc_ids=attachments,
