@@ -20,7 +20,7 @@ import re
 from copy import deepcopy
 from timeit import default_timer as timer
 from typing import Optional
-from api.db import LLMType, ParserType
+from api.db import LLMType, ParserType, StatusEnum
 from api.db.db_models import Dialog, Conversation,DB
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
@@ -96,31 +96,31 @@ PROMPT_TEMPLATES = {
         "default":
             '<指令>请根据已知信息，简洁和专业地回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
             '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
-            '<已知信息>{{ knowledge }}</已知信息>\n'
-            '<问题>{{ prompt }}</问题>\n',
+            '<已知信息>{knowledge}</已知信息>\n'
+            '<问题>{prompt}</问题>\n',
 
 
         "log":
             '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
             '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
-            '<已知信息>{{ knowledge }}</已知信息>\n'
+            '<已知信息>{knowledge}</已知信息>\n'
             '<问题> 作为IT系统日志分析专家，你的任务是分析以下日志并撰写一份详细的报告，报告格式应包括以下内容：'
             '1. 概述：简要介绍分析的目的和方法。'
             '2. 日志分析：根据给定的日志内容，分析出潜在的问题、异常或趋势。'
             '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。特别是对于ORACLE日志，当出现ORA开头的错误码时，尽量找出相关的sql语句和session信息。'
             '4. 解决方案建议：针对每个问题或异常，提出相应的解决方案，并说明实施步骤和预期效果。'
             '5. 预防措施建议：为了避免类似问题再次发生，提出一些预防措施或最佳实践建议。'
-            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{{ prompt }}</问题>\n',
+            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{prompt}</问题>\n',
 
 
         "text":
             '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
-            '<已知信息>{{ context }}</已知信息>\n'
-            '<问题>{{ question }}</问题>\n',
+            '<已知信息>{knowledge}</已知信息>\n'
+            '<问题>{prompt}</问题>\n',
 
         "empty":  # 搜不到知识库的时候使用
             '请你回答我的问题:\n'
-            '{{ question }}\n\n',
+            '{prompt}\n\n',
     },
 
 
@@ -128,13 +128,13 @@ PROMPT_TEMPLATES = {
         "default":
             '<指令>这是我搜索到的互联网信息，请你根据这些信息进行提取并有调理，简洁的回答问题。'
             '如果无法从中得到答案，请说 “无法搜索到能回答问题的内容”。 </指令>\n'
-            '<已知信息>{{ context }}</已知信息>\n'
-            '<问题>{{ question }}</问题>\n',
+            '<已知信息>{knowledge}</已知信息>\n'
+            '<问题>{prompt}</问题>\n',
 
         "search":
             '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 </指令>\n'
-            '<已知信息>{{ context }}</已知信息>\n'
-            '<问题>{{ question }}</问题>\n',
+            '<已知信息>{knowledge}</已知信息>\n'
+            '<问题>{prompt}</问题>\n',
     },
 
 
@@ -390,9 +390,12 @@ def chat(dialog, messages, stream=True, **kwargs):
                                         top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl)
     knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
     chat_logger.info(
-        "{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
+        "问题 {}-> 知识库 {}".format(" ".join(questions), "\n->".join(knowledges)))
     retrieval_tm = timer()
+    chat_logger.info('-----knowledges')
+    chat_logger.info(knowledges)
 
+    
     if not knowledges and prompt_config.get("empty_response"):
         empty_res = prompt_config["empty_response"]
         yield {"answer": empty_res, "reference": kbinfos, "audio_binary": tts(tts_mdl, empty_res)}
@@ -400,14 +403,25 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     kwargs["knowledge"] = "\n\n------\n\n".join(knowledges)
     gen_conf = dialog.llm_setting
-
+    chat_logger.info('---------kwargs----')
+    chat_logger.info(kwargs)
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
+
+    chat_logger.info('---chat--')
+    chat_logger.info(msg)
+
     prompt = msg[0]["content"]
     prompt += "\n\n### Query:\n%s" % " ".join(questions)
+
+    chat_logger.info('prompt----------------')
+    chat_logger.info(prompt)
+
+    chat_logger.info('history----------------')
+    chat_logger.info( msg[1:])
 
     if "max_tokens" in gen_conf:
         gen_conf["max_tokens"] = min(
