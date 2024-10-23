@@ -25,12 +25,14 @@ from api.db.db_models import Dialog, Conversation,DB
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
+from api.db.services.user_service import UserTenantService
 from api.settings import chat_logger, retrievaler, kg_retrievaler
 from rag.app.resume import forbidden_select_fields4resume
 from rag.nlp import keyword_extraction
 from rag.nlp.search import index_name
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
+from rag.utils.es_conn import ELASTICSEARCH
 PROMPT_TEMPLATES = {
     "llm_chat": {
         "default":
@@ -373,6 +375,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     if dialog.rerank_id:
         rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
 
+    team_id= get_index_id(dialog.tenant_id)
     for _ in range(len(questions) // 2):
         questions.append(questions[-1])
     if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
@@ -380,7 +383,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     else:
         if prompt_config.get("keyword", False):
             questions[-1] += keyword_extraction(chat_mdl, questions[-1])
-        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, dialog.tenant_id, dialog.kb_ids, 1, dialog.top_n,
+        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, team_id, dialog.kb_ids, 1, dialog.top_n,
                                         dialog.similarity_threshold,
                                         dialog.vector_similarity_weight,
                                         doc_ids=attachments,
@@ -461,6 +464,24 @@ def chat(dialog, messages, stream=True, **kwargs):
         res = decorate_answer(answer)
         res["audio_binary"] = tts(tts_mdl, answer)
         yield res
+
+def get_index_id(uid): 
+    #判断自己的知识库索引文件是否存在，存在就使用自己的索引
+    #不存在，就看团队是否存在，如果团队存在，就找团队里面超级用户的索引， 如果不存在团队，就提示用户创建知识库
+    idxnm =  f"ragflow_{uid}"
+    if ELASTICSEARCH.indexExist(idxnm):
+        return uid
+    else:
+        users = UserTenantService.get_tenants_by_user_id(uid)
+        chat_logger.info('------------users-------------')
+        chat_logger.info(users)
+        if users:
+            for u in users:
+                if u["invited_by"]=='':
+                    team_user_id=u["tenant_id"]
+                    return team_user_id
+        else:
+            return  uid
 
 
 def file_chat(dialog, messages, stream=True, **kwargs):

@@ -361,6 +361,7 @@ class Dealer:
     def retrieval(self, question, embd_mdl, tenant_id, kb_ids, page, page_size, similarity_threshold=0.2,
                   vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True, rerank_mdl=None, highlight=False):
         ranks = {"total": 0, "chunks": [], "doc_aggs": {}}
+        es_logger.info('------start rerank--------')
         if not question:
             return ranks
         RERANK_PAGE_LIMIT = 3
@@ -368,24 +369,36 @@ class Dealer:
                "question": question, "vector": True, "topk": top,
                "similarity": similarity_threshold,
                "available_int": 1}
+        es_logger.info(req)
         if page > RERANK_PAGE_LIMIT:
             req["page"] = page
             req["size"] = page_size
+            es_logger.info('------2-------')
         sres = self.search(req, index_name(tenant_id), embd_mdl, highlight)
+        es_logger.info(sres)
+        es_logger.info('------3-------')
         ranks["total"] = sres.total
 
         if page <= RERANK_PAGE_LIMIT:
+            es_logger.info('------3-------')
             if rerank_mdl:
                 sim, tsim, vsim = self.rerank_by_model(rerank_mdl,
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
             else:
+                es_logger.info('------4-------')
                 sim, tsim, vsim = self.rerank(
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
             idx = np.argsort(sim * -1)[(page-1)*page_size:page*page_size]
         else:
+            es_logger.info('------5-------')
             sim = tsim = vsim = [1]*len(sres.ids)
             idx = list(range(len(sres.ids)))
-
+        es_logger.info('idx-----------')
+        es_logger.info(idx)
+        es_logger.info(sim)
+        es_logger.info(tsim)
+        es_logger.info(vsim)
+        es_logger.info('------6-------')
         dim = len(sres.query_vector)
         for i in idx:
             if sim[i] < similarity_threshold:

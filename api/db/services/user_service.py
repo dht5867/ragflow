@@ -165,10 +165,14 @@ class UserTenantService(CommonService):
         fields = [
             cls.model.tenant_id,
             cls.model.role,
+            cls.model.invited_by,
+            cls.model.user_id,
             User.nickname,
             User.email,
             User.avatar,
-            User.update_date
+            User.update_date,
+            User.is_superuser
+
         ]
         return list(cls.model.select(*fields)
                     .join(User, on=((cls.model.tenant_id == User.id) & (UserTenant.user_id == user_id) & (UserTenant.status == StatusEnum.VALID.value)))
