@@ -268,13 +268,13 @@ API_SERVER = {
 
 # cmdb server
 CMDB_SERVER = {
-    "host": "121.40.167.143",
-    "port": 8090,
+    "host": "10.171.248.164",
+    "port": 8080,
 }
 # cmdb chat server
 
 CMDB_CHAT_SERVER = {
-    "host": "127.0.0.1",
+    "host": "10.171.248.164",
     "port": 8000,
 }
 

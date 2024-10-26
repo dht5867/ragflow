@@ -1035,7 +1035,8 @@ def ask(question, kb_ids, tenant_id):
     chat_mdl = LLMBundle(tenant_id, LLMType.CHAT)
     max_tokens = chat_mdl.max_length
 
-    kbinfos = retr.retrieval(question, embd_mdl, tenant_id, kb_ids, 1, 12, 0.1, 0.3, aggs=False)
+    team_id= get_index_id(tenant_id)
+    kbinfos = retr.retrieval(question, embd_mdl, team_id, kb_ids, 1, 12, 0.1, 0.3, aggs=False)
     knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
 
     used_token_count = 0
