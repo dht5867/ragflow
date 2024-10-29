@@ -51,6 +51,10 @@ export interface IGenerateParameter {
   component_id?: string;
 }
 
+export interface IInvokeVariable extends IGenerateParameter {
+  value?: string;
+}
+
 export type ICategorizeItemResult = Record<
   string,
   Omit<ICategorizeItem, 'name'>
@@ -64,20 +68,20 @@ export interface IRelevantForm extends IGenerateForm {
   no: string;
 }
 
-interface Condition {
-  items: Item[];
+export interface ISwitchCondition {
+  items: ISwitchItem[];
   logical_operator: string;
   to: string;
 }
 
-interface Item {
+export interface ISwitchItem {
   cpn_id: string;
   operator: string;
   value: string;
 }
 
 export interface ISwitchForm {
-  conditions: Condition[];
+  conditions: ISwitchCondition[];
   end_cpn_id: string;
   no: string;
 }

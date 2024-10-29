@@ -15,20 +15,20 @@
 #
 
 from flask import request
-
 from api.db import StatusEnum, FileSource
 from api.db.db_models import File
 from api.db.services.document_service import DocumentService
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
 from api.db.services.knowledgebase_service import KnowledgebaseService
+from api.db.services.llm_service import TenantLLMService
 from api.db.services.user_service import TenantService
 from api.settings import RetCode
 from api.utils import get_uuid
-from api.utils.api_utils import get_result, token_required, get_error_data_result, valid
+from api.utils.api_utils import get_result, token_required, get_error_data_result, valid,get_parser_config
 
 
-@manager.route('/dataset', methods=['POST'])
+@manager.route('/datasets', methods=['POST'])
 @token_required
 def create(tenant_id):
     req = request.json
@@ -36,19 +36,19 @@ def create(tenant_id):
     permission = req.get("permission")
     language = req.get("language")
     chunk_method = req.get("chunk_method")
-    valid_permission = ("me", "team")
-    valid_language =("Chinese", "English")
-    valid_chunk_method = ("naive","manual","qa","table","paper","book","laws","presentation","picture","one","knowledge_graph","email")
+    parser_config = req.get("parser_config")
+    valid_permission = ["me", "team"]
+    valid_language =["Chinese", "English"]
+    valid_chunk_method = ["naive","manual","qa","table","paper","book","laws","presentation","picture","one","knowledge_graph","email"]
     check_validation=valid(permission,valid_permission,language,valid_language,chunk_method,valid_chunk_method)
     if check_validation:
         return check_validation
-    if "tenant_id" in req or "embedding_model" in req:
+    req["parser_config"]=get_parser_config(chunk_method,parser_config)
+    if "tenant_id" in req:
         return get_error_data_result(
-            retmsg="`tenant_id` or `embedding_model` must not be provided")
-    chunk_count=req.get("chunk_count")
-    document_count=req.get("document_count")
-    if chunk_count or document_count:
-        return get_error_data_result(retmsg="`chunk_count` or `document_count` must be 0 or not be provided")
+            retmsg="`tenant_id` must not be provided")
+    if "chunk_count" in req or "document_count" in req:
+        return get_error_data_result(retmsg="`chunk_count` or `document_count` must not be provided")
     if "name" not in req:
         return get_error_data_result(
             retmsg="`name` is not empty!")
@@ -59,9 +59,18 @@ def create(tenant_id):
             retmsg="`name` is not empty string!")
     if KnowledgebaseService.query(name=req["name"], tenant_id=tenant_id, status=StatusEnum.VALID.value):
         return get_error_data_result(
-            retmsg="Duplicated knowledgebase name in creating dataset.")
+            retmsg="Duplicated dataset name in creating dataset.")
     req["tenant_id"] = req['created_by'] = tenant_id
-    req['embedding_model'] = t.embd_id
+    if not req.get("embedding_model"):
+        req['embedding_model'] = t.embd_id
+    else:
+        valid_embedding_models=["BAAI/bge-large-zh-v1.5","BAAI/bge-base-en-v1.5","BAAI/bge-large-en-v1.5","BAAI/bge-small-en-v1.5",
+                                "BAAI/bge-small-zh-v1.5","jinaai/jina-embeddings-v2-base-en","jinaai/jina-embeddings-v2-small-en",
+                                "nomic-ai/nomic-embed-text-v1.5","sentence-transformers/all-MiniLM-L6-v2","text-embedding-v2",
+                                "text-embedding-v3","maidalun1020/bce-embedding-base_v1"]
+        if not TenantLLMService.query(tenant_id=tenant_id,model_type="embedding", llm_name=req.get("embedding_model"))\
+                and req.get("embedding_model") not in valid_embedding_models:
+            return get_error_data_result(f"`embedding_model` {req.get('embedding_model')} doesn't exist")
     key_mapping = {
         "chunk_num": "chunk_count",
         "doc_num": "document_count",
@@ -79,7 +88,7 @@ def create(tenant_id):
         renamed_data[new_key] = value
     return get_result(data=renamed_data)
 
-@manager.route('/dataset', methods=['DELETE'])
+@manager.route('/datasets', methods=['DELETE'])
 @token_required
 def delete(tenant_id):
     req = request.json
@@ -103,7 +112,7 @@ def delete(tenant_id):
             retmsg="Delete dataset error.(Database error)")
     return get_result(retcode=RetCode.SUCCESS)
 
-@manager.route('/dataset/<dataset_id>', methods=['PUT'])
+@manager.route('/datasets/<dataset_id>', methods=['PUT'])
 @token_required
 def update(tenant_id,dataset_id):
     if not KnowledgebaseService.query(id=dataset_id,tenant_id=tenant_id):
@@ -116,10 +125,12 @@ def update(tenant_id,dataset_id):
     permission = req.get("permission")
     language = req.get("language")
     chunk_method = req.get("chunk_method")
-    valid_permission = ("me", "team")
-    valid_language =("Chinese", "English")
-    valid_chunk_method = ("naive","manual","qa","table","paper","book","laws","presentation","picture","one","knowledge_graph","email")
-    check_validation=valid(permission,valid_permission,language,valid_language,chunk_method,valid_chunk_method)
+    parser_config = req.get("parser_config")
+    valid_permission = ["me", "team"]
+    valid_language = ["Chinese", "English"]
+    valid_chunk_method = ["naive", "manual", "qa", "table", "paper", "book", "laws", "presentation", "picture", "one",
+                          "knowledge_graph", "email"]
+    check_validation = valid(permission, valid_permission, language, valid_language, chunk_method, valid_chunk_method)
     if check_validation:
         return check_validation
     if "tenant_id" in req:
@@ -127,6 +138,9 @@ def update(tenant_id,dataset_id):
             return get_error_data_result(
                 retmsg="Can't change `tenant_id`.")
     e, kb = KnowledgebaseService.get_by_id(dataset_id)
+    if "parser_config" in req:
+        print(kb.parser_config,flush=True)
+        req["parser_config"]=kb.parser_config.update(req["parser_config"])
     if "chunk_count" in req:
         if req["chunk_count"] != kb.chunk_num:
             return get_error_data_result(
@@ -142,10 +156,21 @@ def update(tenant_id,dataset_id):
             return get_error_data_result(
                 retmsg="If `chunk_count` is not 0, `chunk_method` is not changeable.")
         req['parser_id'] = req.pop('chunk_method')
+        if req['parser_id'] != kb.parser_id:
+            req["parser_config"] = get_parser_config(chunk_method, parser_config)
     if "embedding_model" in req:
         if kb.chunk_num != 0 and req['embedding_model'] != kb.embd_id:
             return get_error_data_result(
-                retmsg="If `chunk_count` is not 0, `embedding_method` is not changeable.")
+                retmsg="If `chunk_count` is not 0, `embedding_model` is not changeable.")
+        if not req.get("embedding_model"):
+            return get_error_data_result("`embedding_model` can't be empty")
+        valid_embedding_models=["BAAI/bge-large-zh-v1.5","BAAI/bge-base-en-v1.5","BAAI/bge-large-en-v1.5","BAAI/bge-small-en-v1.5",
+                                "BAAI/bge-small-zh-v1.5","jinaai/jina-embeddings-v2-base-en","jinaai/jina-embeddings-v2-small-en",
+                                "nomic-ai/nomic-embed-text-v1.5","sentence-transformers/all-MiniLM-L6-v2","text-embedding-v2",
+                                "text-embedding-v3","maidalun1020/bce-embedding-base_v1"]
+        if not TenantLLMService.query(tenant_id=tenant_id,model_type="embedding", llm_name=req.get("embedding_model"))\
+                and req.get("embedding_model") not in valid_embedding_models:
+            return get_error_data_result(f"`embedding_model` {req.get('embedding_model')} doesn't exist")
         req['embd_id'] = req.pop('embedding_model')
     if "name" in req:
         req["name"] = req["name"].strip()
@@ -153,12 +178,12 @@ def update(tenant_id,dataset_id):
                 and len(KnowledgebaseService.query(name=req["name"], tenant_id=tenant_id,
                                                    status=StatusEnum.VALID.value)) > 0:
             return get_error_data_result(
-                retmsg="Duplicated knowledgebase name in updating dataset.")
+                retmsg="Duplicated dataset name in updating dataset.")
     if not KnowledgebaseService.update_by_id(kb.id, req):
         return get_error_data_result(retmsg="Update dataset error.(Database error)")
     return get_result(retcode=RetCode.SUCCESS)
 
-@manager.route('/dataset', methods=['GET'])
+@manager.route('/datasets', methods=['GET'])
 @token_required
 def list(tenant_id):
     id = request.args.get("id")

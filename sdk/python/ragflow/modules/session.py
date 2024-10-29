@@ -15,7 +15,7 @@ class Session(Base):
         for message in self.messages:
             if "reference" in message:
                 message.pop("reference")
-        res = self.post(f"/chat/{self.chat_id}/completion",
+        res = self.post(f"/chats/{self.chat_id}/completions",
                         {"question": question, "stream": True,"session_id":self.id}, stream=stream)
         for line in res.iter_lines():
             line = line.decode("utf-8")
@@ -40,7 +40,7 @@ class Session(Base):
                                 "content": chunk["content_with_weight"],
                                 "document_id": chunk["doc_id"],
                                 "document_name": chunk["docnm_kwd"],
-                                "knowledgebase_id": chunk["kb_id"],
+                                "dataset_id": chunk["kb_id"],
                                 "image_id": chunk["img_id"],
                                 "similarity": chunk["similarity"],
                                 "vector_similarity": chunk["vector_similarity"],
@@ -53,7 +53,7 @@ class Session(Base):
                     yield message
 
     def update(self,update_message):
-        res = self.put(f"/chat/{self.chat_id}/session/{self.id}",
+        res = self.put(f"/chats/{self.chat_id}/sessions/{self.id}",
                         update_message)
         res = res.json()
         if res.get("code") != 0:
@@ -75,7 +75,7 @@ class Chunk(Base):
         self.content = None
         self.document_id = ""
         self.document_name = ""
-        self.knowledgebase_id = ""
+        self.dataset_id = ""
         self.image_id = ""
         self.similarity = None
         self.vector_similarity = None

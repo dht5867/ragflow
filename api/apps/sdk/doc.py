@@ -1,48 +1,37 @@
+#
+#  Copyright 2024 The InfiniFlow Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
 import pathlib
-import re
 import datetime
-import json
-import traceback
 
-from botocore.docs.method import document_model_driven_method
-from flask import request
-from flask_login import login_required, current_user
-from elasticsearch_dsl import Q
-from pygments import highlight
-from sphinx.addnodes import document
-
+from api.db.services.dialog_service import keyword_extraction
 from rag.app.qa import rmPrefix, beAdoc
-from rag.nlp import search, rag_tokenizer, keyword_extraction
-from rag.utils.es_conn import ELASTICSEARCH
-from rag.utils import rmSpace
+from rag.nlp import rag_tokenizer
 from api.db import LLMType, ParserType
-from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import TenantLLMService
-from api.db.services.user_service import UserTenantService
-from api.utils.api_utils import server_error_response, get_error_data_result, validate_request
-from api.db.services.document_service import DocumentService
-from api.settings import RetCode, retrievaler, kg_retrievaler
-from api.utils.api_utils import get_result
+from api.settings import kg_retrievaler
 import hashlib
 import re
-from api.utils.api_utils import get_result, token_required, get_error_data_result
-
-from api.db.db_models import Task, File
-
+from api.utils.api_utils import token_required
+from api.db.db_models import Task
 from api.db.services.task_service import TaskService, queue_tasks
-from api.db.services.user_service import TenantService, UserTenantService
-
-from api.utils.api_utils import server_error_response, get_error_data_result, validate_request
-
-from api.utils.api_utils import get_result, get_result, get_error_data_result
-
-from functools import partial
+from api.utils.api_utils import server_error_response
+from api.utils.api_utils import get_result, get_error_data_result
 from io import BytesIO
-
 from elasticsearch_dsl import Q
 from flask import request, send_file
-from flask_login import login_required
-
 from api.db import FileSource, TaskStatus, FileType
 from api.db.db_models import File
 from api.db.services.document_service import DocumentService
@@ -50,19 +39,15 @@ from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.settings import RetCode, retrievaler
-from api.utils.api_utils import construct_json_result, construct_error_response
-from rag.app import book, laws, manual, naive, one, paper, presentation, qa, resume, table, picture, audio, email
+from api.utils.api_utils import construct_json_result,get_parser_config
 from rag.nlp import search
 from rag.utils import rmSpace
 from rag.utils.es_conn import ELASTICSEARCH
 from rag.utils.storage_factory import STORAGE_IMPL
-
-MAXIMUM_OF_UPLOADING_FILES = 256
-
-MAXIMUM_OF_UPLOADING_FILES = 256
+import os
 
 
-@manager.route('/dataset/<dataset_id>/document', methods=['POST'])
+@manager.route('/datasets/<dataset_id>/documents', methods=['POST'])
 @token_required
 def upload(dataset_id, tenant_id):
     if 'file' not in request.files:
@@ -73,17 +58,34 @@ def upload(dataset_id, tenant_id):
         if file_obj.filename == '':
             return get_result(
                 retmsg='No file selected!', retcode=RetCode.ARGUMENT_ERROR)
+
     e, kb = KnowledgebaseService.get_by_id(dataset_id)
     if not e:
-        raise LookupError(f"Can't find the knowledgebase with ID {dataset_id}!")
-    err, _ = FileService.upload_document(kb, file_objs, tenant_id)
+        raise LookupError(f"Can't find the dataset with ID {dataset_id}!")
+    err, files = FileService.upload_document(kb, file_objs, tenant_id)
     if err:
         return get_result(
             retmsg="\n".join(err), retcode=RetCode.SERVER_ERROR)
-    return get_result()
+    # rename key's name
+    renamed_doc_list = []
+    for file in files:
+        doc = file[0]
+        key_mapping = {
+            "chunk_num": "chunk_count",
+            "kb_id": "dataset_id",
+            "token_num": "token_count",
+            "parser_id": "chunk_method"
+        }
+        renamed_doc = {}
+        for key, value in doc.items():
+            new_key = key_mapping.get(key, key)
+            renamed_doc[new_key] = value
+        renamed_doc["run"] = "UNSTART"
+        renamed_doc_list.append(renamed_doc)
+    return get_result(data=renamed_doc_list)
 
 
-@manager.route('/dataset/<dataset_id>/info/<document_id>', methods=['PUT'])
+@manager.route('/datasets/<dataset_id>/documents/<document_id>', methods=['PUT'])
 @token_required
 def update_doc(tenant_id, dataset_id, document_id):
     req = request.json
@@ -109,7 +111,7 @@ def update_doc(tenant_id, dataset_id, document_id):
         for d in DocumentService.query(name=req["name"], kb_id=doc.kb_id):
             if d.name == req["name"]:
                 return get_error_data_result(
-                    retmsg="Duplicated document name in the same knowledgebase.")
+                    retmsg="Duplicated document name in the same dataset.")
         if not DocumentService.update_by_id(
                 document_id, {"name": req["name"]}):
             return get_error_data_result(
@@ -122,6 +124,9 @@ def update_doc(tenant_id, dataset_id, document_id):
     if "parser_config" in req:
         DocumentService.update_parser_config(doc.id, req["parser_config"])
     if "chunk_method" in req:
+        valid_chunk_method = {"naive","manual","qa","table","paper","book","laws","presentation","picture","one","knowledge_graph","email"}
+        if req.get("chunk_method") not in valid_chunk_method:
+            return get_error_data_result(f"`chunk_method` {req['chunk_method']} doesn't exist")
         if doc.parser_id.lower() == req["chunk_method"].lower():
                 return get_result()
 
@@ -134,21 +139,19 @@ def update_doc(tenant_id, dataset_id, document_id):
                                           "run": TaskStatus.UNSTART.value})
         if not e:
             return get_error_data_result(retmsg="Document not found!")
+        req["parser_config"] = get_parser_config(req["chunk_method"], req.get("parser_config"))
         if doc.token_num > 0:
             e = DocumentService.increment_chunk_num(doc.id, doc.kb_id, doc.token_num * -1, doc.chunk_num * -1,
                                                     doc.process_duation * -1)
             if not e:
                 return get_error_data_result(retmsg="Document not found!")
-            tenant_id = DocumentService.get_tenant_id(req["id"])
-            if not tenant_id:
-                return get_error_data_result(retmsg="Tenant not found!")
             ELASTICSEARCH.deleteByQuery(
                 Q("match", doc_id=doc.id), idxnm=search.index_name(tenant_id))
 
     return get_result()
 
 
-@manager.route('/dataset/<dataset_id>/document/<document_id>', methods=['GET'])
+@manager.route('/datasets/<dataset_id>/documents/<document_id>', methods=['GET'])
 @token_required
 def download(tenant_id, dataset_id, document_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -171,7 +174,7 @@ def download(tenant_id, dataset_id, document_id):
     )
 
 
-@manager.route('/dataset/<dataset_id>/info', methods=['GET'])
+@manager.route('/datasets/<dataset_id>/documents', methods=['GET'])
 @token_required
 def list_docs(dataset_id, tenant_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -194,32 +197,49 @@ def list_docs(dataset_id, tenant_id):
     for doc in docs:
         key_mapping = {
             "chunk_num": "chunk_count",
-            "kb_id": "knowledgebase_id",
+            "kb_id": "dataset_id",
             "token_num": "token_count",
             "parser_id": "chunk_method"
         }
+        run_mapping = {
+         "0" :"UNSTART",
+         "1":"RUNNING",
+         "2":"CANCEL",
+         "3":"DONE",
+         "4":"FAIL"
+        }
         renamed_doc = {}
         for key, value in doc.items():
+            if key =="run":
+                renamed_doc["run"]=run_mapping.get(str(value))
             new_key = key_mapping.get(key, key)
             renamed_doc[new_key] = value
         renamed_doc_list.append(renamed_doc)
     return get_result(data={"total": tol, "docs": renamed_doc_list})
 
 
-@manager.route('/dataset/<dataset_id>/document', methods=['DELETE'])
+@manager.route('/datasets/<dataset_id>/documents', methods=['DELETE'])
 @token_required
 def delete(tenant_id,dataset_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
         return get_error_data_result(retmsg=f"You don't own the dataset {dataset_id}. ")
     req = request.json
-    if not req.get("ids"):
-        return get_error_data_result(retmsg="`ids` is required")
-    doc_ids = req["ids"]
+    if not req:
+        doc_ids=None
+    else:
+        doc_ids=req.get("ids")
+    if not doc_ids:
+        doc_list = []
+        docs=DocumentService.query(kb_id=dataset_id)
+        for doc in docs:
+            doc_list.append(doc.id)
+    else:
+        doc_list=doc_ids
     root_folder = FileService.get_root_folder(tenant_id)
     pf_id = root_folder["id"]
     FileService.init_knowledgebase_docs(pf_id, tenant_id)
     errors = ""
-    for doc_id in doc_ids:
+    for doc_id in doc_list:
         try:
             e, doc = DocumentService.get_by_id(doc_id)
             if not e:
@@ -248,7 +268,7 @@ def delete(tenant_id,dataset_id):
     return get_result()
 
 
-@manager.route('/dataset/<dataset_id>/chunk', methods=['POST'])
+@manager.route('/datasets/<dataset_id>/chunks', methods=['POST'])
 @token_required
 def parse(tenant_id,dataset_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -257,8 +277,11 @@ def parse(tenant_id,dataset_id):
     if not req.get("document_ids"):
         return get_error_data_result("`document_ids` is required")
     for id in req["document_ids"]:
-        if not DocumentService.query(id=id,kb_id=dataset_id):
+        doc = DocumentService.query(id=id,kb_id=dataset_id)
+        if not doc:
             return get_error_data_result(retmsg=f"You don't own the document {id}.")
+        if doc[0].progress != 0.0:
+            return get_error_data_result("Can't stop parsing document with progress at 0 or 100")
         info = {"run": "1", "progress": 0}
         info["progress_msg"] = ""
         info["chunk_num"] = 0
@@ -275,7 +298,7 @@ def parse(tenant_id,dataset_id):
         queue_tasks(doc, bucket, name)
     return get_result()
 
-@manager.route('/dataset/<dataset_id>/chunk', methods=['DELETE'])
+@manager.route('/datasets/<dataset_id>/chunks', methods=['DELETE'])
 @token_required
 def stop_parsing(tenant_id,dataset_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -298,7 +321,7 @@ def stop_parsing(tenant_id,dataset_id):
     return get_result()
 
 
-@manager.route('/dataset/<dataset_id>/document/<document_id>/chunk', methods=['GET'])
+@manager.route('/datasets/<dataset_id>/documents/<document_id>/chunks', methods=['GET'])
 @token_required
 def list_chunks(tenant_id,dataset_id,document_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -316,7 +339,27 @@ def list_chunks(tenant_id,dataset_id,document_id):
         "doc_ids": [doc_id], "page": page, "size": size, "question": question, "sort": True
     }
     sres = retrievaler.search(query, search.index_name(tenant_id), highlight=True)
-    res = {"total": sres.total, "chunks": [], "doc": doc.to_dict()}
+    key_mapping = {
+        "chunk_num": "chunk_count",
+        "kb_id": "dataset_id",
+        "token_num": "token_count",
+        "parser_id": "chunk_method"
+    }
+    run_mapping = {
+        "0": "UNSTART",
+        "1": "RUNNING",
+        "2": "CANCEL",
+        "3": "DONE",
+        "4": "FAIL"
+    }
+    doc=doc.to_dict()
+    renamed_doc = {}
+    for key, value in doc.items():
+        if key == "run":
+            renamed_doc["run"] = run_mapping.get(str(value))
+        new_key = key_mapping.get(key, key)
+        renamed_doc[new_key] = value
+    res = {"total": sres.total, "chunks": [], "doc": renamed_doc}
     origin_chunks = []
     sign = 0
     for id in sres.ids:
@@ -355,7 +398,7 @@ def list_chunks(tenant_id,dataset_id,document_id):
             "content_with_weight": "content",
             "doc_id": "document_id",
             "important_kwd": "important_keywords",
-            "img_id": "image_id",
+            "img_id": "image_id"
         }
         renamed_chunk = {}
         for key, value in chunk.items():
@@ -366,9 +409,9 @@ def list_chunks(tenant_id,dataset_id,document_id):
 
 
 
-@manager.route('/dataset/<dataset_id>/document/<document_id>/chunk', methods=['POST'])
+@manager.route('/datasets/<dataset_id>/documents/<document_id>/chunks', methods=['POST'])
 @token_required
-def create(tenant_id,dataset_id,document_id):
+def add_chunk(tenant_id,dataset_id,document_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
         return get_error_data_result(retmsg=f"You don't own the dataset {dataset_id}.")
     doc = DocumentService.query(id=document_id, kb_id=dataset_id)
@@ -427,7 +470,7 @@ def create(tenant_id,dataset_id,document_id):
     # return get_result(data={"chunk_id": chunk_id})
 
 
-@manager.route('dataset/<dataset_id>/document/<document_id>/chunk', methods=['DELETE'])
+@manager.route('datasets/<dataset_id>/documents/<document_id>/chunks', methods=['DELETE'])
 @token_required
 def rm_chunk(tenant_id,dataset_id,document_id):
     if not KnowledgebaseService.query(id=dataset_id, tenant_id=tenant_id):
@@ -455,7 +498,7 @@ def rm_chunk(tenant_id,dataset_id,document_id):
 
 
 
-@manager.route('/dataset/<dataset_id>/document/<document_id>/chunk/<chunk_id>', methods=['PUT'])
+@manager.route('/datasets/<dataset_id>/documents/<document_id>/chunks/<chunk_id>', methods=['PUT'])
 @token_required
 def update_chunk(tenant_id,dataset_id,document_id,chunk_id):
     try:
@@ -484,12 +527,12 @@ def update_chunk(tenant_id,dataset_id,document_id,chunk_id):
     d["content_ltks"] = rag_tokenizer.tokenize(d["content_with_weight"])
     d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(d["content_ltks"])
     if "important_keywords" in req:
-        if type(req["important_keywords"]) != list:
-            return get_error_data_result("`important_keywords` is required to be a list")
+        if not isinstance(req["important_keywords"],list):
+            return get_error_data_result("`important_keywords` should be a list")
         d["important_kwd"] = req.get("important_keywords")
         d["important_tks"] = rag_tokenizer.tokenize(" ".join(req["important_keywords"]))
     if "available" in req:
-        d["available_int"] = req["available"]
+        d["available_int"] = int(req["available"])
     embd_id = DocumentService.get_embd_id(document_id)
     embd_mdl = TenantLLMService.model_instance(
         tenant_id, LLMType.EMBEDDING.value, embd_id)
@@ -517,25 +560,32 @@ def update_chunk(tenant_id,dataset_id,document_id,chunk_id):
 @token_required
 def retrieval_test(tenant_id):
     req = request.json
-    if not req.get("datasets"):
+    if not req.get("dataset_ids"):
         return get_error_data_result("`datasets` is required.")
-    kb_ids = req["datasets"]
+    kb_ids = req["dataset_ids"]
+    if not isinstance(kb_ids,list):
+        return get_error_data_result("`datasets` should be a list")
     kbs = KnowledgebaseService.get_by_ids(kb_ids)
-    embd_nms = list(set([kb.embd_id for kb in kbs]))
-    if len(embd_nms) != 1:
-        return get_result(
-            retmsg='Knowledge bases use different embedding models or does not exist."',
-            retcode=RetCode.AUTHENTICATION_ERROR)
-    if isinstance(kb_ids, str): kb_ids = [kb_ids]
     for id in kb_ids:
         if not KnowledgebaseService.query(id=id,tenant_id=tenant_id):
             return get_error_data_result(f"You don't own the dataset {id}.")
+    embd_nms = list(set([kb.embd_id for kb in kbs]))
+    if len(embd_nms) != 1:
+        return get_result(
+            retmsg='Datasets use different embedding models."',
+            retcode=RetCode.AUTHENTICATION_ERROR)
     if "question" not in req:
         return get_error_data_result("`question` is required.")
     page = int(req.get("offset", 1))
-    size = int(req.get("limit", 30))
+    size = int(req.get("limit", 1024))
     question = req["question"]
-    doc_ids = req.get("documents", [])
+    doc_ids = req.get("document_ids", [])
+    if not isinstance(doc_ids,list):
+        return get_error_data_result("`documents` should be a list")
+    doc_ids_list=KnowledgebaseService.list_documents_by_ids(kb_ids)
+    for doc_id in doc_ids:
+        if doc_id not in doc_ids_list:
+            return get_error_data_result(f"The datasets don't own the document {doc_id}")
     similarity_threshold = float(req.get("similarity_threshold", 0.2))
     vector_similarity_weight = float(req.get("vector_similarity_weight", 0.3))
     top = int(req.get("top_k", 1024))
@@ -546,7 +596,7 @@ def retrieval_test(tenant_id):
     try:
         e, kb = KnowledgebaseService.get_by_id(kb_ids[0])
         if not e:
-            return get_error_data_result(retmsg="Knowledgebase not found!")
+            return get_error_data_result(retmsg="Dataset not found!")
         embd_mdl = TenantLLMService.model_instance(
             kb.tenant_id, LLMType.EMBEDDING.value, llm_name=kb.embd_id)
 

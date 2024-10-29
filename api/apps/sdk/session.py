@@ -24,7 +24,7 @@ from api.utils import get_uuid
 from api.utils.api_utils import get_error_data_result
 from api.utils.api_utils import get_result, token_required
 
-@manager.route('/chat/<chat_id>/session', methods=['POST'])
+@manager.route('/chats/<chat_id>/sessions', methods=['POST'])
 @token_required
 def create(tenant_id,chat_id):
     req = request.json
@@ -50,7 +50,7 @@ def create(tenant_id,chat_id):
     del conv["reference"]
     return get_result(data=conv)
 
-@manager.route('/chat/<chat_id>/session/<session_id>', methods=['PUT'])
+@manager.route('/chats/<chat_id>/sessions/<session_id>', methods=['PUT'])
 @token_required
 def update(tenant_id,chat_id,session_id):
     req = request.json
@@ -72,7 +72,7 @@ def update(tenant_id,chat_id,session_id):
     return get_result()
 
 
-@manager.route('/chat/<chat_id>/completion', methods=['POST'])
+@manager.route('/chats/<chat_id>/completions', methods=['POST'])
 @token_required
 def completion(tenant_id,chat_id):
     req = request.json
@@ -161,7 +161,7 @@ def completion(tenant_id,chat_id):
             break
         return get_result(data=answer)
 
-@manager.route('/chat/<chat_id>/session', methods=['GET'])
+@manager.route('/chats/<chat_id>/sessions', methods=['GET'])
 @token_required
 def list(chat_id,tenant_id):
     if not DialogService.query(tenant_id=tenant_id, id=chat_id, status=StatusEnum.VALID.value):
@@ -199,7 +199,7 @@ def list(chat_id,tenant_id):
                                 "content": chunk["content_with_weight"],
                                 "document_id": chunk["doc_id"],
                                 "document_name": chunk["docnm_kwd"],
-                                "knowledgebase_id": chunk["kb_id"],
+                                "dataset_id": chunk["kb_id"],
                                 "image_id": chunk["img_id"],
                                 "similarity": chunk["similarity"],
                                 "vector_similarity": chunk["vector_similarity"],
@@ -213,7 +213,7 @@ def list(chat_id,tenant_id):
         del conv["reference"]
     return get_result(data=convs)
 
-@manager.route('/chat/<chat_id>/session', methods=["DELETE"])
+@manager.route('/chats/<chat_id>/sessions', methods=["DELETE"])
 @token_required
 def delete(tenant_id,chat_id):
     if not DialogService.query(id=chat_id, tenant_id=tenant_id, status=StatusEnum.VALID.value):

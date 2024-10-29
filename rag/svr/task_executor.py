@@ -34,6 +34,7 @@ import pandas as pd
 from elasticsearch_dsl import Q
 
 from api.db import LLMType, ParserType
+from api.db.services.dialog_service import keyword_extraction, question_proposal
 from api.db.services.document_service import DocumentService
 from api.db.services.llm_service import LLMBundle
 from api.db.services.task_service import TaskService
@@ -220,6 +221,26 @@ def build(row):
         del d["image"]
         docs.append(d)
     cron_logger.info("MINIO PUT({}):{}".format(row["name"], el))
+
+    if row["parser_config"].get("auto_keywords", 0):
+        callback(msg="Start to generate keywords for every chunk ...")
+        chat_mdl = LLMBundle(row["tenant_id"], LLMType.CHAT, llm_name=row["llm_id"], lang=row["language"])
+        for d in docs:
+            d["important_kwd"] = keyword_extraction(chat_mdl, d["content_with_weight"],
+                                                    row["parser_config"]["auto_keywords"]).split(",")
+            d["important_tks"] = rag_tokenizer.tokenize(" ".join(d["important_kwd"]))
+
+    if row["parser_config"].get("auto_questions", 0):
+        callback(msg="Start to generate questions for every chunk ...")
+        chat_mdl = LLMBundle(row["tenant_id"], LLMType.CHAT, llm_name=row["llm_id"], lang=row["language"])
+        for d in docs:
+            qst = question_proposal(chat_mdl, d["content_with_weight"], row["parser_config"]["auto_questions"])
+            d["content_with_weight"] = f"Question: \n{qst}\n\nAnswer:\n" + d["content_with_weight"]
+            qst = rag_tokenizer.tokenize(qst)
+            if "content_ltks" in d:
+                d["content_ltks"] += " " + qst
+            if "content_sm_ltks" in d:
+                d["content_sm_ltks"] += " " + rag_tokenizer.fine_grained_tokenize(qst)
 
     return docs
 

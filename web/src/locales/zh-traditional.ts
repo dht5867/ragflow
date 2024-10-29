@@ -29,6 +29,7 @@ export default {
       move: '移動',
       warn: '提醒',
       action: '操作',
+      s: '秒',
     },
     login: {
       login: '登入',
@@ -150,6 +151,10 @@ export default {
       delimiter: `分段標識符`,
       html4excel: '表格轉HTML',
       html4excelTip: `Excel 是否會被解析為 HTML 表格。如果為 FALSE，Excel 中的每一行都會形成一個區塊。`,
+      autoKeywords: '自動關鍵字',
+      autoKeywordsTip: `在查詢此類關鍵字時，為每個區塊提取 N 個關鍵字以提高其排名分數。在「系統模型設定」中設定的 LLM 將消耗額外的 token。您可以在區塊清單中查看結果。 `,
+      autoQuestions: '自動問題',
+      autoQuestionsTip: `在查詢此類問題時，為每個區塊提取 N 個問題以提高其排名分數。在「系統模型設定」中設定的 LLM 將消耗額外的 token。您可以在區塊清單中查看結果。如果發生錯誤，此功能不會破壞整個分塊過程，除了將空結果新增至原始區塊。 `,
     },
     knowledgeConfiguration: {
       titleDescription: '在這裡更新您的知識庫詳細信息，尤其是解析方法。',
@@ -382,7 +387,7 @@ export default {
       preview: '預覽',
       embedded: '嵌入',
       serviceApiEndpoint: '服務 API 端點',
-      apiKey: 'API 鍵',
+      apiKey: 'API KEY',
       apiReference: 'API 文檔',
       dateRange: '日期範圍：',
       backendServiceApi: 'API 伺服器',
@@ -416,7 +421,7 @@ export default {
       password: '密碼',
       passwordDescription: '請輸入您當前的密碼以更改您的密碼。',
       model: '模型提供商',
-      modelDescription: '在此設置模型參數和 API Key。',
+      modelDescription: '在此設置模型參數和 API KEY。',
       team: '團隊',
       logout: '登出',
       system: '系統',
@@ -539,8 +544,7 @@ export default {
         '請輸入 Google Cloud Service Account Key in base64 format',
       addGoogleRegion: 'Google Cloud 區域',
       GoogleRegionMessage: '請輸入 Google Cloud 區域',
-      modelProvidersWarn:
-        '請先在 <b>「設定」>「模型提供者」</b> 中新增嵌入模型和LLM。',
+      modelProvidersWarn: `請先在<b>設定>模型提供者</b>中新增嵌入模型和LLM。然後，在「系統模型設定」中設定它們。`,
       add: '添加',
       updateDate: '更新日期',
       role: '角色',
@@ -676,23 +680,26 @@ export default {
       messageHistoryWindowSizeTip:
         'LLM需要查看的對話記錄的視窗大小。越大越好。但要注意LLM的最大內容長度。',
       wikipedia: '維基百科',
+      pubMed: 'PubMed',
+      pubMedDescription:
+        '此元件用於從 https://pubmed.ncbi.nlm.nih.gov/ 取得搜尋結果。通常，它充當知識庫的補充。 Top N 指定您需要適應的搜尋結果的數量。電子郵件是必填欄位。',
       email: '信箱',
       emailTip:
         '此元件用於從 https://pubmed.ncbi.nlm.nih.gov/ 取得搜尋結果。通常，它充當知識庫的補充。 Top N 指定您需要適應的搜尋結果的數量。電子郵件是必填欄位。',
       arXiv: 'ArXiv',
-      arXivTip:
+      arXivDescription:
         '此元件用於從 https://arxiv.org/ 取得搜尋結果。通常，它充當知識庫的補充。 Top N 指定您需要適應的搜尋結果的數量。',
       sortBy: '排序方式',
       submittedDate: '提交日期',
       lastUpdatedDate: '最後更新日期',
       relevance: '關聯',
       google: 'Google',
-      googleTip:
+      googleDescription:
         '此元件用於從https://www.google.com/取得搜尋結果。通常，它作為知識庫的補充。 Top N 和 SerpApi API 金鑰指定您需要調整的搜尋結果數量。',
       bing: 'Bing',
       bingTip:
         '此元件用於從 https://www.bing.com/ 取得搜尋結果。通常，它充當知識庫的補充。 Top N 和 Bing Subscription-Key 指定您需要適配的搜尋結果數量。',
-      apiKey: 'API Key',
+      apiKey: 'API KEY',
       country: '國家',
       language: '語言',
       googleScholar: '谷歌學術',
@@ -958,6 +965,13 @@ export default {
       note: '註解',
       noteDescription: '註解',
       notePlaceholder: '請輸入註釋',
+      invoke: 'Invoke',
+      invokeDescription:
+        '此元件可以呼叫遠端端點呼叫。將其他元件的輸出作為參數或設定常數參數來呼叫遠端函數。',
+      url: '網址',
+      method: '方法',
+      timeout: '超時',
+      headers: '請求頭',
     },
     footer: {
       profile: '“保留所有權利 @ react”',
