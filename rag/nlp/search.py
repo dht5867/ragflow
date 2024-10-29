@@ -81,6 +81,7 @@ class Dealer:
 
     def search(self, req, idxnm, emb_mdl=None, highlight=False):
         qst = req.get("question", "")
+        #构建
         bqry, keywords = self.qryr.question(qst, min_match="30%")
         bqry = self._add_filters(bqry, req)
         bqry.boost = 0.05
@@ -96,6 +97,7 @@ class Dealer:
         s = s.query(bqry)[pg * ps:(pg + 1) * ps]
         s = s.highlight("content_ltks")
         s = s.highlight("title_ltks")
+
         if not qst:
             if not req.get("sort"):
                 s = s.sort(
@@ -336,6 +338,7 @@ class Dealer:
                vtweight=0.7, cfield="content_ltks"):
         _, keywords = self.qryr.question(query)
 
+        es_logger.info('------3-------')
         for i in sres.ids:
             if isinstance(sres.field[i].get("important_kwd", []), str):
                 sres.field[i]["important_kwd"] = [sres.field[i]["important_kwd"]]
@@ -375,12 +378,12 @@ class Dealer:
             req["size"] = page_size
             es_logger.info('------2-------')
         sres = self.search(req, index_name(tenant_id), embd_mdl, highlight)
-        es_logger.info(sres)
+       
         es_logger.info('------3-------')
         ranks["total"] = sres.total
 
         if page <= RERANK_PAGE_LIMIT:
-            es_logger.info('------3-------')
+            es_logger.info('------3----1---')
             if rerank_mdl:
                 sim, tsim, vsim = self.rerank_by_model(rerank_mdl,
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)

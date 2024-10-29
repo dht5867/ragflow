@@ -374,7 +374,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     rerank_mdl = None
     if dialog.rerank_id:
         rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
-
+    #在search方法中，可以通过逗号分隔的字符串来指定多个索引名称。例如，要搜索my-index-000001和my-index-000002这两个索引
     team_id= get_index_id(dialog.tenant_id)
     for _ in range(len(questions) // 2):
         questions.append(questions[-1])
