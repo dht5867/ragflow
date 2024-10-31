@@ -236,13 +236,8 @@ const Chat = () => {
   return (
     <Flex className={styles.chatWrapper}>
       {/* 左边 */}
-      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 300 }}>
-          <Button
-            type="text"
-            icon={isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={toggleSidebar}
-            className={styles.toggleButton}
-          />
+      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 280 }}>
+        
         {!isSidebarCollapsed && (
 
           <Flex flex={1} vertical>
@@ -298,6 +293,12 @@ const Chat = () => {
       {/* 中间 */}
       <Divider type={'vertical'} className={styles.divider}></Divider>
       <Flex className={styles.chatTitleWrapper}>
+      <Button
+            type="text"
+            icon={isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={toggleSidebar}
+            className={styles.toggleButton}
+          />
         <Flex flex={1} vertical>
           <Flex
             justify={'space-between'}

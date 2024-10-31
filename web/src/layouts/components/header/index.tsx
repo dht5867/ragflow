@@ -69,7 +69,11 @@ const RagHeader = () => {
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     navigate(e.key); // 使用 key 作为路径导航
   };
-
+  const currentKey = useMemo(() => {
+    const matchedItem = items.find((item) => pathname.startsWith(item.key));
+    return matchedItem ? matchedItem.key : '/chat'; // Default to '/chat' if no match
+  }, [pathname, items]);
+  
   return (
     <Header
       style={{
@@ -89,7 +93,7 @@ const RagHeader = () => {
       {/* 使用 Menu 组件实现导航 */}
       <Menu
         onClick={handleMenuClick}
-        selectedKeys={[pathname]} // 当前选中的菜单项
+        selectedKeys={[currentKey]} // 当前选中的菜单项
         mode="horizontal"
         items={items}
       />
