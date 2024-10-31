@@ -603,7 +603,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     rerank_mdl = None
     if dialog.rerank_id:
         rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
-    team_id= get_index_id(dialog.tenant_id)
+    #team_id= get_index_id(dialog.tenant_id)
     for _ in range(len(questions) // 2):
         questions.append(questions[-1])
     if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
@@ -612,7 +612,8 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         chat_logger.info('---------retrieval---')
         if prompt_config.get("keyword", False):
             questions[-1] += keyword_extraction(chat_mdl, questions[-1])
-        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, team_id, dialog.kb_ids, 1, dialog.top_n,
+        tenant_ids = list(set([kb.tenant_id for kb in kbs]))
+        kbinfos = retr.retrieval(" ".join(questions), embd_mdl, tenant_ids, dialog.kb_ids, 1, dialog.top_n,
                                         dialog.similarity_threshold,
                                         dialog.vector_similarity_weight,
                                         doc_ids=attachments,
