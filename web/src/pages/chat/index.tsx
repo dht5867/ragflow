@@ -235,22 +235,15 @@ const Chat = () => {
 
   return (
     <Flex className={styles.chatWrapper}>
-      {/* 左边 */}
-      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 300 }}>
-          <Button
-            type="text"
-            icon={isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={toggleSidebar}
-            className={styles.toggleButton}
-          />
+      {/* 左边创建助理*/}
+      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 240 }}>
         {!isSidebarCollapsed && (
-
           <Flex flex={1} vertical>
             <Button type="primary" onClick={handleShowChatConfigurationModal()}>
               {t('createAssistant')}
             </Button>
             <Divider></Divider>
-            <Flex className={styles.chatAppContent} vertical gap={10}>
+            <Flex className={styles.chatAppContent} vertical gap={2}>
               <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
                 {dialogList.map((x) => (
                   <Card
@@ -270,7 +263,7 @@ const Chat = () => {
                           <b>
                             <Text
                               ellipsis={{ tooltip: x.name }}
-                              style={{ width: 130 }}
+                              style={{ width: 140}}
                             >
                               {x.name}
                             </Text>
@@ -295,10 +288,17 @@ const Chat = () => {
           </Flex>
         )}
       </Flex>
-      {/* 中间 */}
+      {/* 中间 历史会话*/}
       <Divider type={'vertical'} className={styles.divider}></Divider>
       <Flex className={styles.chatTitleWrapper}>
+        <Button
+            type="text"
+            icon={isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={toggleSidebar}
+            className={styles.toggleButton}
+          />
         <Flex flex={1} vertical>
+         
           <Flex
             justify={'space-between'}
             align="center"
@@ -361,7 +361,9 @@ const Chat = () => {
             </Spin>
           </Flex>
         </Flex>
+        
       </Flex>
+
       <Divider type={'vertical'} className={styles.divider}></Divider>
       {/* 会话窗口 */}
       <ChatContainer controller={controller}></ChatContainer>
