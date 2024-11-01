@@ -236,7 +236,7 @@ const Chat = () => {
   return (
     <Flex className={styles.chatWrapper}>
       {/* 左边创建助理*/}
-      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 240 }}>
+      <Flex className={styles.chatAppWrapper} style={{ width: isSidebarCollapsed ? 60 : 280 }}>
         {!isSidebarCollapsed && (
           <Flex flex={1} vertical>
             <Button type="primary" onClick={handleShowChatConfigurationModal()}>
