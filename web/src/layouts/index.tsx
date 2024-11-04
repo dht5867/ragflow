@@ -85,8 +85,9 @@ const App: React.FC = () => {
       <Layout>
         <Sider 
           width={200}
+          theme="light"
           className={styles.sider}
-          collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}
+          collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)} 
           style={{ background: colorBgBase, border: 1 }} // Set sidebar background color
         >
           {/* Toggle button for collapsing the sidebar */}
