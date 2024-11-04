@@ -194,10 +194,9 @@ class Canvas(ABC):
                     self.answer.append(c)
                 else:
                     if DEBUG: print("RUN: ", c)
-                    if cpn.component_name == "Generate":
-                        cpids = cpn.get_dependent_components()
-                        if any([c not in self.path[-1] for c in cpids]):
-                            continue
+                    cpids = cpn.get_dependent_components()
+                    if any([c not in self.path[-1] for c in cpids]):
+                        continue
                     ans = cpn.run(self.history, **kwargs)
                     self.path[-1].append(c)
             ran += 1
@@ -260,7 +259,7 @@ class Canvas(ABC):
 
     def get_history(self, window_size):
         convs = []
-        for role, obj in self.history[(window_size + 1) * -1:]:
+        for role, obj in self.history[window_size * -1:]:
             convs.append({"role": role, "content": (obj if role == "user" else
                     '\n'.join([str(s) for s in pd.DataFrame(obj)['content']]))})
         return convs

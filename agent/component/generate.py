@@ -105,6 +105,9 @@ class Generate(ComponentBase):
         input = ("  - "+"\n  - ".join([c for c in retrieval_res["content"] if isinstance(c, str)])) if "content" in retrieval_res else ""
         for para in self._param.parameters:
             cpn = self._canvas.get_component(para["component_id"])["obj"]
+            if cpn.component_name.lower() == "answer":
+                kwargs[para["key"]] = self._canvas.get_history(1)[0]["content"]
+                continue
             _, out = cpn.output(allow_partial=False)
             if "content" not in out.columns:
                 kwargs[para["key"]] = "Nothing"
@@ -127,6 +130,7 @@ class Generate(ComponentBase):
 
         msg = self._canvas.get_history(self._param.message_history_window_size)
         _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
+        if len(msg) < 2: msg.append({"role": "user", "content": ""})
         ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
 
         if self._param.cite and "content_ltks" in retrieval_res.columns and "vector" in retrieval_res.columns:
@@ -146,6 +150,7 @@ class Generate(ComponentBase):
 
         msg = self._canvas.get_history(self._param.message_history_window_size)
         _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
+        if len(msg) < 2: msg.append({"role": "user", "content": ""})
         answer = ""
         for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], self._param.gen_conf()):
             res = {"content": ans, "reference": []}

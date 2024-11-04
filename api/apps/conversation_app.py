@@ -164,9 +164,6 @@ def decorate_answer(answer):
 @validate_request("conversation_id", "messages")
 def completion():
     req = request.json
-    # req = {"conversation_id": "9aaaca4c11d311efa461fa163e197198", "messages": [
-    #    {"role": "user", "content": "上海有吗？"}
-    # ]}
     msg = []
     chat_logger.info('-------completion----')
     chat_logger.info(req)
