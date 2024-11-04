@@ -460,6 +460,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         return {"answer": answer, "reference": refs, "prompt": prompt}
 
     if stream:
+        chat_logger.info("--stream---")
         last_ans = ""
         answer = ""
         for ans in chat_mdl.chat_streamly(prompt, msg[1:], gen_conf):
@@ -474,6 +475,7 @@ def chat(dialog, messages, stream=True, **kwargs):
             yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
         yield decorate_answer(answer)
     else:
+        chat_logger.info("--chatchat---")
         answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
         chat_logger.info("User: {}|Assistant: {}".format(
             msg[-1]["content"], answer))
