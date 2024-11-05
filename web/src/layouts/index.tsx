@@ -11,6 +11,9 @@ import {
   AppstoreOutlined,
   MessageOutlined,
   SearchOutlined,
+  ToolOutlined,
+  UserOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useTranslate } from '@/hooks/common-hooks';
 import { ReactComponent as FileIcon } from '@/assets/svg/file-management.svg';
@@ -52,9 +55,24 @@ const App: React.FC = () => {
         icon: <FileIcon />,
       },
       {
-        label: '自动化运维',
+        label: t('automation'),
         key: '/automation',
+        icon: <ToolOutlined />,
+      },
+      {
+        label: t('model'),
+        key: '/user-setting/model',
         icon: <AppstoreOutlined />,
+      },
+      {
+        label:  t('team'),
+        key: '/user-setting/team',
+        icon: <TeamOutlined  />,
+      },
+      {
+        label: t('user'),
+        key: '/user-setting/profile',
+        icon: <UserOutlined />,
       },
     ],
     [t],

@@ -14,7 +14,7 @@ type FieldType = {
 };
 
 const tailLayout = {
-  wrapperCol: { offset: 20, span: 4 },
+  wrapperCol: { offset: 10, span: 4 },
 };
 
 const UserSettingPassword = () => {
@@ -118,7 +118,7 @@ const UserSettingPassword = () => {
           }
         >
           <Space>
-            <Button htmlType="button">{t('cancel')}</Button>
+            {/* <Button htmlType="button">{t('cancel')}</Button> */}
             <Button
               type="primary"
               htmlType="submit"
