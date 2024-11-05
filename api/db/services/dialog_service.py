@@ -248,6 +248,18 @@ class ConversationService(CommonService):
         sessions = sessions.paginate(page_number, items_per_page)
 
         return list(sessions.dicts())
+    
+    @classmethod
+    @DB.connection_context()
+    def get_list_by_dialog_id(cls,dialog_id):
+        fields = [
+            cls.model.id,
+            cls.model.name,
+            cls.model.dialog_id
+        ]
+        sessions = cls.model.select(*fields).where(cls.model.dialog_id ==dialog_id)
+        return sessions
+    
 
 
 def message_fit_in(msg, max_length=4000):

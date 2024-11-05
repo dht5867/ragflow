@@ -130,10 +130,8 @@ def list_convsersation():
             return get_json_result(
                 data=False, retmsg=f'Only owner of dialog authorized for this operation.',
                 retcode=RetCode.OPERATING_ERROR)
-        convs = ConversationService.query(
-            dialog_id=dialog_id,
-            order_by=ConversationService.model.create_time,
-            reverse=True)
+       
+        convs = ConversationService.get_list_by_dialog_id(dialog_id)
         convs = [d.to_dict() for d in convs]
         return get_json_result(data=convs)
     except Exception as e:
