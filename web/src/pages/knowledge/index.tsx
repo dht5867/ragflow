@@ -27,9 +27,9 @@ const KnowledgeList = () => {
     <Flex className={styles.knowledge} vertical flex={1}>
       <div className={styles.topWrapper}>
         <div>
-          <span className={styles.title}>
+          {/* <span className={styles.title}>
             {t('welcome')}, {userInfo.nickname}
-          </span>
+          </span> */}
           <p className={styles.description}>{t('description')}</p>
         </div>
         <Space size={'large'}>
