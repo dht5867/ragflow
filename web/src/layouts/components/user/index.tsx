@@ -1,26 +1,67 @@
-import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
-import { Avatar } from 'antd';
-import React from 'react';
+import React, { useState } from 'react';
+import { Avatar, Dropdown, Menu, MenuProps, Modal } from 'antd';
 import { history } from 'umi';
+import { useLogout } from '@/hooks/login-hooks';
+
+import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 
 import styles from '../../index.less';
+import UserSettingPassword from '@/pages/user-setting/setting-password';
 
 const App: React.FC = () => {
   const { data: userInfo } = useFetchUserInfo();
+  const { logout } = useLogout();
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const toSetting = () => {
-    history.push('/user-setting');
+  const showPasswordModal = () => {
+    setIsModalVisible(true);
   };
 
+  const handleLogout = () => {
+    logout();
+    // Optionally, you might want to redirect after logout
+    // history.push('/login'); 
+  };
+
+  const handleMenuClick = (e: any) => {
+    if (e.key === 'change-password') showPasswordModal();
+    if (e.key === 'logout') handleLogout();
+  };
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'change-password',
+      label: <span>修改密码</span>,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      label: <span>退出</span>,
+    },
+  ];
   return (
-    <Avatar
-      size={32}
-      onClick={toSetting}
-      className={styles.clickAvailable}
-      src={
-        userInfo.avatar ?? 'https://dht5867.oss-cn-hangzhou.aliyuncs.com/ai.png'
-      }
-    />
+    <>
+
+      <Dropdown menu={{ items: menuItems, onClick: handleMenuClick }}>
+        <Avatar
+          size={32}
+          className={styles.clickAvailable}
+          src={
+            userInfo.avatar ?? 'https://dht5867.oss-cn-hangzhou.aliyuncs.com/ai.png'
+          }
+        />
+      </Dropdown>
+      
+      <Modal
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+      >
+        <UserSettingPassword />
+      </Modal>
+    </>
   );
 };
 

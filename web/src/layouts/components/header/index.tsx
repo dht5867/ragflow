@@ -82,7 +82,7 @@ const RagHeader = () => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        height: '72px',
+        height: '48px',
         overflow: 'hidden', // 增加 overflow 防止元素溢出
       }}
     >
@@ -91,12 +91,12 @@ const RagHeader = () => {
         <span className={styles.appName}>{appConf.appName}</span>
       </Space>
       {/* 使用 Menu 组件实现导航 */}
-      <Menu
+      {/* <Menu
         onClick={handleMenuClick}
         selectedKeys={[currentKey]} // 当前选中的菜单项
         mode="horizontal"
         items={items}
-      />
+      /> */}
       <Toolbar></Toolbar>
     </Header>
   );

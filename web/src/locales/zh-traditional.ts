@@ -65,6 +65,10 @@ export default {
       fileManager: '文件管理',
       flow: 'Agent',
       search: '搜尋',
+      automation:'自动化运维',
+      model:'模型提供商',
+      team:'团队成员配置',
+      user:'个人信息概要'
     },
     knowledgeList: {
       welcome: '歡迎回來',

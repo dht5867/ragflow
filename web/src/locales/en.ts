@@ -65,6 +65,10 @@ export default {
       fileManager: 'File Management',
       flow: 'Agent',
       search: 'Search',
+      automation:'Ansible',
+      model:'Model',
+      team:'Team',
+      user:'User'
     },
     knowledgeList: {
       welcome: 'Welcome back',

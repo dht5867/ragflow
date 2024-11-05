@@ -64,7 +64,11 @@ export default {
       logout: '登出',
       fileManager: '文件管理',
       flow: 'Agent',
-      search: '搜索',
+      search: '知识搜索',
+      automation:'自动化运维',
+      model:'模型提供商',
+      team:'团队成员配置',
+      user:'个人信息概要'
     },
     knowledgeList: {
       welcome: '欢迎回来',
@@ -435,13 +439,13 @@ export default {
         '在多轮对话的中，对去知识库查询的问题进行优化。会调用大模型额外消耗token。',
     },
     setting: {
-      profile: '概要',
+      profile: '个人信息概要',
       profileDescription: '在此更新您的照片和个人详细信息。',
       password: '密码',
       passwordDescription: '请输入您当前的密码以更改您的密码。',
       model: '模型提供商',
       modelDescription: '在此设置模型参数和 API KEY。',
-      team: '团队',
+      team: '团队成员设置',
       system: '系统',
       logout: '登出',
       username: '用户名',
