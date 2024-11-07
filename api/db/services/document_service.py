@@ -488,7 +488,13 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
     embd_mdl = LLMBundle(kb.tenant_id, LLMType.EMBEDDING, llm_name=kb.embd_id, lang=kb.language)
 
     err, files = FileService.upload_document(kb, file_objs, user_id)
+
+    stat_logger.info('---upload and save --')
+
+    stat_logger.info(files)
     assert not err, "\n".join(err)
+
+    return [d["id"] for d, _ in files]  
 
     def dummy(prog=None, msg=""):
         pass
@@ -515,6 +521,8 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             "lang": kb.language
         }
         threads.append(exe.submit(FACTORY.get(d["parser_id"], naive).chunk, d["name"], blob, **kwargs))
+
+    stat_logger.info('---start parse --')
 
     for (docinfo, _), th in zip(files, threads):
         docs = []

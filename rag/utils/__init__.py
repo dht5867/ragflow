@@ -72,8 +72,10 @@ def findMaxTm(fnm):
     return m
 
 
-encoder = tiktoken.encoding_for_model("gpt-3.5-turbo")
-
+#encoder = tiktoken.encoding_for_model("gpt-3.5-turbo")
+#/tmp/data-gym-cache
+#encoder=None
+encoder = tiktoken.get_encoding("cl100k_base")
 
 def num_tokens_from_string(string: str) -> int:
     """Returns the number of tokens in a text string."""
