@@ -387,7 +387,6 @@ def chat(dialog, messages, stream=True, **kwargs):
     if dialog.rerank_id:
         rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
     #在search方法中，可以通过逗号分隔的字符串来指定多个索引名称。例如，要搜索my-index-000001和my-index-000002这两个索引
-    team_id= get_index_id(dialog.tenant_id)
     for _ in range(len(questions) // 2):
         questions.append(questions[-1])
     if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
@@ -1103,9 +1102,9 @@ def ask(question, kb_ids, tenant_id):
     embd_mdl = LLMBundle(tenant_id, LLMType.EMBEDDING, embd_nms[0])
     chat_mdl = LLMBundle(tenant_id, LLMType.CHAT)
     max_tokens = chat_mdl.max_length
-
-    team_id= get_index_id(tenant_id)
-    kbinfos = retr.retrieval(question, embd_mdl, team_id, kb_ids, 1, 12, 0.1, 0.3, aggs=False)
+    
+    tenant_ids = list(set([kb.tenant_id for kb in kbs]))
+    kbinfos = retr.retrieval(question, embd_mdl, tenant_ids, kb_ids, 1, 12, 0.1, 0.3, aggs=False)
     knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
 
     used_token_count = 0
