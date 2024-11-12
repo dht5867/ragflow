@@ -380,7 +380,7 @@ class Dealer:
 
         if isinstance(tenant_ids, str):
             tenant_ids = tenant_ids.split(",")
-
+        es_logger.info(tenant_ids)
         sres = self.search(req, [index_name(tid) for tid in tenant_ids], embd_mdl, highlight)
         ranks["total"] = sres.total
 

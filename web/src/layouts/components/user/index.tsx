@@ -49,7 +49,7 @@ const App: React.FC = () => {
           size={32}
           className={styles.clickAvailable}
           src={
-            userInfo.avatar ?? 'https://dht5867.oss-cn-hangzhou.aliyuncs.com/ai.png'
+            userInfo.avatar ?? '/logout.png'
           }
         />
       </Dropdown>

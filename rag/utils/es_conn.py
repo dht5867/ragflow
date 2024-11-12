@@ -226,6 +226,8 @@ class ESConnection:
             q = Search().query(q).to_dict()
         if isinstance(idxnms, str):
             idxnms = idxnms.split(",")
+        es_logger.info('----idxnms-----')
+        es_logger.info(idxnms)
         for i in range(3):
             try:
                 res = self.es.search(index=(self.idxnm if not idxnms else idxnms),
