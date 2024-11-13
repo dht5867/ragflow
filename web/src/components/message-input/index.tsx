@@ -104,7 +104,7 @@ const MessageInput = ({
   uploadMethod = 'upload_and_parse',
   onSelect, // 添加 onSelect 回调属性
 }: IProps) => {
-  const { t } = useTranslate('chat');
+  const { t,i18n } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
   const { deleteDocument } = useDeleteDocument();
   const { data: documentInfos, setDocumentIds } = useFetchDocumentInfosByIds();
@@ -113,17 +113,26 @@ const MessageInput = ({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const options = [
+  const optionsZh = [
     '自由对话',
     '程序开发',
     '知识库',
     '日志分析',
     'CMDB',
   ]; // 选择框的选项
+  const optionsEn = [
+    'CHAT',
+    'CODE',
+    'KNOWLEDGE',
+    'LOG',
+    'CMDB',
+  ]; // 选择框的选项
+ 
+  console.log(t)
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
   const [placeholderValue, setPlaceholderValue] =
-    useState('随时@小吉, 使用各种能力...'); // 输入框的值
+    useState( t('skillplaceholder')); // 输入框的值
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
@@ -165,7 +174,7 @@ const MessageInput = ({
     // 使用 Modal 进行提示
     // 显示成功通知
     notification.success({
-      message: `你选择了: ${option} 技能`,
+      message:  t('msg')+` : ${option} `,
       placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
     });
     setPopoverVisible(false);
@@ -380,7 +389,7 @@ conversationIdRef.current = conversationId;
       <Popover
         content={
           <List
-            dataSource={options}
+            dataSource={i18n.language === 'zh' ? optionsZh : optionsEn}
             renderItem={(item: ChangeEvent<HTMLInputElement>) => (
               <List.Item
                 onClick={() => handleSelect(item)}
@@ -391,7 +400,7 @@ conversationIdRef.current = conversationId;
             )}
           />
         }
-        title="请选择一个技能"
+        title= {t('selectSkillHolder')}
         trigger="click"
         open={popoverVisible}
         onOpenChange={setPopoverVisible}

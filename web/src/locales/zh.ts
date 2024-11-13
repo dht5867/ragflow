@@ -437,6 +437,16 @@ export default {
       multiTurn: '多轮对话优化',
       multiTurnTip:
         '在多轮对话的中，对去知识库查询的问题进行优化。会调用大模型额外消耗token。',
+      msg:"你选择了",
+      skillplaceholder:"随时@小吉, 使用各种能力...",
+      selectSkillHolder:"请选择一个技能",
+      skills:{
+        chat: '自由对话',
+        code:'程序开发',
+        knowledge: '知识库',
+        log:'日志分析',
+        cmdb:'CMDB',
+      }
     },
     setting: {
       profile: '个人信息概要',

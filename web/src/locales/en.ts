@@ -450,6 +450,16 @@ The above is the content you need to summarize.`,
       multiTurn: 'Multi-turn optimization',
       multiTurnTip:
         'In multi-round conversations, the query to the knowledge base is optimized. The large model will be called to consume additional tokens.',
+      msg:"You Selected ",
+      skillplaceholder:" Enter @ , Get SKill ",
+      selectSkillHolder:"Please select One Skill",
+      skills:{
+          chat: 'skills',
+          code:'code',
+          knowledge: 'knowledge',
+          log:'log',
+          cmdb:'cmdb',
+      }
     },
     setting: {
       profile: 'Profile',
