@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Avatar, Dropdown, Menu, MenuProps, Modal } from 'antd';
-import { history } from 'umi';
 import { useLogout } from '@/hooks/login-hooks';
+import { useTranslate } from '@/hooks/common-hooks';
 
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 
@@ -9,6 +9,7 @@ import styles from '../../index.less';
 import UserSettingPassword from '@/pages/user-setting/setting-password';
 
 const App: React.FC = () => {
+  const { t } = useTranslate('header');
   const { data: userInfo } = useFetchUserInfo();
   const { logout } = useLogout();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -31,14 +32,14 @@ const App: React.FC = () => {
   const menuItems: MenuProps['items'] = [
     {
       key: 'change-password',
-      label: <span>修改密码</span>,
+      label: <span> {t('password')}</span>,
     },
     {
       type: 'divider',
     },
     {
       key: 'logout',
-      label: <span>退出</span>,
+      label: <span>{t('loginout')}</span>,
     },
   ];
   return (

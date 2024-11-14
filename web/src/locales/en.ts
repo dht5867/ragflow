@@ -69,7 +69,9 @@ export default {
       model:'Model',
       team:'Team',
       user:'User',
-      name:'IntelliOps'
+      name:'IntelliOps',
+      password:'update password',
+      loginout:'logout'
     },
     knowledgeList: {
       welcome: 'Welcome back',
