@@ -206,12 +206,12 @@ def completion():
         def stream():
             nonlocal dia, msg, req, conv
             try:
-                if selectedSkill=='知识库'  :
+                if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE':
                     for ans in chat(dia, msg, True, **req):
                         fillin_conv(ans)
                         yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
-                elif selectedSkill=='日志分析':
+                elif selectedSkill=='日志分析' or selectedSkill=='LOG' :
                     chat_logger.info('-------日志分析----')
                     for ans in file_chat(dia, msg, True, **req):
                         fillin_conv(ans)
