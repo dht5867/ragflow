@@ -23,6 +23,7 @@ import { memo } from 'react';
 import AssistantIntro from './assistant-intro'; // 根据文件路径引入组件
 import RenderIntro from './base-intro'; // 根据文件路径引入组件
 import styles from './index.less';
+import { useTranslate } from '@/hooks/common-hooks';
 
 interface IProps {
   controller: AbortController;
@@ -61,13 +62,15 @@ const ChatContainer = ({ controller }: IProps) => {
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
 
+    const { t,i18n } = useTranslate('chat');
+    
   return (
     <>
       <Flex flex={1} className={styles.chatContainer} vertical>
         <Flex flex={1} vertical className={styles.messageContainer}>
           {derivedMessages.length === 0 ? (
             // 当没有消息时显示 RenderIntro
-            <RenderIntro selectedValue={selectedValue} />
+            <RenderIntro selectedValue={selectedValue} language={i18n.language} />
           ) : (
             <div>
               <Spin spinning={loading}>
