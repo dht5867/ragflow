@@ -88,7 +88,7 @@ const RagHeader = () => {
     >
       <Space size={12} onClick={handleLogoClick} className={styles.logoWrapper}>
         <img src="/logo.jpg" alt="" className={styles.appIcon} />
-        <span className={styles.appName}>{appConf.appName}</span>
+        <span className={styles.appName}>{ t('name')}</span>
       </Space>
       {/* 使用 Menu 组件实现导航 */}
       {/* <Menu

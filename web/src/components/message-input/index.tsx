@@ -128,11 +128,11 @@ const MessageInput = ({
     'CMDB',
   ]; // 选择框的选项
  
-  console.log(t)
+
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
-  const [placeholderValue, setPlaceholderValue] =
-    useState( t('skillplaceholder')); // 输入框的值
+  const [placeholderValue, setPlaceholderValue] = useState( t('')); // 输入框的值
+  console.log(placeholderValue)
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
@@ -389,7 +389,7 @@ conversationIdRef.current = conversationId;
       <Popover
         content={
           <List
-            dataSource={i18n.language === 'zh' ? optionsZh : optionsEn}
+            dataSource={ i18n.language === 'zh' ? optionsZh : optionsEn}
             renderItem={(item: ChangeEvent<HTMLInputElement>) => (
               <List.Item
                 onClick={() => handleSelect(item)}
@@ -408,7 +408,7 @@ conversationIdRef.current = conversationId;
       ></Popover>
       <Input
         size="large"
-        placeholder={placeholderValue}
+        placeholder={ placeholderValue =='chat.' ? (i18n.language === 'en' ? 'Call @ IntelliOps at any time, using  skills...' :'随时@小吉, 使用各种能力...' ):placeholderValue }
         value={value}
         disabled={disabled}
         className={classNames({ [styles.inputWrapper]: fileList.length === 0 })}

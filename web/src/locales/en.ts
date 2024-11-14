@@ -68,7 +68,8 @@ export default {
       automation:'Ansible',
       model:'Model',
       team:'Team',
-      user:'User'
+      user:'User',
+      name:'IntelliOps'
     },
     knowledgeList: {
       welcome: 'Welcome back',
@@ -451,8 +452,8 @@ The above is the content you need to summarize.`,
       multiTurnTip:
         'In multi-round conversations, the query to the knowledge base is optimized. The large model will be called to consume additional tokens.',
       msg:"You Selected ",
-      skillplaceholder:" Enter @ , Get SKill ",
-      selectSkillHolder:"Please select One Skill",
+      skillplaceholder:"Call IntelliOps  at any time, using  skills...",
+      selectSkillHolder:"Please select one skill",
       skills:{
           chat: 'skills',
           code:'code',

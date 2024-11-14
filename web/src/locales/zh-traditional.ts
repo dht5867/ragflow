@@ -57,18 +57,19 @@ export default {
     header: {
       knowledgeBase: '知識庫',
       chat: '聊天',
-      register: '註冊',
-      signin: '登入',
+      register: '注册',
+      signin: '登录',
       home: '首頁',
-      setting: '用戶設置',
+      setting: '用户设置',
       logout: '登出',
       fileManager: '文件管理',
       flow: 'Agent',
-      search: '搜尋',
+      search: '知识搜索',
       automation:'自动化运维',
       model:'模型提供商',
       team:'团队成员配置',
-      user:'个人信息概要'
+      user:'个人信息概要',
+      name:'小吉助手'
     },
     knowledgeList: {
       welcome: '歡迎回來',

@@ -68,7 +68,8 @@ export default {
       automation:'自动化运维',
       model:'模型提供商',
       team:'团队成员配置',
-      user:'个人信息概要'
+      user:'个人信息概要',
+      name:'小吉助手'
     },
     knowledgeList: {
       welcome: '欢迎回来',
