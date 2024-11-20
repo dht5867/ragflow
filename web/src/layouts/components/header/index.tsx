@@ -11,8 +11,6 @@ import Toolbar from '../right-toolbar';
 import { useFetchAppConf } from '@/hooks/logic-hooks';
 import {
   AppstoreOutlined,
-  MessageOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import styles from './index.less';
