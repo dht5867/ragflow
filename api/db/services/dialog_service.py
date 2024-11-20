@@ -13,18 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import logging
 import binascii
 import os
 import json
 import re
 from copy import deepcopy
 from timeit import default_timer as timer
-from typing import Optional
-from api.db import LLMType, ParserType, StatusEnum
+import datetime
+from datetime import timedelta
+from api.db import LLMType, ParserType,StatusEnum
 from api.db.db_models import Dialog, Conversation,DB
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
+from api import settings
 from api.db.services.user_service import UserTenantService
 from api.settings import chat_logger, retrievaler, kg_retrievaler
 from rag.app.resume import forbidden_select_fields4resume
@@ -279,7 +282,8 @@ def message_fit_in(msg, max_length=4000):
         return c, msg
 
     msg_ = [m for m in msg[:-1] if m["role"] == "system"]
-    msg_.append(msg[-1])
+    if len(msg) > 1:
+        msg_.append(msg[-1])
     msg = msg_
     c = count()
     if c < max_length:
@@ -340,7 +344,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         return {"answer": "**ERROR**: Knowledge bases use different embedding models.", "reference": []}
 
     is_kg = all([kb.parser_id == ParserType.KG for kb in kbs])
-    retr = retrievaler if not is_kg else kg_retrievaler
+    retr = settings.retrievaler if not is_kg else settings.kg_retrievaler
 
     questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
     attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
@@ -351,6 +355,9 @@ def chat(dialog, messages, stream=True, **kwargs):
                 attachments.extend(m["doc_ids"])
 
     embd_mdl = LLMBundle(dialog.tenant_id, LLMType.EMBEDDING, embd_nms[0])
+    if not embd_mdl:
+        raise LookupError("Embedding model(%s) not found" % embd_nms[0])
+
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
     else:
@@ -363,7 +370,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
     # try to use sql if field mapping is good to go
     if field_map:
-        chat_logger.info("Use SQL to retrieval:{}".format(questions[-1]))
+        logging.debug("Use SQL to retrieval:{}".format(questions[-1]))
         ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
         if ans:
             yield ans
@@ -382,6 +389,8 @@ def chat(dialog, messages, stream=True, **kwargs):
         questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
     else:
         questions = questions[-1:]
+    refineQ_tm = timer()
+    keyword_tm = timer()
 
     rerank_mdl = None
     if dialog.rerank_id:
@@ -394,6 +403,8 @@ def chat(dialog, messages, stream=True, **kwargs):
     else:
         if prompt_config.get("keyword", False):
             questions[-1] += keyword_extraction(chat_mdl, questions[-1])
+            keyword_tm = timer()
+
         tenant_ids = list(set([kb.tenant_id for kb in kbs]))
         chat_logger.info(tenant_ids)
         kbinfos = retr.retrieval(" ".join(questions), embd_mdl, tenant_ids, dialog.kb_ids, 1, dialog.top_n,
@@ -402,8 +413,8 @@ def chat(dialog, messages, stream=True, **kwargs):
                                         doc_ids=attachments,
                                         top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl)
     knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
-    chat_logger.info(
-        "问题 {}-> 知识库 {}".format(" ".join(questions), "\n->".join(knowledges)))
+    logging.debug(
+        "{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
     retrieval_tm = timer()
     chat_logger.info('-----knowledges')
     chat_logger.info(knowledges)
@@ -467,7 +478,9 @@ def chat(dialog, messages, stream=True, **kwargs):
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
         done_tm = timer()
-        prompt += "\n\n### Elapsed\n  - Retrieval: %.1f ms\n  - LLM: %.1f ms"%((retrieval_tm-st)*1000, (done_tm-st)*1000)
+        prompt += "\n\n### Elapsed\n  - Refine Question: %.1f ms\n  - Keywords: %.1f ms\n  - Retrieval: %.1f ms\n  - LLM: %.1f ms" % (
+            (refineQ_tm - st) * 1000, (keyword_tm - refineQ_tm) * 1000, (retrieval_tm - keyword_tm) * 1000,
+            (done_tm - retrieval_tm) * 1000)
         return {"answer": answer, "reference": refs, "prompt": prompt}
 
     if stream:
@@ -488,7 +501,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     else:
         chat_logger.info("--chatchat---")
         answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
-        chat_logger.info("User: {}|Assistant: {}".format(
+        logging.debug("User: {}|Assistant: {}".format(
             msg[-1]["content"], answer))
         res = decorate_answer(answer)
         res["audio_binary"] = tts(tts_mdl, answer)
@@ -697,7 +710,9 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
         done_tm = timer()
-        prompt += "\n\n### Elapsed\n  - Retrieval: %.1f ms\n  - LLM: %.1f ms"%((retrieval_tm-st)*1000, (done_tm-st)*1000)
+        prompt += "\n\n### Elapsed\n  - Refine Question: %.1f ms\n  - Keywords: %.1f ms\n  - Retrieval: %.1f ms\n  - LLM: %.1f ms" % (
+            (refineQ_tm - st) * 1000, (keyword_tm - refineQ_tm) * 1000, (retrieval_tm - keyword_tm) * 1000,
+            (done_tm - retrieval_tm) * 1000)
         return {"answer": answer, "reference": refs, "prompt": prompt}
 
     if stream:
@@ -716,7 +731,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         yield decorate_answer(answer)
     else:
         answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
-        chat_logger.info("User: {}|Assistant: {}".format(
+        logging.debug("User: {}|Assistant: {}".format(
             msg[-1]["content"], answer))
         res = decorate_answer(answer)
         res["audio_binary"] = tts(tts_mdl, answer)
@@ -833,8 +848,7 @@ def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
         nonlocal sys_prompt, user_promt, question, tried_times
         sql = chat_mdl.chat(sys_prompt, [{"role": "user", "content": user_promt}], {
             "temperature": 0.06})
-        print(user_promt, sql)
-        chat_logger.info(f"“{question}”==>{user_promt} get SQL: {sql}")
+        logging.debug(f"{question} ==> {user_promt} get SQL: {sql}")
         sql = re.sub(r"[\r\n]+", " ", sql.lower())
         sql = re.sub(r".*select ", "select ", sql.lower())
         sql = re.sub(r" +", " ", sql)
@@ -854,11 +868,9 @@ def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
                     flds.append(k)
                 sql = "select doc_id,docnm_kwd," + ",".join(flds) + sql[8:]
 
-        print(f"“{question}” get SQL(refined): {sql}")
-
-        chat_logger.info(f"“{question}” get SQL(refined): {sql}")
+        logging.debug(f"{question} get SQL(refined): {sql}")
         tried_times += 1
-        return retrievaler.sql_retrieval(sql, format="json"), sql
+        return settings.retrievaler.sql_retrieval(sql, format="json"), sql
 
     tbl, sql = get_table()
     if tbl is None:
@@ -885,10 +897,9 @@ def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
             question, sql, tbl["error"]
         )
         tbl, sql = get_table()
-        chat_logger.info("TRY it again: {}".format(sql))
+        logging.debug("TRY it again: {}".format(sql))
 
-    chat_logger.info("GET table: {}".format(tbl))
-    print(tbl)
+    logging.debug("GET table: {}".format(tbl))
     if tbl.get("error") or len(tbl["rows"]) == 0:
         return None
 
@@ -910,6 +921,7 @@ def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
     rows = ["|" +
             "|".join([rmSpace(str(r[i])) for i in clmn_idx]).replace("None", " ") +
             "|" for r in tbl["rows"]]
+    rows = [r for r in rows if re.sub(r"[ |]+", "", r)]
     if quota:
         rows = "\n".join([r + f" ##{ii}$$ |" for ii, r in enumerate(rows)])
     else:
@@ -917,7 +929,7 @@ def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
     rows = re.sub(r"T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+Z)?\|", "|", rows)
 
     if not docid_idx or not docnm_idx:
-        chat_logger.warning("SQL missing field: " + sql)
+        logging.warning("SQL missing field: " + sql)
         return {
             "answer": "\n".join([clmns, line, rows]),
             "reference": {"chunks": [], "doc_aggs": []},
@@ -1042,9 +1054,16 @@ def full_question(tenant_id, llm_id, messages):
         if m["role"] not in ["user", "assistant"]: continue
         conv.append("{}: {}".format(m["role"].upper(), m["content"]))
     conv = "\n".join(conv)
+    today = datetime.date.today().isoformat()
+    yesterday = (datetime.date.today() - timedelta(days=1)).isoformat()
+    tomorrow = (datetime.date.today() + timedelta(days=1)).isoformat()
     prompt = f"""
 Role: A helpful assistant
-Task: Generate a full user question that would follow the conversation.
+
+Task and steps: 
+    1. Generate a full user question that would follow the conversation.
+    2. If the user's question involves relative date, you need to convert it into absolute date based on the current date, which is {today}. For example: 'yesterday' would be converted to {yesterday}.
+    
 Requirements & Restrictions:
   - Text generated MUST be in the same language of the original user's question.
   - If the user's latest question is completely, don't do anything, just return the original question.
@@ -1073,6 +1092,14 @@ User: What's her full name?
 ###############
 Output: What's the full name of Donald Trump's mother Mary Trump?
 
+------------
+# Example 3
+## Conversation
+USER: What's the weather today in London?
+ASSISTANT:  Cloudy.
+USER: What's about tomorrow in Rochester?
+###############
+Output: What's the weather in Rochester on {tomorrow}?
 ######################
 
 # Real Data
@@ -1097,7 +1124,7 @@ def ask(question, kb_ids, tenant_id):
     embd_nms = list(set([kb.embd_id for kb in kbs]))
 
     is_kg = all([kb.parser_id == ParserType.KG for kb in kbs])
-    retr = retrievaler if not is_kg else kg_retrievaler
+    retr = settings.retrievaler if not is_kg else settings.kg_retrievaler
 
     embd_mdl = LLMBundle(tenant_id, LLMType.EMBEDDING, embd_nms[0])
     chat_mdl = LLMBundle(tenant_id, LLMType.CHAT)

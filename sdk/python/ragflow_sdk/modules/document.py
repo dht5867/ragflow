@@ -1,7 +1,6 @@
 import json
 from .base import Base
 from .chunk import Chunk
-from typing import List
 
 
 class Document(Base):
@@ -50,8 +49,8 @@ class Document(Base):
             return res.content
 
 
-    def list_chunks(self,offset=0, limit=30, keywords="", id:str=None):
-        data={"document_id": self.id,"keywords": keywords,"offset":offset,"limit":limit,"id":id}
+    def list_chunks(self,page=1, page_size=30, keywords=""):
+        data={"keywords": keywords,"page":page,"page_size":page_size}
         res = self.get(f'/datasets/{self.dataset_id}/documents/{self.id}/chunks', data)
         res = res.json()
         if res.get("code") == 0:
@@ -63,15 +62,15 @@ class Document(Base):
         raise Exception(res.get("message"))
 
 
-    def add_chunk(self, content: str,important_keywords:List[str]=[]):
+    def add_chunk(self, content: str,important_keywords: list[str] = []):
         res = self.post(f'/datasets/{self.dataset_id}/documents/{self.id}/chunks', {"content":content,"important_keywords":important_keywords})
         res = res.json()
         if res.get("code") == 0:
             return Chunk(self.rag,res["data"].get("chunk"))
         raise Exception(res.get("message"))
 
-    def delete_chunks(self,ids:List[str] = None):
-        res = self.rm(f"datasets/{self.dataset_id}/documents/{self.id}/chunks",{"ids":ids})
+    def delete_chunks(self,ids:list[str] | None = None):
+        res = self.rm(f"/datasets/{self.dataset_id}/documents/{self.id}/chunks",{"chunk_ids":ids})
         res = res.json()
         if res.get("code")!=0:
             raise Exception(res.get("message"))

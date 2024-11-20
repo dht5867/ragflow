@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import logging
 from abc import ABC
 
 import pandas as pd
@@ -20,7 +21,7 @@ import pandas as pd
 from api.db import LLMType
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMBundle
-from api.settings import retrievaler
+from api import settings
 from agent.component.base import ComponentBase, ComponentParamBase
 
 
@@ -66,7 +67,7 @@ class Retrieval(ComponentBase, ABC):
         if self._param.rerank_id:
             rerank_mdl = LLMBundle(kbs[0].tenant_id, LLMType.RERANK, self._param.rerank_id)
 
-        kbinfos = retrievaler.retrieval(query, embd_mdl, kbs[0].tenant_id, self._param.kb_ids,
+        kbinfos = settings.retrievaler.retrieval(query, embd_mdl, kbs[0].tenant_id, self._param.kb_ids,
                                         1, self._param.top_n,
                                         self._param.similarity_threshold, 1 - self._param.keywords_similarity_weight,
                                         aggs=False, rerank_mdl=rerank_mdl)
@@ -80,7 +81,7 @@ class Retrieval(ComponentBase, ABC):
         df = pd.DataFrame(kbinfos["chunks"])
         df["content"] = df["content_with_weight"]
         del df["content_with_weight"]
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>\n", query, df)
+        logging.debug("{} {}".format(query, df))
         return df
 
 

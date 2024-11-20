@@ -176,7 +176,7 @@ export const useEditDialog = () => {
     async (dialogId?: string) => {
       if (dialogId) {
         const ret = await fetchDialog(dialogId);
-        if (ret.retcode === 0) {
+        if (ret.code === 0) {
           setDialog(ret.data);
         }
       }
@@ -401,7 +401,7 @@ export const useSendNextMessage = (
         controller,
       );
 
-      if (res && (res?.response.status !== 200 || res?.data?.retcode !== 0)) {
+      if (res && (res?.response.status !== 200 || res?.data?.code !== 0)) {
         // cancel loading
         setValue(message.content);
         console.info('removeLatestMessage111');
@@ -430,7 +430,7 @@ export const useSendNextMessage = (
           true,
           conversationId,
         );
-        if (data.retcode === 0) {
+        if (data.code === 0) {
           setConversationIsNew('');
           const id = data.data.id;
           // currentConversationIdRef.current = id;
@@ -558,7 +558,7 @@ export const useRenameConversation = () => {
         is_new: false,
       });
 
-      if (ret.retcode === 0) {
+      if (ret.code === 0) {
         hideConversationRenameModal();
       }
     },
@@ -568,7 +568,7 @@ export const useRenameConversation = () => {
   const handleShowConversationRenameModal = useCallback(
     async (conversationId: string) => {
       const ret = await fetchConversation(conversationId);
-      if (ret.retcode === 0) {
+      if (ret.code === 0) {
         setConversation(ret.data);
       }
       showConversationRenameModal();

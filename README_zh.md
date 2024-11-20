@@ -8,7 +8,8 @@
   <a href="./README.md">English</a> |
   <a href="./README_zh.md">简体中文</a> |
   <a href="./README_ja.md">日本語</a> |
-  <a href="./README_ko.md">한국어</a>
+  <a href="./README_ko.md">한국어</a> |
+  <a href="./README_id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
@@ -54,7 +55,6 @@
 ## 🔥 近期更新
 
 - 2024-11-01 对解析后的chunk加入关键词抽取和相关问题生成以提高召回的准确度。
-- 2024-09-29 优化多轮对话.
 - 2024-09-13 增加知识库问答搜索模式。
 - 2024-09-09 在 Agent 中加入医疗问诊模板。
 - 2024-08-22 支持用 RAG 技术实现从自然语言到 SQL 语句的转换。
@@ -174,7 +174,7 @@
     * Running on http://x.x.x.x:9380
     INFO:werkzeug:Press CTRL+C to quit
    ```
-   > 如果您跳过这一步系统确认步骤就登录 RAGFlow，你的浏览器有可能会提示 `network abnormal` 或 `网络异常`，因为 RAGFlow 可能并未完全启动成功。
+   > 如果您跳过这一步系统确认步骤就登录 RAGFlow，你的浏览器有可能会提示 `network anormal` 或 `网络异常`，因为 RAGFlow 可能并未完全启动成功。
 
 5. 在你的浏览器中输入你的服务器对应的 IP 地址并登录 RAGFlow。
    > 上面这个例子中，您只需输入 http://IP_OF_YOUR_MACHINE 即可：未改动过配置则无需输入端口（默认的 HTTP 服务端口 80）。
@@ -206,6 +206,28 @@
 > $ docker compose -f docker-compose.yml up -d
 > ```
 
+### 把文档引擎从 Elasticsearch 切换成为 Infinity
+
+RAGFlow 默认使用 Elasticsearch 存储文本和向量数据. 如果要切换为 [Infinity](https://github.com/infiniflow/infinity/), 可以按照下面步骤进行:
+
+1. 停止所有容器运行:
+
+   ```bash
+   $ docker compose -f docker/docker-compose.yml down -v
+   ```
+
+2. 设置 **docker/.env** 目录中的 `DOC_ENGINE` 为 `infinity`.
+
+3. 启动容器:
+
+   ```bash
+   $ docker compose -f docker/docker-compose.yml up -d
+   ```
+
+> [!WARNING] 
+> Infinity 目前官方并未正式支持在 Linux/arm64 架构下的机器上运行.
+
+
 ## 🔧 源码编译 Docker 镜像（不含 embedding 模型）
 
 本 Docker 镜像大小约 1 GB 左右并且依赖外部的大模型和 embedding 服务。
@@ -215,7 +237,7 @@ git clone https://github.com/infiniflow/ragflow.git
 cd ragflow/
 pip3 install huggingface-hub nltk
 python3 download_deps.py
-docker build -f Dockerfile.slim -t infiniflow/ragflow:dev-slim .
+bash build_docker_image.sh slim
 ```
 
 ## 🔧 源码编译 Docker 镜像（包含 embedding 模型）
@@ -227,7 +249,7 @@ git clone https://github.com/infiniflow/ragflow.git
 cd ragflow/
 pip3 install huggingface-hub nltk
 python3 download_deps.py
-docker build -f Dockerfile -t infiniflow/ragflow:dev .
+bash build_docker_image.sh full
 ```
 
 ## 🔨 以源代码启动服务
@@ -252,7 +274,7 @@ docker build -f Dockerfile -t infiniflow/ragflow:dev .
 
    在 `/etc/hosts` 中添加以下代码，将 **docker/service_conf.yaml** 文件中的所有 host 地址都解析为 `127.0.0.1`：  
    ```
-   127.0.0.1       es01 mysql minio redis
+   127.0.0.1       es01 infinity mysql minio redis
    ```  
    在文件 **docker/service_conf.yaml** 中，对照 **docker/.env** 的配置将 mysql 端口更新为 `5455`，es 端口更新为 `1200`。
 

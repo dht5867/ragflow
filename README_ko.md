@@ -9,6 +9,7 @@
   <a href="./README_zh.md">简体中文</a> |
   <a href="./README_ja.md">日本語</a> |
   <a href="./README_ko.md">한국어</a> |
+  <a href="./README_id.md">Bahasa Indonesia</a>
 </p>
 
 <p align="center">
@@ -56,8 +57,6 @@
 ## 🔥 업데이트
 
 - 2024-11-01 파싱된 청크에 키워드 추출 및 관련 질문 생성을 추가하여 재현율을 향상시킵니다.
-  
-- 2024-09-29 다단계 대화를 최적화합니다.
   
 - 2024-09-13 지식베이스 Q&A 검색 모드를 추가합니다.
   
@@ -180,7 +179,7 @@
     * Running on http://x.x.x.x:9380
     INFO:werkzeug:Press CTRL+C to quit
    ```
-   > 만약 확인 단계를 건너뛰고 바로 RAGFlow에 로그인하면, RAGFlow가 완전히 초기화되지 않았기 때문에 브라우저에서 `network abnormal` 오류가 발생할 수 있습니다.
+   > 만약 확인 단계를 건너뛰고 바로 RAGFlow에 로그인하면, RAGFlow가 완전히 초기화되지 않았기 때문에 브라우저에서 `network anormal` 오류가 발생할 수 있습니다.
 
 5. 웹 브라우저에 서버의 IP 주소를 입력하고 RAGFlow에 로그인하세요.
    > 기본 설정을 사용할 경우, `http://IP_OF_YOUR_MACHINE`만 입력하면 됩니다 (포트 번호는 제외). 기본 HTTP 서비스 포트 `80`은 기본 구성으로 사용할 때 생략할 수 있습니다.
@@ -209,6 +208,21 @@
 > $ docker compose -f docker/docker-compose.yml up -d
 > ```
 
+### Elasticsearch 에서 Infinity 로 문서 엔진 전환
+
+RAGFlow 는 기본적으로 Elasticsearch 를 사용하여 전체 텍스트 및 벡터를 저장합니다. [Infinity]로 전환(https://github.com/infiniflow/infinity/), 다음 절차를 따르십시오.
+1. 실행 중인 모든 컨테이너를 중지합니다.
+   ```bash
+   $docker compose-f docker/docker-compose.yml down-v
+   ```
+2. **docker/.env**의 "DOC_ENGINE" 을 "infinity" 로 설정합니다.
+3. 컨테이너 부팅:
+   ```bash
+   $docker compose-f docker/docker-compose.yml up-d
+   ``` 
+> [!WARNING]
+> Linux/arm64 시스템에서 Infinity로 전환하는 것은 공식적으로 지원되지 않습니다.
+ 
 ## 🔧 소스 코드로 Docker 이미지를 컴파일합니다(임베딩 모델 포함하지 않음)
 
 이 Docker 이미지의 크기는 약 1GB이며, 외부 대형 모델과 임베딩 서비스에 의존합니다.
@@ -218,7 +232,7 @@ git clone https://github.com/infiniflow/ragflow.git
 cd ragflow/
 pip3 install huggingface-hub nltk
 python3 download_deps.py
-docker build -f Dockerfile.slim -t infiniflow/ragflow:dev-slim .
+bash build_docker_image.sh slim
 ```
 
 ## 🔧 소스 코드로 Docker 이미지를 컴파일합니다(임베딩 모델 포함)
@@ -230,7 +244,7 @@ git clone https://github.com/infiniflow/ragflow.git
 cd ragflow/
 pip3 install huggingface-hub nltk
 python3 download_deps.py
-docker build -f Dockerfile -t infiniflow/ragflow:dev .
+bash build_docker_image.sh full
 ```
 
 ## 🔨 소스 코드로 서비스를 시작합니다.
@@ -255,7 +269,7 @@ docker build -f Dockerfile -t infiniflow/ragflow:dev .
 
    `/etc/hosts` 에 다음 줄을 추가하여 **docker/service_conf.yaml** 에 지정된 모든 호스트를 `127.0.0.1` 로 해결합니다:  
    ```
-   127.0.0.1       es01 mysql minio redis
+   127.0.0.1       es01 infinity mysql minio redis
    ```  
    **docker/service_conf.yaml** 에서 mysql 포트를 `5455` 로, es 포트를 `1200` 으로 업데이트합니다( **docker/.env** 에 지정된 대로).
 

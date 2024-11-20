@@ -43,6 +43,15 @@ import {
   SendOutlined,
 } from '@ant-design/icons';
 import upperFirst from 'lodash/upperFirst';
+import {
+  CloudUpload,
+  Link2,
+  ListOrdered,
+  OptionIcon,
+  TextCursorInput,
+  ToggleLeft,
+  WrapText,
+} from 'lucide-react';
 
 export enum Operator {
   Begin = 'Begin',
@@ -2859,3 +2868,23 @@ export const TuShareSrcOptions = [
   'jinrongjie',
 ];
 export const CrawlerResultOptions = ['markdown', 'html', 'content'];
+
+export enum BeginQueryType {
+  Line = 'line',
+  Paragraph = 'paragraph',
+  Options = 'options',
+  File = 'file',
+  Integer = 'integer',
+  Boolean = 'boolean',
+  Url = 'url',
+}
+
+export const BeginQueryTypeIconMap = {
+  [BeginQueryType.Line]: TextCursorInput,
+  [BeginQueryType.Paragraph]: WrapText,
+  [BeginQueryType.Options]: OptionIcon,
+  [BeginQueryType.File]: CloudUpload,
+  [BeginQueryType.Integer]: ListOrdered,
+  [BeginQueryType.Boolean]: ToggleLeft,
+  [BeginQueryType.Url]: Link2,
+};
