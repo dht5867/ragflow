@@ -30,7 +30,7 @@ export default defineConfig({
   copy: ['src/conf.json'],
   proxy: {
     '/v1': {
-      target: 'http://121.40.167.143:9380/',
+      target: 'http://10.171.248.164:9380/',
       changeOrigin: true,
       ws: true,
       logger: console,

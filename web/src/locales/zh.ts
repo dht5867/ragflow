@@ -427,7 +427,7 @@ export default {
       partialTitle: '部分嵌入',
       extensionTitle: 'Chrome 插件',
       tokenError: '请先创建 API Token!',
-      searching: '搜索中',
+      searching: '思考中',
       parsing: '解析中',
       uploading: '上传中',
       uploadFailed: '上传失败',

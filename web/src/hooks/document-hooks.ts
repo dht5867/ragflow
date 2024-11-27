@@ -337,10 +337,10 @@ export const useFetchDocumentInfosByIds = () => {
     enabled: ids.length > 0,
     initialData: [],
     queryFn: async () => {
-      const { data } = await kbService.document_infos({ doc_ids: ids });
-      if (data.retcode === 0) {
-        return data.data;
-      }
+      // const { data } = await kbService.document_infos({ doc_ids: ids });
+      // if (data.retcode === 0) {
+      //   return data.data;
+      // }
 
       return [];
     },
@@ -429,7 +429,7 @@ export const useUploadAndParseDocument = (uploadMethod: string) => {
           formData.append('file', file as any);
         });
         if (uploadMethod === 'upload_and_parse') {
-          const data = await kbService.upload_and_parse(formData);
+          const data = await kbService.log_upload_and_parse(formData);
           return data?.data;
         }
         const data = await chatService.uploadAndParseExternal(formData);

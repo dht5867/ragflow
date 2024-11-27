@@ -24,6 +24,7 @@ from flask_login import login_required, current_user
 from api.db.db_models import Task, File
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
+from api.db.services.log_service import upload_temp_docs
 from api.db.services.task_service import TaskService, queue_tasks
 from api.db.services.user_service import UserTenantService
 from rag.nlp import search
@@ -34,12 +35,13 @@ from api.utils.api_utils import server_error_response, get_data_error_result, va
 from api.utils import get_uuid
 from api.db import FileType, TaskStatus, ParserType, FileSource
 from api.db.services.document_service import DocumentService, doc_upload_and_parse
-from api.settings import RetCode
+from api.settings import RetCode, api_address
 from api.utils.api_utils import get_json_result
 from rag.utils.storage_factory import STORAGE_IMPL
 from api.utils.file_utils import filename_type, thumbnail
 from api.utils.web_utils import html2pdf, is_valid_url
 from api.contants import IMG_BASE64_PREFIX
+import requests
 
 
 @manager.route('/upload', methods=['POST'])
@@ -526,4 +528,36 @@ def upload_and_parse():
 
     doc_ids = doc_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id)
 
+    return get_json_result(data=doc_ids)
+
+
+@manager.route("/log_upload_and_parse", methods=["POST"])
+@validate_request("conversation_id")
+def upload_parse():
+    if "file" not in request.files:
+        return get_json_result(
+            data=False, retmsg="No file part!", retcode=RetCode.ARGUMENT_ERROR
+        )
+    file_objs = request.files.getlist("file")
+    for file_obj in file_objs:
+        if file_obj.filename == "":
+            return get_json_result(
+                data=False, retmsg="No file selected!", retcode=RetCode.ARGUMENT_ERROR
+            )
+        
+     # 准备文件数据以转发到目标服务器
+    files = [
+        ('files', (file.filename, file.stream, file.content_type))
+        for file in file_objs
+    ]
+
+    result = upload_temp_docs(files)
+    doc_ids=[]
+    if "data" not in result:
+        return get_json_result(
+            data=False, retmsg="upload file failed!", retcode=RetCode.ARGUMENT_ERROR
+        )
+    else:
+        doc_ids.append(result.get("data", {}).get("id"))
+    
     return get_json_result(data=doc_ids)

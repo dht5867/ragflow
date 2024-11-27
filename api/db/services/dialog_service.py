@@ -19,7 +19,7 @@ import json
 import re
 from copy import deepcopy
 from timeit import default_timer as timer
-from typing import Optional
+from typing import Optional, Union
 from api.db import LLMType, ParserType, StatusEnum
 from api.db.db_models import Dialog, Conversation,DB
 from api.db.services.common_service import CommonService
@@ -32,6 +32,8 @@ from rag.nlp.search import index_name
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
 from rag.utils.es_conn import ELASTICSEARCH
+from api.db.services.log_service import log_file_chat
+
 PROMPT_TEMPLATES = {
     "llm_chat": {
         "default":
@@ -307,6 +309,81 @@ def llm_id2llm_type(llm_id):
         for llm in llm_factory["llm"]:
             if llm_id == llm["llm_name"]:
                 return llm["model_type"].strip(",")[-1]
+            
+def log_chat(dialog, messages, stream=True, **kwargs):
+    assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    #qwen2.5:14b@Ollama
+    refs = []
+    tmp = dialog.llm_id.split("@")
+    fid = None
+    llm_id = tmp[0]
+    if len(tmp)>1: fid = tmp[1]
+    #如果fid为False，则只根据llm_name查询LLMService；
+    #如果fid不为False，则在查询时还会根据fid进行过滤。
+    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    if not llm:
+        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
+            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
+        if not llm:
+            #
+            raise LookupError("LLM(%s) not found" % dialog.llm_id)
+        max_tokens = 8192
+    else:
+        max_tokens = llm[0].max_tokens
+    questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
+    chat_logger.info('questions------')
+    chat_logger.info(questions[-1])
+    attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
+    if "doc_ids" in messages[-1]:
+        attachments = messages[-1]["doc_ids"]
+        for m in messages[:-1]:
+            if "doc_ids" in m:
+                attachments.extend(m["doc_ids"])
+    chat_logger.info('doc_id------')
+    #取最后一个上传的日志
+    doc_id = attachments[-1]
+    chat_logger.info(doc_id)
+    # prompt_name=kwargs["prompt_name"]
+     
+    # 生成答案的装饰器
+    def decorate_answer(answer):
+        return {"answer": answer, "reference": refs}
+    
+    def check_error_msg(data: Union[str, dict, list], key: str = "errorMsg") -> str:
+        '''
+        return error message if error occured when requests API
+        '''
+        if isinstance(data, dict):
+            if key in data:
+                return data[key]
+            if "code" in data and data["code"] != 200:
+                return data["msg"]
+        return ""
+    # 根据stream选项处理模型的对话响应
+    if stream:
+        answer = ""
+        chat_logger.info('--- stream rest log_chat--')
+        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default"):
+            if error_msg := check_error_msg(d):  # check whether error occured
+                        chat_logger.error(error_msg)
+                        answer=" 后台服务错误，请重试对话"
+                        break
+            elif chunk := d.get("answer"):
+                       answer += chunk
+            yield {"answer": answer, "reference": {}}
+        yield decorate_answer(answer)
+    else:
+        answer = ""
+        chat_logger.info('---rest log_chat--')
+        for d in log_file_chat(questions, doc_id,top_k,similarity_threshold,[],False,llm_id,temperature ,max_tokens,prompt_name):
+            if error_msg := check_error_msg(d):  # check whether error occured
+                        chat_logger.error(error_msg)
+                        answer=" 后台服务错误，请重试对话"
+                        break
+            elif chunk := d.get("answer"):
+                       answer= chunk
+            yield {"answer": answer, "reference": {}}
+        yield decorate_answer(answer)
 
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
