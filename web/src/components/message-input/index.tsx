@@ -345,9 +345,9 @@ const MessageInput = ({
       // Upload Successfully
       if (Array.isArray(ids) && ids.length) {
         if (isShared) {
-          //await deleteDocument(ids);
+          await deleteDocument(ids);
         } else {
-          //await removeDocument(ids[0]);
+          await removeDocument(ids[0]);
         }
         setFileList((preList) => {
           return preList.filter((x) => getFileId(x) !== ids[0]);

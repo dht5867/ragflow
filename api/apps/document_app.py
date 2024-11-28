@@ -34,7 +34,7 @@ from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.utils.api_utils import server_error_response, get_data_error_result, validate_request
 from api.utils import get_uuid
 from api.db import FileType, TaskStatus, ParserType, FileSource
-from api.db.services.document_service import DocumentService, doc_upload_and_parse
+from api.db.services.document_service import DocumentService, doc_upload_and_parse, save_upload_and_parse
 from api.settings import RetCode, api_address
 from api.utils.api_utils import get_json_result
 from rag.utils.storage_factory import STORAGE_IMPL
@@ -557,7 +557,6 @@ def upload_parse():
         return get_json_result(
             data=False, retmsg="upload file failed!", retcode=RetCode.ARGUMENT_ERROR
         )
-    else:
-        doc_ids.append(result.get("data", {}).get("id"))
-    
+    doc_id=result.get("data", {}).get("id")
+    doc_ids = save_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id,doc_id)
     return get_json_result(data=doc_ids)

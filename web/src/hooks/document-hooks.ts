@@ -337,10 +337,10 @@ export const useFetchDocumentInfosByIds = () => {
     enabled: ids.length > 0,
     initialData: [],
     queryFn: async () => {
-      // const { data } = await kbService.document_infos({ doc_ids: ids });
-      // if (data.retcode === 0) {
-      //   return data.data;
-      // }
+      const { data } = await kbService.document_infos({ doc_ids: ids });
+      if (data.retcode === 0) {
+        return data.data;
+      }
 
       return [];
     },
