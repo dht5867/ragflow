@@ -470,10 +470,14 @@ export const useSendNextMessage = (
     (documentIds: string[]) => {
       if (trim(value) === '') return;
       const id = uuid();
-
       console.log('0----' + selectedValue);
       console.log(documentIds);
       console.log('1----press enter ');
+      if (selectedValue === "LOG" || selectedValue == "日志分析") {
+        if (documentIds.length <=0){
+            return 
+        } 
+      }
 
       addNewestQuestion({
         content: value,

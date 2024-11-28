@@ -205,6 +205,16 @@ def completion():
             conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
             ans["id"] = message_id
 
+        attachments = req["doc_ids"].split(",") if "doc_ids" in req else None
+        if "doc_ids" in msg[-1]:
+            attachments = msg[-1]["doc_ids"]
+            for m in msg[:-1]:
+                if "doc_ids" in m:
+                    attachments.extend(m["doc_ids"])
+        chat_logger.info('doc_id------')
+        #取最后一个上传的日志
+        if (selectedSkill=='日志分析' or selectedSkill=='LOG') and len(attachments)<=0:
+            return get_data_error_result(retmsg="please upload file")
         def stream():
             nonlocal dia, msg, req, conv
             try:

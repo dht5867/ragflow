@@ -462,7 +462,8 @@ The above is the content you need to summarize.`,
           knowledge: 'knowledge',
           log:'log',
           cmdb:'cmdb',
-      }
+      },
+      uploadfiletips:"please upload log file "
     },
     setting: {
       profile: 'Profile',

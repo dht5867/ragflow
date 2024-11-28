@@ -449,7 +449,8 @@ export default {
         knowledge: '知识库',
         log:'日志分析',
         cmdb:'CMDB',
-      }
+      },
+      uploadfiletips:"请上传文件"
     },
     setting: {
       profile: '个人信息概要',

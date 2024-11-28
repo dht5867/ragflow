@@ -132,7 +132,6 @@ const MessageInput = ({
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
   const [placeholderValue, setPlaceholderValue] = useState( t('')); // 输入框的值
-  console.log(placeholderValue)
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
@@ -334,6 +333,16 @@ const MessageInput = ({
   const handlePressEnter = useCallback(async () => {
     if (isUploadingFile) return;
     const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));
+    console.log(placeholderValue)
+    if(placeholderValue=="@LOG"||placeholderValue=="@日志分析"){
+      if(ids.length<=0){
+        notification.error({
+          message:  t('uploadfiletips'),
+          placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
+        });
+        return
+      }
+    }
 
     onPressEnter(ids);
     setFileList([]);
