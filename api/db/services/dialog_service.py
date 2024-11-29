@@ -375,7 +375,7 @@ def log_chat(dialog, messages, stream=True, **kwargs):
     else:
         answer = ""
         chat_logger.info('---rest log_chat--')
-        for d in log_file_chat(questions, doc_id,top_k,similarity_threshold,[],False,llm_id,temperature ,max_tokens,prompt_name):
+        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default"):
             if error_msg := check_error_msg(d):  # check whether error occured
                         chat_logger.error(error_msg)
                         answer=" 后台服务错误，请重试对话"
