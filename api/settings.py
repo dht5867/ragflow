@@ -256,7 +256,7 @@ class RetCode(IntEnum, CustomEnum):
 import sys
 DEFAULT_BIND_HOST = "0.0.0.0" if sys.platform != "win32" else "127.0.0.1"
 # httpx 请求默认超时时间（秒）。如果加载模型或对话较慢，出现超时错误，可以适当加大该值。
-HTTPX_DEFAULT_TIMEOUT = 3000.0
+HTTPX_DEFAULT_TIMEOUT = 30000.0
 
 # 是否显示详细日志
 log_verbose = False

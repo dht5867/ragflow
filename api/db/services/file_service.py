@@ -404,8 +404,8 @@ class FileService(CommonService):
                     name=file.filename,
                     kb_id=kb.id)
                 filetype = filename_type(filename)
-                if filetype == FileType.OTHER.value:
-                    raise RuntimeError("This type of file has not been supported yet!")
+                # if filetype == FileType.OTHER.value:
+                #     raise RuntimeError("This type of file has not been supported yet!")
                 location = filename
                 while STORAGE_IMPL.obj_exist(kb.id, location):
                     location += "_"
