@@ -326,6 +326,27 @@ export const useSelectNextMessages = (selectedValue: string) => {
     addPrologue();
   }, [addPrologue]);
 
+  // 特定选项逻辑: 处理 CMDB 示例消息
+  useEffect(() => {
+    if (selectedValue === 'CMDB') {
+      const cmdbExampleMessage = {
+        id: uuid(),
+        role: MessageType.Assistant,
+        content: `
+### CMDB 数据库数据示例
+| 主机名        | 运行环境 | 可用域 | 系统角色                | 虚拟化角色 | CPU | 内存    | 操作系统 | 操作系统版本         | Kernel                     | 系统架构 | IP地址                                      |
+|--------------|----------|--------|-------------------------|------------|-----|---------|----------|----------------------|----------------------------|-----------|---------------------------------------------|
+| baremetal02  | 生产     | tok04  | kvm                     | 物理机     | 192 | 516 GB  | Ubuntu   | 20.04                | 5.4.0-88-generic           | x86_64     | 192.168.122.110, 10.88.0.1, 128.168.65.99, 10.192.2 |
+| baremetal01  | 生产     | dal10  | nvidia, machine-learning, xiaoji | 物理机 | 192 | 258 GB  | Ubuntu   | 22.04                | 5.15.0-112-generic         | x86_64     | 192.168.67.2, 172.18.0.1, 10.171.248.164, 172.17.0 |
+        `,
+        selectedSkill: 'CMDB',
+      } as IMessage;
+      
+      setDerivedMessages([cmdbExampleMessage]);
+      
+    }
+  }, [selectedValue]);
+
   useEffect(() => {
     if (
       conversationId &&
@@ -514,6 +535,9 @@ export const useSendNextMessage = (
     },
     [addNewestQuestion, handleSendMessage, done, setValue, value],
   );
+
+   
+
 
   return {
     handlePressEnter,
