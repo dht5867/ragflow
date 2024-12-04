@@ -293,19 +293,33 @@ export const useSelectNextMessages = (selectedValue: string) => {
   const { data: conversation, loading } = useFetchNextConversation();
   const { data: dialog } = useFetchNextDialog();
   const { conversationId, dialogId, isNew } = useGetChatSearchParams();
+  //
 
   const addPrologue = useCallback(() => {
-    if (dialogId !== '' && isNew === 'true') {
-      const prologue = dialog.prompt_config?.prologue;
-      const nextMessage = {
-        role: MessageType.Assistant,
-        content: prologue,
-        id: uuid(),
-        selectedSkill: selectedValue,
-      } as IMessage;
+    console.log(selectedValue);
+    let prologue = dialog.prompt_config?.prologue;
 
-      setDerivedMessages([nextMessage]);
+    if (selectedValue === "CMDB") {
+      prologue = `
+### CMDB 数据库
+| 主机名        | 运行环境 | 可用域 | 系统角色                | 虚拟化角色 | CPU | 内存    | 操作系统 | 操作系统版本         | Kernel                     | 系统架构 | IP地址                                      |
+|--------------|----------|--------|-------------------------|------------|-----|---------|----------|----------------------|----------------------------|-----------|---------------------------------------------|
+| baremetal02  | 生产     | tok04  | kvm                     | 物理机     | 192 | 516 GB  | Ubuntu   | 20.04                | 5.4.0-88-generic           | x86_64     | 192.168.122.110, 10.88.0.1, 128.168.65.99, 10.192.2 |
+| baremetal01  | 生产     | dal10  | nvidia, machine-learning, xiaoji | 物理机 | 192 | 258 GB  | Ubuntu   | 22.04                | 5.15.0-112-generic         | x86_64     | 192.168.67.2, 172.18.0.1, 10.171.248.164, 172.17.0 |
+| ansible-builder | 测试   | tok04  | elasticsearch, grafana  | 虚拟机     | 2   | 3.73 GB | CentOS   | 8.0                  | 4.18.0-358.el8.x86_64      | x86_64     | 10.88.0.1, 172.16.0.2, 192.168.69.77        |
+| virtualserver01 | 准生产 | dal10  | nginx                   | 虚拟机     | 1   | 1.94 GB | Ubuntu   | 24.04                | 6.8.0-1011-ibm             | x86_64     | 10.171.248.150, 169.61.232.18, 192.168.67.1  |
+| prom         | 测试     | tok04  | prometheus, grafana     | 虚拟机     | 4   | 15.7 GB | RedHat   | 9.4                  | 5.14.0-427.13.1.el9_4.x86_64 | x86_64  | 10.88.0.1, 192.168.70.100                    |
+| pg1          | 测试     | tok04  | postgresql, ha_cluster  | 虚拟机     | 4   | 15.7 GB | RedHat   | 9.4                  | 5.14.0-427.13.1.el9_4.x86_64 | x86_64  | 192.168.70.211, 192.168.70.210               |
+`;
     }
+
+    const nextMessage = {
+      role: MessageType.Assistant,
+      content: prologue,
+      id: uuid(),
+      selectedSkill: selectedValue,
+    } as IMessage;
+    setDerivedMessages([nextMessage]);
   }, [isNew, dialog, dialogId, setDerivedMessages]);
 
   useEffect(() => {
@@ -318,10 +332,11 @@ export const useSelectNextMessages = (selectedValue: string) => {
       isNew !== 'true' &&
       conversation.message?.length > 0
     ) {
+      console.log(conversation.message)
       setDerivedMessages(conversation.message);
     }
-
     if (!conversationId) {
+
       setDerivedMessages([]);
     }
   }, [conversation.message, conversationId, setDerivedMessages, isNew]);
@@ -474,9 +489,9 @@ export const useSendNextMessage = (
       console.log(documentIds);
       console.log('1----press enter ');
       if (selectedValue === "LOG" || selectedValue == "日志分析") {
-        if (documentIds.length <=0){
-            return 
-        } 
+        if (documentIds.length <= 0) {
+          return
+        }
       }
 
       addNewestQuestion({
