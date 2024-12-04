@@ -163,7 +163,7 @@ const MessageItem = ({
               )}
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
-            <b>{isAssistant ? `【${skill || '自由对话'}】` : ''}</b>
+            <b>{isAssistant ? `【${ item.selectedSkill || '自由对话'}】` : ''}</b>
 
             <div
               className={

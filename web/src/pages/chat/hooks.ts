@@ -350,11 +350,10 @@ export const useSelectNextMessages = (selectedValue: string) => {
           ...(pre?.slice(0) ?? []),
           cmdbExampleMessage ,
         ];
+       
       });
-
-      
       //setDerivedMessages([cmdbExampleMessage]);
-      
+      console.log(derivedMessages)
     }
   }, [selectedValue]);
 
