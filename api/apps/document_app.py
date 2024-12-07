@@ -376,6 +376,7 @@ def run():
                 doc = doc.to_dict()
                 doc["tenant_id"] = tenant_id
                 bucket, name = File2DocumentService.get_storage_address(doc_id=doc["id"])
+                #文件放入消息队列开始解析
                 queue_tasks(doc, bucket, name)
 
         return get_json_result(data=True)

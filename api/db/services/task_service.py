@@ -174,6 +174,6 @@ def queue_tasks(doc: dict, bucket: str, name: str):
 
     bulk_insert_into_db(Task, tsks, True)
     DocumentService.begin2parse(doc["id"])
-
+    #生产redis 消息
     for t in tsks:
         assert REDIS_CONN.queue_product(SVR_QUEUE_NAME, message=t), "Can't access Redis. Please check the Redis' status."
