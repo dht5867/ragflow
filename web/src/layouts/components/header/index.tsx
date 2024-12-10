@@ -2,8 +2,7 @@ import { ReactComponent as FileIcon } from '@/assets/svg/file-management.svg';
 import { ReactComponent as KnowledgeBaseIcon } from '@/assets/svg/knowledge-base.svg';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useNavigateWithFromState } from '@/hooks/route-hook';
-import { MessageOutlined, SearchOutlined } from '@ant-design/icons';
-import { Flex, Layout, Radio, Space, theme } from 'antd';
+import { Layout, Menu, Space, theme } from 'antd';
 import { useCallback, useMemo } from 'react';
 import { useLocation } from 'umi';
 import Toolbar from '../right-toolbar';
@@ -11,6 +10,8 @@ import Toolbar from '../right-toolbar';
 import { useFetchAppConf } from '@/hooks/logic-hooks';
 import {
   AppstoreOutlined,
+  MessageOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import styles from './index.less';
@@ -60,16 +61,6 @@ const RagHeader = () => {
     [t],
   );
 
-  const currentPath = useMemo(() => {
-    return (
-      tagsData.find((x) => pathname.startsWith(x.path))?.name || 'knowledge'
-    );
-  }, [pathname, tagsData]);
-
-  const handleChange = (path: string) => {
-    navigate(path);
-  };
-
   const handleLogoClick = useCallback(() => {
     navigate('/');
   }, [navigate]);
@@ -96,35 +87,16 @@ const RagHeader = () => {
       }}
     >
       <Space size={12} onClick={handleLogoClick} className={styles.logoWrapper}>
-        <img src="/logo.svg" alt="" className={styles.appIcon} />
-        <span className={styles.appName}>{appConf.appName}</span>
+        <img src="/logo.jpg" alt="" className={styles.appIcon} />
+        <span className={styles.appName}>{ t('name')}</span>
       </Space>
-      <Space size={[0, 8]} wrap>
-        <Radio.Group
-          defaultValue="a"
-          buttonStyle="solid"
-          className={
-            themeRag === 'dark' ? styles.radioGroupDark : styles.radioGroup
-          }
-          value={currentPath}
-        >
-          {tagsData.map((item) => (
-            <Radio.Button
-              value={item.name}
-              onClick={() => handleChange(item.path)}
-              key={item.name}
-            >
-              <Flex align="center" gap={8}>
-                <item.icon
-                  className={styles.radioButtonIcon}
-                  stroke={item.name === currentPath ? 'black' : 'white'}
-                ></item.icon>
-                {item.name}
-              </Flex>
-            </Radio.Button>
-          ))}
-        </Radio.Group>
-      </Space>
+      {/* 使用 Menu 组件实现导航 */}
+      {/* <Menu
+        onClick={handleMenuClick}
+        selectedKeys={[currentKey]} // 当前选中的菜单项
+        mode="horizontal"
+        items={items}
+      /> */}
       <Toolbar></Toolbar>
     </Header>
   );

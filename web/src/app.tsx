@@ -63,7 +63,7 @@ function Root({ children }: React.PropsWithChildren) {
       >
         <App> {children}</App>
       </ConfigProvider>
-      <ReactQueryDevtools buttonPosition={'top-left'} />
+      <ReactQueryDevtools buttonPosition={'bottom-left'} />
     </>
   );
 }
