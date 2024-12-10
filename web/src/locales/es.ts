@@ -98,7 +98,7 @@ export default {
       processDuration: 'Duración del proceso',
       progressMsg: 'Mensaje de progreso',
       testingDescription:
-        '¡Último paso! Después del éxito, deja el resto al AI de Infiniflow.',
+        '¡Último paso! Después del éxito, deja el resto al AI de RAGFlow.',
       similarityThreshold: 'Umbral de similitud',
       similarityThresholdTip:
         'Usamos una puntuación de similitud híbrida para evaluar la distancia entre dos líneas de texto. Se pondera la similitud de palabras clave y la similitud coseno de vectores. Si la similitud entre la consulta y el fragmento es menor que este umbral, el fragmento será filtrado.',
@@ -231,7 +231,8 @@ export default {
       maxTokensMessage: 'El máximo de tokens es obligatorio',
       maxTokensTip:
         'Esto establece la longitud máxima de la salida del modelo, medida en el número de tokens (palabras o piezas de palabras).',
-      maxTokensInvalidMessage: 'Por favor, ingresa un número válido para Max Tokens.',
+      maxTokensInvalidMessage:
+        'Por favor, ingresa un número válido para Max Tokens.',
       maxTokensMinMessage: 'Max Tokens no puede ser menor que 0.',
       quote: 'Mostrar cita',
       quoteTip: '¿Debe mostrarse la fuente del texto original?',
@@ -276,6 +277,7 @@ export default {
       multiTurn: 'Optimización de múltiples turnos',
       multiTurnTip:
         'En conversaciones de múltiples rondas, la consulta a la base de conocimiento se optimiza. El gran modelo se llamará para consumir tokens adicionales.',
+      description: 'Description of assistant',
     },
     setting: {
       profile: 'Perfil',
@@ -284,7 +286,8 @@ export default {
       maxTokensMessage: 'El máximo de tokens es obligatorio',
       maxTokensTip:
         'Esto establece la longitud máxima de la salida del modelo, medida en el número de tokens (palabras o piezas de palabras).',
-      maxTokensInvalidMessage: 'Por favor, ingresa un número válido para Max Tokens.',
+      maxTokensInvalidMessage:
+        'Por favor, ingresa un número válido para Max Tokens.',
       maxTokensMinMessage: 'Max Tokens no puede ser menor que 0.',
       password: 'Contraseña',
       passwordDescription:
@@ -590,7 +593,7 @@ export default {
       bingTip:
         'Este componente se usa para obtener resultados de búsqueda de https://www.bing.com/. Típicamente, actúa como un complemento a las bases de conocimiento. Top N y la clave de suscripción de Bing especifican el número de resultados de búsqueda que necesitas ajustar.',
       apiKey: 'Clave API',
-      country: 'País',
+      country: 'País&Región',
       language: 'Idioma',
       googleScholar: 'Google Scholar',
       googleScholarDescription:

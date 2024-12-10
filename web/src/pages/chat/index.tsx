@@ -30,6 +30,7 @@ import {
 } from './hooks';
 
 import SvgIcon from '@/components/svg-icon';
+import { useTheme } from '@/components/theme-provider';
 import {
   useClickConversationCard,
   useClickDialogCard,
@@ -51,6 +52,7 @@ const Chat = () => {
   const { handleClickDialog } = useClickDialogCard();
   const { handleClickConversation } = useClickConversationCard();
   const { dialogId, conversationId } = useGetChatSearchParams();
+  const { theme } = useTheme();
   const {
     list: conversationList,
     addTemporaryConversation,
@@ -243,7 +245,9 @@ const Chat = () => {
                   key={x.id}
                   hoverable
                   className={classNames(styles.chatAppCard, {
-                    [styles.chatAppCardSelected]: dialogId === x.id,
+                    [theme === 'dark'
+                      ? styles.chatAppCardSelectedDark
+                      : styles.chatAppCardSelected]: dialogId === x.id,
                   })}
                   onMouseEnter={handleAppCardEnter(x.id)}
                   onMouseLeave={handleItemLeave}
@@ -316,7 +320,9 @@ const Chat = () => {
                   onMouseEnter={handleConversationCardEnter(x.id)}
                   onMouseLeave={handleConversationItemLeave}
                   className={classNames(styles.chatTitleCard, {
-                    [styles.chatTitleCardSelected]: x.id === conversationId,
+                    [theme === 'dark'
+                      ? styles.chatTitleCardSelectedDark
+                      : styles.chatTitleCardSelected]: x.id === conversationId,
                   })}
                 >
                   <Flex justify="space-between" align="center">
@@ -328,17 +334,19 @@ const Chat = () => {
                         {x.name}
                       </Text>
                     </div>
-                    {conversationActivated === x.id && x.id !== '' && (
-                      <section>
-                        <Dropdown
-                          menu={{ items: buildConversationItems(x.id) }}
-                        >
-                          <ChatAppCube
-                            className={styles.cubeIcon}
-                          ></ChatAppCube>
-                        </Dropdown>
-                      </section>
-                    )}
+                    {conversationActivated === x.id &&
+                      x.id !== '' &&
+                      !x.is_new && (
+                        <section>
+                          <Dropdown
+                            menu={{ items: buildConversationItems(x.id) }}
+                          >
+                            <ChatAppCube
+                              className={styles.cubeIcon}
+                            ></ChatAppCube>
+                          </Dropdown>
+                        </section>
+                      )}
                   </Flex>
                 </Card>
               ))}

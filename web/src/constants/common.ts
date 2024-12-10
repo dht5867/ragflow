@@ -45,6 +45,8 @@ export const LanguageList = [
   'Traditional Chinese',
   'Indonesia',
   'Spanish',
+  'Vietnamese',
+  'Japanese',
 ];
 
 export const LanguageMap = {
@@ -53,6 +55,8 @@ export const LanguageMap = {
   'Traditional Chinese': '繁體中文',
   Indonesia: 'Indonesia',
   Spanish: 'Español',
+  Vietnamese: 'Tiếng việt',
+  Japanese: '日本語',
 };
 
 export const LanguageTranslationMap = {
@@ -61,29 +65,32 @@ export const LanguageTranslationMap = {
   'Traditional Chinese': 'zh-TRADITIONAL',
   Indonesia: 'id',
   Spanish: 'es',
+  Vietnamese: 'vi',
+  Japanese: 'ja',
 };
 
-export const FileMimeTypeMap = {
-  bmp: 'image/bmp',
-  csv: 'text/csv',
-  odt: 'application/vnd.oasis.opendocument.text',
-  doc: 'application/msword',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  gif: 'image/gif',
-  htm: 'text/htm',
-  html: 'text/html',
-  jpg: 'image/jpg',
-  jpeg: 'image/jpeg',
-  pdf: 'application/pdf',
-  png: 'image/png',
-  ppt: 'application/vnd.ms-powerpoint',
-  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  tiff: 'image/tiff',
-  txt: 'text/plain',
-  xls: 'application/vnd.ms-excel',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  mp4: 'video/mp4',
-};
+export enum FileMimeType {
+  Bmp = 'image/bmp',
+  Csv = 'text/csv',
+  Odt = 'application/vnd.oasis.opendocument.text',
+  Doc = 'application/msword',
+  Docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  Gif = 'image/gif',
+  Htm = 'text/htm',
+  Html = 'text/html',
+  Jpg = 'image/jpg',
+  Jpeg = 'image/jpeg',
+  Pdf = 'application/pdf',
+  Png = 'image/png',
+  Ppt = 'application/vnd.ms-powerpoint',
+  Pptx = 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  Tiff = 'image/tiff',
+  Txt = 'text/plain',
+  Xls = 'application/vnd.ms-excel',
+  Xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  Mp4 = 'video/mp4',
+  Json = 'application/json',
+}
 
 export const Domain = 'demo.ragflow.io';
 

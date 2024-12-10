@@ -14,20 +14,14 @@
 #  limitations under the License.
 #
 
-from beartype.claw import beartype_packages
-beartype_packages(["agent", "api", "deepdoc", "plugins", "rag", "ragflow_sdk"])  # <-- raise exceptions in your code
+# from beartype import BeartypeConf
+# from beartype.claw import beartype_all  # <-- you didn't sign up for this
+# beartype_all(conf=BeartypeConf(violation_type=UserWarning))    # <-- emit warnings from all code
 
-import logging
 from api.utils.log_utils import initRootLogger
 initRootLogger("ragflow_server")
-for module in ["pdfminer"]:
-    module_logger = logging.getLogger(module)
-    module_logger.setLevel(logging.WARNING)
-for module in ["peewee"]:
-    module_logger = logging.getLogger(module)
-    module_logger.handlers.clear()
-    module_logger.propagate = True
 
+import logging
 import os
 import signal
 import sys
@@ -46,6 +40,7 @@ from api.db.db_models import init_database_tables as init_web_db
 from api.db.init_data import init_web_data
 from api.versions import get_ragflow_version
 from api.utils import show_configs
+from rag.settings import print_rag_settings
 
 
 def update_progress():
@@ -74,6 +69,7 @@ if __name__ == '__main__':
     )
     show_configs()
     settings.init_settings()
+    print_rag_settings()
 
     # init db
     init_web_db()

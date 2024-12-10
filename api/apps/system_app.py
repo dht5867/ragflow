@@ -38,7 +38,7 @@ from timeit import default_timer as timer
 from rag.utils.redis_conn import REDIS_CONN
 
 
-@manager.route("/version", methods=["GET"])
+@manager.route("/version", methods=["GET"])  # noqa: F821
 @login_required
 def version():
     """
@@ -61,7 +61,7 @@ def version():
     return get_json_result(data=get_ragflow_version())
 
 
-@manager.route("/status", methods=["GET"])
+@manager.route("/status", methods=["GET"])  # noqa: F821
 @login_required
 def status():
     """
@@ -98,10 +98,10 @@ def status():
     res = {}
     st = timer()
     try:
-        res["doc_store"] = settings.docStoreConn.health()
-        res["doc_store"]["elapsed"] = "{:.1f}".format((timer() - st) * 1000.0)
+        res["doc_engine"] = settings.docStoreConn.health()
+        res["doc_engine"]["elapsed"] = "{:.1f}".format((timer() - st) * 1000.0)
     except Exception as e:
-        res["doc_store"] = {
+        res["doc_engine"] = {
             "type": "unknown",
             "status": "red",
             "elapsed": "{:.1f}".format((timer() - st) * 1000.0),
@@ -170,7 +170,7 @@ def status():
     return get_json_result(data=res)
 
 
-@manager.route("/new_token", methods=["POST"])
+@manager.route("/new_token", methods=["POST"])  # noqa: F821
 @login_required
 def new_token():
     """
@@ -205,6 +205,7 @@ def new_token():
         obj = {
             "tenant_id": tenant_id,
             "token": generate_confirmation_token(tenant_id),
+            "beta": generate_confirmation_token(generate_confirmation_token(tenant_id)).replace("ragflow-", "")[:32],
             "create_time": current_timestamp(),
             "create_date": datetime_format(datetime.now()),
             "update_time": None,
@@ -219,7 +220,7 @@ def new_token():
         return server_error_response(e)
 
 
-@manager.route("/token_list", methods=["GET"])
+@manager.route("/token_list", methods=["GET"])  # noqa: F821
 @login_required
 def token_list():
     """
@@ -261,7 +262,7 @@ def token_list():
         return server_error_response(e)
 
 
-@manager.route("/token/<token>", methods=["DELETE"])
+@manager.route("/token/<token>", methods=["DELETE"])  # noqa: F821
 @login_required
 def rm(token):
     """

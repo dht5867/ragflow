@@ -23,8 +23,21 @@ module.exports = {
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'var(--background)',
-        foreground: 'hsl(var(--foreground))',
+        foreground: 'var(--colors-text-neutral-strong)',
         buttonBlueText: 'var(--button-blue-text)',
+
+        'colors-outline-sentiment-primary':
+          'var(--colors-outline-sentiment-primary)',
+        'colors-outline-neutral-strong': 'var(--colors-outline-neutral-strong)',
+        'colors-outline-neutral-standard':
+          'var(--colors-outline-neutral-standard)',
+
+        'colors-text-core-standard': 'var(--colors-text-core-standard)',
+        'colors-text-neutral-strong': 'var(--colors-text-neutral-strong)',
+        'colors-text-neutral-standard': 'var(--colors-text-neutral-standard)',
+        'colors-text-functional-danger': 'var(--colors-text-functional-danger)',
+        'colors-text-inverse-strong': 'var(--colors-text-inverse-strong)',
+
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
@@ -69,6 +82,80 @@ module.exports = {
           DEFAULT: 'var(--background-core-weak)',
           foreground: 'var(--background-core-weak-foreground)',
         },
+
+        'colors-background-inverse-standard': {
+          DEFAULT: 'var(--colors-background-inverse-standard)',
+          foreground: 'var(--colors-background-inverse-standard-foreground)',
+        },
+
+        'color-background-brand-default': {
+          DEFAULT: 'var(--color-background-brand-default)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'color-background-positive-default': {
+          DEFAULT: 'var(--color-background-positive-default)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-core-standard': {
+          DEFAULT: 'var(--colors-background-core-standard)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-core-strong': {
+          DEFAULT: 'var(--colors-background-core-strong)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-core-weak': {
+          DEFAULT: 'var(--colors-background-core-weak)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-solid-danger': {
+          DEFAULT: 'var(--colors-background-functional-solid-danger)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-solid-notice': {
+          DEFAULT: 'var(--colors-background-functional-solid-notice)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-solid-positive': {
+          DEFAULT: 'var(--colors-background-functional-solid-positive)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-transparent-danger': {
+          DEFAULT: 'var(--colors-background-functional-transparent-danger)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-transparent-notice': {
+          DEFAULT: 'var(--colors-background-functional-transparent-notice)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-functional-transparent-positive': {
+          DEFAULT: 'var(--colors-background-functional-transparent-positive)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-inverse-standard': {
+          DEFAULT: 'var(--colors-background-inverse-standard)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-inverse-strong': {
+          DEFAULT: 'var(--colors-background-inverse-strong)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-inverse-weak': {
+          DEFAULT: 'var(--colors-background-inverse-weak)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-neutral-standard': {
+          DEFAULT: 'var(--colors-background-neutral-standard)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-neutral-strong': {
+          DEFAULT: 'var(--colors-background-neutral-strong)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        'colors-background-neutral-weak': {
+          DEFAULT: 'var(--colors-background-neutral-weak)',
+          foreground: 'var(--background-inverse-standard-foreground)',
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -99,5 +186,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate'), require('@tailwindcss/line-clamp')],
 };

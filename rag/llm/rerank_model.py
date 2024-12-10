@@ -92,7 +92,7 @@ class DefaultRerank(Base):
 
 
 class JinaRerank(Base):
-    def __init__(self, key, model_name="jina-reranker-v1-base-en",
+    def __init__(self, key, model_name="jina-reranker-v2-base-multilingual",
                  base_url="https://api.jina.ai/v1/rerank"):
         self.base_url = "https://api.jina.ai/v1/rerank"
         self.headers = {
@@ -126,7 +126,6 @@ class YoudaoRerank(DefaultRerank):
             with YoudaoRerank._model_lock:
                 if not YoudaoRerank._model:
                     try:
-                        logging.info("LOADING BCE...")
                         YoudaoRerank._model = RerankerModel(model_name_or_path=os.path.join(
                             get_home_cache_dir(),
                             re.sub(r"^[a-zA-Z0-9]+/", "", model_name)))
@@ -157,6 +156,8 @@ class YoudaoRerank(DefaultRerank):
 class XInferenceRerank(Base):
     def __init__(self, key="xxxxxxx", model_name="", base_url=""):
         if base_url.find("/v1") == -1:
+            base_url = urljoin(base_url, "/v1/rerank")
+        if base_url.find("/rerank") == -1:
             base_url = urljoin(base_url, "/v1/rerank")
         self.model_name = model_name
         self.base_url = base_url
@@ -193,7 +194,7 @@ class LocalAIRerank(Base):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {key}"
         }
-        self.model_name = model_name.replace("___LocalAI","")
+        self.model_name = model_name.split("___")[0]
 
     def similarity(self, query: str, texts: list):
         # noway to config Ragflow , use fix setting
@@ -285,7 +286,7 @@ class OpenAI_APIRerank(Base):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {key}"
         }
-        self.model_name = model_name
+        self.model_name = model_name.split("___")[0]
 
     def similarity(self, query: str, texts: list):
         # noway to config Ragflow , use fix setting
@@ -452,4 +453,5 @@ class QWenRerank(Base):
             for r in resp.output.results:
                 rank[r.index] = r.relevance_score
             return rank, resp.usage.total_tokens
-        return rank, 0
+        else:
+            raise ValueError(f"Error calling QWenRerank model {self.model_name}: {resp.status_code} - {resp.text}")
