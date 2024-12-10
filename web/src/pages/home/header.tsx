@@ -64,7 +64,7 @@ export function HomeHeader() {
   }, [navigate]);
 
   return (
-    <section className="px-[60px] py-[12px] flex justify-between items-center">
+    <section className="py-[12px] flex justify-between items-center">
       <div className="flex items-center gap-4">
         <img
           src={'/logo.svg'}
@@ -83,7 +83,7 @@ export function HomeHeader() {
           options={options}
           value={currentPath}
           onChange={handleChange}
-          className="bg-backgroundInverseStandard text-backgroundInverseStandard-foreground"
+          className="bg-colors-background-inverse-standard text-backgroundInverseStandard-foreground"
         ></Segmented>
       </div>
       <div className="flex items-center gap-4">

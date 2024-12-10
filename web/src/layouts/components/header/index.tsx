@@ -103,7 +103,9 @@ const RagHeader = () => {
         <Radio.Group
           defaultValue="a"
           buttonStyle="solid"
-          className={styles.radioGroup}
+          className={
+            themeRag === 'dark' ? styles.radioGroupDark : styles.radioGroup
+          }
           value={currentPath}
         >
           {tagsData.map((item) => (

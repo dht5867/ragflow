@@ -31,6 +31,7 @@ import {
 } from 'antd';
 import classNames from 'classnames';
 import get from 'lodash/get';
+import { Paperclip } from 'lucide-react';
 import {
   ChangeEvent,
   ChangeEventHandler,
@@ -41,7 +42,6 @@ import {
   useState,
 } from 'react';
 import FileIcon from '../file-icon';
-import SvgIcon from '../svg-icon';
 import styles from './index.less';
 
 type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
@@ -434,14 +434,7 @@ conversationIdRef.current = conversationId;
                 <Button
                   type={'text'}
                   disabled={disabled}
-                  icon={
-                    <SvgIcon
-                      name="paper-clip"
-                      width={18}
-                      height={22}
-                      disabled={disabled}
-                    ></SvgIcon>
-                  }
+                  icon={<Paperclip></Paperclip>}
                 ></Button>
               </Upload>
             )}

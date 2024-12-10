@@ -17,6 +17,7 @@
 from flask import request
 from flask_login import login_required, current_user
 
+from api import settings
 from api.db import UserTenantRole, StatusEnum
 from api.db.db_models import UserTenant
 from api.db.services.user_service import UserTenantService, UserService
@@ -25,9 +26,15 @@ from api.utils import get_uuid, delta_seconds
 from api.utils.api_utils import get_json_result, validate_request, server_error_response, get_data_error_result
 
 
-@manager.route("/<tenant_id>/user/list", methods=["GET"])
+@manager.route("/<tenant_id>/user/list", methods=["GET"])  # noqa: F821
 @login_required
 def user_list(tenant_id):
+    if current_user.id != tenant_id:
+        return get_json_result(
+            data=False,
+            message='No authorization.',
+            code=settings.RetCode.AUTHENTICATION_ERROR)
+
     try:
         users = UserTenantService.get_by_tenant_id(tenant_id)
         for u in users:
@@ -37,10 +44,16 @@ def user_list(tenant_id):
         return server_error_response(e)
 
 
-@manager.route('/<tenant_id>/user', methods=['POST'])
+@manager.route('/<tenant_id>/user', methods=['POST'])  # noqa: F821
 @login_required
 @validate_request("email")
 def create(tenant_id):
+    if current_user.id != tenant_id:
+        return get_json_result(
+            data=False,
+            message='No authorization.',
+            code=settings.RetCode.AUTHENTICATION_ERROR)
+
     req = request.json
     usrs = UserService.query(email=req["email"])
     if not usrs:
@@ -67,9 +80,15 @@ def create(tenant_id):
     return get_json_result(data=usr)
 
 
-@manager.route('/<tenant_id>/user/<user_id>', methods=['DELETE'])
+@manager.route('/<tenant_id>/user/<user_id>', methods=['DELETE'])  # noqa: F821
 @login_required
 def rm(tenant_id, user_id):
+    if current_user.id != tenant_id and current_user.id != user_id:
+        return get_json_result(
+            data=False,
+            message='No authorization.',
+            code=settings.RetCode.AUTHENTICATION_ERROR)
+
     try:
         UserTenantService.filter_delete([UserTenant.tenant_id == tenant_id, UserTenant.user_id == user_id])
         return get_json_result(data=True)
@@ -77,7 +96,7 @@ def rm(tenant_id, user_id):
         return server_error_response(e)
 
 
-@manager.route("/list", methods=["GET"])
+@manager.route("/list", methods=["GET"])  # noqa: F821
 @login_required
 def tenant_list():
     try:
@@ -89,7 +108,7 @@ def tenant_list():
         return server_error_response(e)
 
 
-@manager.route("/agree/<tenant_id>", methods=["PUT"])
+@manager.route("/agree/<tenant_id>", methods=["PUT"])  # noqa: F821
 @login_required
 def agree(tenant_id):
     try:

@@ -31,6 +31,7 @@ class FulltextQueryer:
             "title_sm_tks^5",
             "important_kwd^30",
             "important_tks^20",
+            "question_tks^20",
             "content_ltks^2",
             "content_sm_ltks",
         ]
@@ -54,7 +55,7 @@ class FulltextQueryer:
     def rmWWW(txt):
         patts = [
             (
-                r"是*(什么样的|哪家|一下|那家|请问|啥样|咋样了|什么时候|何时|何地|何人|是否|是不是|多少|哪里|怎么|哪儿|怎么样|如何|哪些|是啥|啥是|啊|吗|呢|吧|咋|什么|有没有|呀)是*",
+                r"是*(什么样的|哪家|一下|那家|请问|啥样|咋样了|什么时候|何时|何地|何人|是否|是不是|多少|哪里|怎么|哪儿|怎么样|如何|哪些|是啥|啥是|啊|吗|呢|吧|咋|什么|有没有|呀|谁|哪位|哪个)是*",
                 "",
             ),
             (r"(^| )(what|who|how|which|where|why)('re|'s)? ", " "),
@@ -74,7 +75,7 @@ class FulltextQueryer:
 
         if not self.isChinese(txt):
             txt = FulltextQueryer.rmWWW(txt)
-            tks = rag_tokenizer.tokenize(txt).split(" ")
+            tks = rag_tokenizer.tokenize(txt).split()
             keywords = [t for t in tks if t]
             tks_w = self.tw.weights(tks, preprocess=False)
             tks_w = [(re.sub(r"[ \\\"'^]", "", tk), w) for tk, w in tks_w]
@@ -83,12 +84,12 @@ class FulltextQueryer:
             syns = []
             for tk, w in tks_w:
                 syn = self.syn.lookup(tk)
-                syn = rag_tokenizer.tokenize(" ".join(syn)).split(" ")
+                syn = rag_tokenizer.tokenize(" ".join(syn)).split()
                 keywords.extend(syn)
-                syn = ["\"{}\"^{:.4f}".format(s, w / 4.) for s in syn]
+                syn = ["\"{}\"^{:.4f}".format(s, w / 4.) for s in syn if s]
                 syns.append(" ".join(syn))
 
-            q = ["({}^{:.4f}".format(tk, w) + " {})".format(syn) for (tk, w), syn in zip(tks_w, syns) if tk]
+            q = ["({}^{:.4f}".format(tk, w) + " {})".format(syn) for (tk, w), syn in zip(tks_w, syns) if tk and not re.match(r"[.^+\(\)-]", tk)]
             for i in range(1, len(tks_w)):
                 q.append(
                     '"%s %s"^%.4f'
@@ -114,18 +115,19 @@ class FulltextQueryer:
 
         txt = FulltextQueryer.rmWWW(txt)
         qs, keywords = [], []
-        for tt in self.tw.split(txt)[:256]:  # .split(" "):
+        for tt in self.tw.split(txt)[:256]:  # .split():
             if not tt:
                 continue
             keywords.append(tt)
             twts = self.tw.weights([tt])
             syns = self.syn.lookup(tt)
-            if syns: keywords.extend(syns)
+            if syns and len(keywords) < 32:
+                keywords.extend(syns)
             logging.debug(json.dumps(twts, ensure_ascii=False))
             tms = []
             for tk, w in sorted(twts, key=lambda x: x[1] * -1):
                 sm = (
-                    rag_tokenizer.fine_grained_tokenize(tk).split(" ")
+                    rag_tokenizer.fine_grained_tokenize(tk).split()
                     if need_fine_grained_tokenize(tk)
                     else []
                 )
@@ -140,17 +142,25 @@ class FulltextQueryer:
                 sm = [FulltextQueryer.subSpecialChar(m) for m in sm if len(m) > 1]
                 sm = [m for m in sm if len(m) > 1]
 
-                keywords.append(re.sub(r"[ \\\"']+", "", tk))
-                keywords.extend(sm)
-                if len(keywords) >= 12:
-                    break
+                if len(keywords) < 32:
+                    keywords.append(re.sub(r"[ \\\"']+", "", tk))
+                    keywords.extend(sm)
 
                 tk_syns = self.syn.lookup(tk)
+                tk_syns = [FulltextQueryer.subSpecialChar(s) for s in tk_syns]
+                if len(keywords) < 32:
+                    keywords.extend([s for s in tk_syns if s])
+                tk_syns = [rag_tokenizer.fine_grained_tokenize(s) for s in tk_syns if s]
+                tk_syns = [f"\"{s}\"" if s.find(" ")>0 else s for s in tk_syns]
+
+                if len(keywords) >= 32:
+                    break
+
                 tk = FulltextQueryer.subSpecialChar(tk)
                 if tk.find(" ") > 0:
                     tk = '"%s"' % tk
                 if tk_syns:
-                    tk = f"({tk} %s)" % " ".join(tk_syns)
+                    tk = f"({tk} OR (%s)^0.2)" % " ".join(tk_syns)
                 if sm:
                     tk = f'{tk} OR "%s" OR ("%s"~2)^0.5' % (" ".join(sm), " ".join(sm))
                 if tk.strip():
@@ -159,14 +169,14 @@ class FulltextQueryer:
             tms = " ".join([f"({t})^{w}" for t, w in tms])
 
             if len(twts) > 1:
-                tms += ' ("%s"~4)^1.5' % (" ".join([t for t, _ in twts]))
+                tms += ' ("%s"~2)^1.5' % rag_tokenizer.tokenize(tt)
             if re.match(r"[0-9a-z ]+$", tt):
                 tms = f'("{tt}" OR "%s")' % rag_tokenizer.tokenize(tt)
 
             syns = " OR ".join(
                 [
-                    '"%s"^0.7'
-                    % FulltextQueryer.subSpecialChar(rag_tokenizer.tokenize(s))
+                    '"%s"'
+                    % rag_tokenizer.tokenize(FulltextQueryer.subSpecialChar(s))
                     for s in syns
                 ]
             )
@@ -194,7 +204,7 @@ class FulltextQueryer:
         def toDict(tks):
             d = {}
             if isinstance(tks, str):
-                tks = tks.split(" ")
+                tks = tks.split()
             for t, c in self.tw.weights(tks, preprocess=False):
                 if t not in d:
                     d[t] = 0

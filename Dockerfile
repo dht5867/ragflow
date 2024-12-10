@@ -1,35 +1,62 @@
 # base stage
 FROM ubuntu:22.04 AS base
 USER root
+SHELL ["/bin/bash", "-c"]
 
-ARG ARCH=amd64
-ENV LIGHTEN=0
+ARG NEED_MIRROR=0
+ARG LIGHTEN=0
+ENV LIGHTEN=${LIGHTEN}
 
 WORKDIR /ragflow
 
-RUN rm -f /etc/apt/apt.conf.d/docker-clean \
-    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# Copy models downloaded via download_deps.py
+RUN mkdir -p /ragflow/rag/res/deepdoc /root/.ragflow
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/huggingface.co,target=/huggingface.co \
+    tar --exclude='.*' -cf - \
+        /huggingface.co/InfiniFlow/text_concat_xgb_v1.0 \
+        /huggingface.co/InfiniFlow/deepdoc \
+        | tar -xf - --strip-components=3 -C /ragflow/rag/res/deepdoc
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/huggingface.co,target=/huggingface.co \
+    if [ "$LIGHTEN" != "1" ]; then \
+        (tar -cf - \
+            /huggingface.co/BAAI/bge-large-zh-v1.5 \
+            /huggingface.co/BAAI/bge-reranker-v2-m3 \
+            /huggingface.co/maidalun1020/bce-embedding-base_v1 \
+            /huggingface.co/maidalun1020/bce-reranker-base_v1 \
+            | tar -xf - --strip-components=2 -C /root/.ragflow) \
+    fi
 
-RUN --mount=type=cache,id=ragflow_base_apt,target=/var/cache/apt,sharing=locked \
-    apt update && apt-get --no-install-recommends install -y ca-certificates
+# https://github.com/chrismattmann/tika-python
+# This is the only way to run python-tika without internet access. Without this set, the default is to check the tika version and pull latest every time from Apache.
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/,target=/deps \
+    cp -r /deps/nltk_data /root/ && \
+    cp /deps/tika-server-standard-3.0.0.jar /deps/tika-server-standard-3.0.0.jar.md5 /ragflow/ && \
+    cp /deps/cl100k_base.tiktoken /ragflow/9b5ad71b2ce5302211f9c61530b329a4922fc6a4
 
-# Setup apt mirror site
-RUN sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+ENV TIKA_SERVER_JAR="file:///ragflow/tika-server-standard-3.0.0.jar"
 
-RUN --mount=type=cache,id=ragflow_base_apt,target=/var/cache/apt,sharing=locked \
-    apt update && DEBIAN_FRONTEND=noninteractive apt install -y curl libpython3-dev nginx libglib2.0-0 libglx-mesa0 pkg-config libicu-dev libgdiplus default-jdk python3-pip pipx \
-    libatk-bridge2.0-0 libgtk-4-1 libnss3 xdg-utils unzip libgbm-dev wget \
-    && rm -rf /var/lib/apt/lists/*
+# Setup apt
+# cv2 requires libGL.so.1
+RUN --mount=type=cache,id=ragflow_apt,target=/var/cache/apt,sharing=locked \
+    if [ "$NEED_MIRROR" == "1" ]; then \
+        sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list; \
+    fi; \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache && \
+    chmod 1777 /tmp && \
+    apt update && \
+    apt --no-install-recommends install -y ca-certificates && \
+    apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install -y curl libpython3-dev nginx libglib2.0-0 libglx-mesa0 pkg-config libicu-dev libgdiplus default-jdk python3-pip pipx \
+    libatk-bridge2.0-0 libgtk-4-1 libnss3 xdg-utils unzip libgbm-dev wget git nginx libgl1 vim less
 
-RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && pip3 config set global.trusted-host "pypi.tuna.tsinghua.edu.cn mirrors.pku.edu.cn" && pip3 config set global.extra-index-url "https://mirrors.pku.edu.cn/pypi/web/simple" \
-    && pipx install poetry \
-    && /root/.local/bin/poetry self add poetry-plugin-pypi-mirror
-
-# https://forum.aspose.com/t/aspose-slides-for-net-no-usable-version-of-libssl-found-with-linux-server/271344/13
-# aspose-slides on linux/arm64 is unavailable
-RUN --mount=type=bind,source=libssl1.1_1.1.1f-1ubuntu2_amd64.deb,target=/root/libssl1.1_1.1.1f-1ubuntu2_amd64.deb \
-    if [ "${ARCH}" = "amd64" ]; then \
-        dpkg -i /root/libssl1.1_1.1.1f-1ubuntu2_amd64.deb; \
+RUN if [ "$NEED_MIRROR" == "1" ]; then \
+        pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+        pip3 config set global.trusted-host pypi.tuna.tsinghua.edu.cn; \
+    fi; \
+    pipx install poetry; \
+    if [ "$NEED_MIRROR" == "1" ]; then \
+        pipx inject poetry poetry-plugin-pypi-mirror; \
     fi
 
 ENV PYTHONDONTWRITEBYTECODE=1 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
@@ -39,16 +66,34 @@ ENV POETRY_NO_INTERACTION=1
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 ENV POETRY_VIRTUALENVS_CREATE=true
 ENV POETRY_REQUESTS_TIMEOUT=15
-ENV POETRY_PYPI_MIRROR_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
 
 # nodejs 12.22 on Ubuntu 22.04 is too old
-RUN --mount=type=cache,id=ragflow_base_apt,target=/var/cache/apt,sharing=locked \
+RUN --mount=type=cache,id=ragflow_apt,target=/var/cache/apt,sharing=locked \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt purge -y nodejs npm && \
     apt autoremove && \
     apt update && \
-    apt install -y nodejs cargo && \
-    rm -rf /var/lib/apt/lists/*
+    apt install -y nodejs cargo
+
+# Add dependencies of selenium
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/chrome-linux64-121-0-6167-85,target=/chrome-linux64.zip \
+    unzip /chrome-linux64.zip && \
+    mv chrome-linux64 /opt/chrome && \
+    ln -s /opt/chrome/chrome /usr/local/bin/
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/chromedriver-linux64-121-0-6167-85,target=/chromedriver-linux64.zip \
+    unzip -j /chromedriver-linux64.zip chromedriver-linux64/chromedriver && \
+    mv chromedriver /usr/local/bin/ && \
+    rm -f /usr/bin/google-chrome
+
+# https://forum.aspose.com/t/aspose-slides-for-net-no-usable-version-of-libssl-found-with-linux-server/271344/13
+# aspose-slides on linux/arm64 is unavailable
+RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/,target=/deps \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+        dpkg -i /deps/libssl1.1_1.1.1f-1ubuntu2_amd64.deb; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+        dpkg -i /deps/libssl1.1_1.1.1f-1ubuntu2_arm64.deb; \
+    fi
+
 
 # builder stage
 FROM base AS builder
@@ -56,20 +101,34 @@ USER root
 
 WORKDIR /ragflow
 
-COPY web web
-COPY docs docs
-RUN --mount=type=cache,id=ragflow_builder_npm,target=/root/.npm,sharing=locked \
-    cd web && npm install --force && npm run build
-
 # install dependencies from poetry.lock file
 COPY pyproject.toml poetry.toml poetry.lock ./
 
-RUN --mount=type=cache,id=ragflow_builder_poetry,target=/root/.cache/pypoetry,sharing=locked \
-    if [ "$LIGHTEN" -eq 0 ]; then \
-        poetry install --no-root --with=full; \
-    else \
+RUN --mount=type=cache,id=ragflow_poetry,target=/root/.cache/pypoetry,sharing=locked \
+    if [ "$NEED_MIRROR" == "1" ]; then \
+        export POETRY_PYPI_MIRROR_URL=https://pypi.tuna.tsinghua.edu.cn/simple/; \
+    fi; \
+    if [ "$LIGHTEN" == "1" ]; then \
         poetry install --no-root; \
+    else \
+        poetry install --no-root --with=full; \
     fi
+
+COPY web web
+COPY docs docs
+RUN --mount=type=cache,id=ragflow_npm,target=/root/.npm,sharing=locked \
+    cd web && npm install --force && npm run build
+
+COPY .git /ragflow/.git
+
+RUN version_info=$(git describe --tags --match=v* --first-parent --always); \
+    if [ "$LIGHTEN" == "1" ]; then \
+        version_info="$version_info slim"; \
+    else \
+        version_info="$version_info full"; \
+    fi; \
+    echo "RAGFlow version: $version_info"; \
+    echo $version_info > /ragflow/VERSION
 
 # production stage
 FROM base AS production
@@ -77,11 +136,12 @@ USER root
 
 WORKDIR /ragflow
 
-# Install python packages' dependencies
-# cv2 requires libGL.so.1
-RUN --mount=type=cache,id=ragflow_production_apt,target=/var/cache/apt,sharing=locked \
-    apt update && apt install -y --no-install-recommends nginx libgl1 vim less && \
-    rm -rf /var/lib/apt/lists/*
+# Copy Python environment and packages
+ENV VIRTUAL_ENV=/ragflow/.venv
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+ENV PYTHONPATH=/ragflow/
 
 COPY web web
 COPY api api
@@ -92,55 +152,13 @@ COPY agent agent
 COPY graphrag graphrag
 COPY pyproject.toml poetry.toml poetry.lock ./
 
-# Copy models downloaded via download_deps.py
-RUN mkdir -p /ragflow/rag/res/deepdoc /root/.ragflow
-RUN --mount=type=bind,source=huggingface.co,target=/huggingface.co \
-    tar --exclude='.*' -cf - \
-        /huggingface.co/InfiniFlow/text_concat_xgb_v1.0 \
-        /huggingface.co/InfiniFlow/deepdoc \
-        | tar -xf - --strip-components=3 -C /ragflow/rag/res/deepdoc
-RUN --mount=type=bind,source=huggingface.co,target=/huggingface.co \
-    tar -cf - \
-        /huggingface.co/BAAI/bge-large-zh-v1.5 \
-        /huggingface.co/BAAI/bge-reranker-v2-m3 \
-        /huggingface.co/maidalun1020/bce-embedding-base_v1 \
-        /huggingface.co/maidalun1020/bce-reranker-base_v1 \
-        | tar -xf - --strip-components=2 -C /root/.ragflow
-
-# Copy nltk data downloaded via download_deps.py
-COPY nltk_data /root/nltk_data
-
-# https://github.com/chrismattmann/tika-python
-# This is the only way to run python-tika without internet access. Without this set, the default is to check the tika version and pull latest every time from Apache.
-COPY tika-server-standard-3.0.0.jar /ragflow/tika-server-standard.jar
-COPY tika-server-standard-3.0.0.jar.md5 /ragflow/tika-server-standard.jar.md5
-ENV TIKA_SERVER_JAR="file:///ragflow/tika-server-standard.jar"
-
-# Copy cl100k_base
-COPY cl100k_base.tiktoken /ragflow/9b5ad71b2ce5302211f9c61530b329a4922fc6a4
-
-# Add dependencies of selenium
-RUN --mount=type=bind,source=chrome-linux64-121-0-6167-85,target=/chrome-linux64.zip \
-    unzip /chrome-linux64.zip && \
-    mv chrome-linux64 /opt/chrome/ && \
-    ln -s /opt/chrome/chrome /usr/local/bin/
-RUN --mount=type=bind,source=chromedriver-linux64-121-0-6167-85,target=/chromedriver-linux64.zip \
-    unzip -j /chromedriver-linux64.zip chromedriver-linux64/chromedriver && \
-    mv chromedriver /usr/local/bin/ && \
-    rm -f /usr/bin/google-chrome
+COPY docker/service_conf.yaml.template ./conf/service_conf.yaml.template
+COPY docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 # Copy compiled web pages
 COPY --from=builder /ragflow/web/dist /ragflow/web/dist
 
-# Copy Python environment and packages
-ENV VIRTUAL_ENV=/ragflow/.venv
-COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
-ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
-
-ENV PYTHONPATH=/ragflow/
-
-COPY docker/service_conf.yaml.template ./conf/service_conf.yaml.template
-COPY docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+COPY --from=builder /ragflow/VERSION /ragflow/VERSION
 
 ENTRYPOINT ["./entrypoint.sh"]

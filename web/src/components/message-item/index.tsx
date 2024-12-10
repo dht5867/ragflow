@@ -27,6 +27,7 @@ import askImage from '../../assets/ask.png'; // 引入本地图片
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
+import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
 import styles from './index.less';
 
@@ -58,6 +59,7 @@ const MessageItem = ({
   showLikeButton = true,
   selectedSkill,
 }: IProps) => {
+  const { theme } = useTheme();
   const isAssistant = item.role === MessageType.Assistant;
   const isUser = item.role === MessageType.User;
   const { data: documentList, setDocumentIds } = useFetchDocumentInfosByIds();
@@ -167,7 +169,11 @@ const MessageItem = ({
 
             <div
               className={
-                isAssistant ? styles.messageText : styles.messageUserText
+                isAssistant
+                  ? theme === 'dark'
+                    ? styles.messageTextDark
+                    : styles.messageText
+                  : styles.messageUserText
               }
             >
               <MarkdownContent
@@ -224,8 +230,8 @@ const MessageItem = ({
                 dataSource={documentList}
                 renderItem={(item) => {
                   // TODO:
-                  const fileThumbnail =
-                    documentThumbnails[item.id] || documentThumbnails[item.id];
+                  // const fileThumbnail =
+                  //   documentThumbnails[item.id] || documentThumbnails[item.id];
                   const fileExtension = getExtension(item.name);
                   return (
                     <List.Item>

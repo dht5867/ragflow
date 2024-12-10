@@ -61,7 +61,10 @@ kg_retrievaler = None
 
 
 def init_settings():
-    global LLM, LLM_FACTORY, LLM_BASE_URL
+    global LLM, LLM_FACTORY, LLM_BASE_URL, LIGHTEN, DATABASE_TYPE, DATABASE
+    LIGHTEN = int(os.environ.get('LIGHTEN', "0"))
+    DATABASE_TYPE = os.getenv("DB_TYPE", 'mysql')
+    DATABASE = decrypt_database_config(name=DATABASE_TYPE)
     LLM = get_base_config("user_default_llm", {})
     LLM_FACTORY = LLM.get("factory", "Tongyi-Qianwen")
     LLM_BASE_URL = LLM.get("base_url")
@@ -160,9 +163,10 @@ def init_settings():
 
     global DOC_ENGINE, docStoreConn, retrievaler, kg_retrievaler
     DOC_ENGINE = os.environ.get('DOC_ENGINE', "elasticsearch")
-    if DOC_ENGINE == "elasticsearch":
+    lower_case_doc_engine = DOC_ENGINE.lower()
+    if lower_case_doc_engine == "elasticsearch":
         docStoreConn = rag.utils.es_conn.ESConnection()
-    elif DOC_ENGINE == "infinity":
+    elif lower_case_doc_engine == "infinity":
         docStoreConn = rag.utils.infinity_conn.InfinityConnection()
     else:
         raise Exception(f"Not supported doc engine: {DOC_ENGINE}")

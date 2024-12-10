@@ -8,6 +8,7 @@ import User from '../user';
 import { LanguageList } from '@/constants/common';
 import { useChangeLanguage } from '@/hooks/logic-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
+import { MoonIcon, SunIcon } from 'lucide-react';
 import styled from './index.less';
 
 const Circle = ({ children, ...restProps }: React.PropsWithChildren) => {
@@ -25,6 +26,7 @@ const handleGithubCLick = () => {
 const RightToolBar = () => {
   const { t } = useTranslate('common');
   const changeLanguage = useChangeLanguage();
+
   const {
     data: { language = 'English' },
   } = useFetchUserInfo();

@@ -425,11 +425,12 @@ def queue_raptor_tasks(doc):
 
 def doc_upload_and_parse(conversation_id, file_objs, user_id):
     from rag.app import presentation, picture, naive, audio, email
-    from api.db.services.dialog_service import ConversationService, DialogService
+    from api.db.services.dialog_service import DialogService
     from api.db.services.file_service import FileService
     from api.db.services.llm_service import LLMBundle
     from api.db.services.user_service import TenantService
     from api.db.services.api_service import API4ConversationService
+    from api.db.services.conversation_service import ConversationService
 
     e, conv = ConversationService.get_by_id(conversation_id)
     if not e:
@@ -555,7 +556,8 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             try:
                 mind_map = json.dumps(mindmap([c["content_with_weight"] for c in docs if c["doc_id"] == doc_id]).output,
                                       ensure_ascii=False, indent=2)
-                if len(mind_map) < 32: raise Exception("Few content: " + mind_map)
+                if len(mind_map) < 32:
+                    raise Exception("Few content: " + mind_map)
                 cks.append({
                     "id": get_uuid(),
                     "doc_id": doc_id,

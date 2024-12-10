@@ -1,6 +1,7 @@
 from .base import Base
 from .session import Session
 import requests
+from typing import List
 
 class Agent(Base):
     def __init__(self,rag,res_dict):
@@ -51,9 +52,24 @@ class Agent(Base):
 
     @staticmethod
     def create_session(id,rag) -> Session:
-        res = requests.post(f"http://127.0.0.1:9380/api/v1/agents/{id}/sessions",headers={"Authorization": f"Bearer {rag.user_key}"},json={})
+        res = requests.post(f"{rag.api_url}/agents/{id}/sessions",headers={"Authorization": f"Bearer {rag.user_key}"},json={})
         res = res.json()
         if res.get("code") == 0:
             return Session(rag,res.get("data"))
         raise Exception(res.get("message"))
 
+    @staticmethod
+    def list_sessions(agent_id,rag,page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True,
+                      id: str = None) -> List[Session]:
+        url = f"{rag.api_url}/agents/{agent_id}/sessions"
+        headers = {"Authorization": f"Bearer {rag.user_key}"}
+        params = {"page": page, "page_size": page_size, "orderby": orderby, "desc": desc, "id": id}
+        res = requests.get(url=url,headers=headers,params=params)
+        res = res.json()
+        if res.get("code") == 0:
+            result_list = []
+            for data in res.get("data"):
+                temp_agent = Session(rag,data)
+                result_list.append(temp_agent)
+            return result_list
+        raise Exception(res.get("message"))

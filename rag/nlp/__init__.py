@@ -22,11 +22,13 @@ from rag.utils import num_tokens_from_string
 from . import rag_tokenizer
 import re
 import copy
+import json
 import roman_numbers as r
 from word2number import w2n
 from cn2an import cn2an
 from PIL import Image
-import json
+
+import chardet
 
 all_codecs = [
     'utf-8', 'gb2312', 'gbk', 'utf_16', 'ascii', 'big5', 'big5hkscs',
@@ -43,12 +45,17 @@ all_codecs = [
     'iso8859_14', 'iso8859_15', 'iso8859_16', 'johab', 'koi8_r', 'koi8_t', 'koi8_u',
     'kz1048', 'mac_cyrillic', 'mac_greek', 'mac_iceland', 'mac_latin2', 'mac_roman',
     'mac_turkish', 'ptcp154', 'shift_jis', 'shift_jis_2004', 'shift_jisx0213',
-    'utf_32', 'utf_32_be', 'utf_32_le''utf_16_be', 'utf_16_le', 'utf_7'
+    'utf_32', 'utf_32_be', 'utf_32_le', 'utf_16_be', 'utf_16_le', 'utf_7', 'windows-1250', 'windows-1251',
+    'windows-1252', 'windows-1253', 'windows-1254', 'windows-1255', 'windows-1256',
+    'windows-1257', 'windows-1258', 'latin-2'
 ]
 
 
 def find_codec(blob):
-    global all_codecs
+    detected = chardet.detect(blob[:1024])
+    if detected['confidence'] > 0.5:
+        return detected['encoding']
+
     for c in all_codecs:
         try:
             blob[:1024].decode(c)
@@ -215,7 +222,8 @@ def bullets_category(sections):
 
 def is_english(texts):
     eng = 0
-    if not texts: return False
+    if not texts:
+        return False
     for t in texts:
         if re.match(r"[ `a-zA-Z.,':;/\"?<>!\(\)-]", t.strip()):
             eng += 1
@@ -223,6 +231,14 @@ def is_english(texts):
         return True
     return False
 
+def is_chinese(text):
+    chinese = 0
+    for ch in text:
+        if '\u4e00' <= ch <= '\u9fff':
+            chinese += 1
+    if chinese / len(text) > 0.2:
+        return True
+    return False
 
 def tokenize(d, t, eng):
     d["content_with_weight"] = t
@@ -235,7 +251,8 @@ def tokenize_chunks(chunks, doc, eng, pdf_parser=None):
     res = []
     # wrap up as es documents
     for ck in chunks:
-        if len(ck.strip()) == 0:continue
+        if len(ck.strip()) == 0:
+            continue
         logging.debug("-- {}".format(ck))
         d = copy.deepcopy(doc)
         if pdf_parser:
@@ -254,7 +271,8 @@ def tokenize_chunks_docx(chunks, doc, eng, images):
     res = []
     # wrap up as es documents
     for ck, image in zip(chunks, images):
-        if len(ck.strip()) == 0:continue
+        if len(ck.strip()) == 0:
+            continue
         logging.debug("-- {}".format(ck))
         d = copy.deepcopy(doc)
         d["image"] = image
@@ -273,8 +291,10 @@ def tokenize_table(tbls, doc, eng, batch_size=10):
             d = copy.deepcopy(doc)
             tokenize(d, rows, eng)
             d["content_with_weight"] = rows
-            if img: d["image"] = img
-            if poss: add_positions(d, poss)
+            if img:
+                d["image"] = img
+            if poss:
+                add_positions(d, poss)
             res.append(d)
             continue
         de = "; " if eng else "； "
@@ -318,12 +338,12 @@ def remove_contents_table(sections, eng=False):
         sections.pop(i)
         if i >= len(sections):
             break
-        prefix = get(i)[:3] if not eng else " ".join(get(i).split(" ")[:2])
+        prefix = get(i)[:3] if not eng else " ".join(get(i).split()[:2])
         while not prefix:
             sections.pop(i)
             if i >= len(sections):
                 break
-            prefix = get(i)[:3] if not eng else " ".join(get(i).split(" ")[:2])
+            prefix = get(i)[:3] if not eng else " ".join(get(i).split()[:2])
         sections.pop(i)
         if i >= len(sections) or not prefix:
             break
@@ -372,9 +392,9 @@ def title_frequency(bull, sections):
             if re.search(r"(title|head)", layout) and not not_title(txt.split("@")[0]):
                 levels[i] = bullets_size
     most_level = bullets_size+1
-    for l, c in sorted(Counter(levels).items(), key=lambda x:x[1]*-1):
-        if l <= bullets_size:
-            most_level = l
+    for level, c in sorted(Counter(levels).items(), key=lambda x:x[1]*-1):
+        if level <= bullets_size:
+            most_level = level
             break
     return most_level, levels
 
@@ -382,7 +402,7 @@ def title_frequency(bull, sections):
 def not_title(txt):
     if re.match(r"第[零一二三四五六七八九十百0-9]+条", txt):
         return False
-    if len(txt.split(" ")) > 12 or (txt.find(" ") < 0 and len(txt) >= 32):
+    if len(txt.split()) > 12 or (txt.find(" ") < 0 and len(txt) >= 32):
         return True
     return re.search(r"[,;，。；！!]", txt)
 
@@ -489,7 +509,8 @@ def naive_merge(sections, chunk_token_num=128, delimiter="\n。；！？"):
     def add_chunk(t, pos):
         nonlocal cks, tk_nums, delimiter
         tnum = num_tokens_from_string(t)
-        if not pos: pos = ""
+        if not pos:
+            pos = ""
         if tnum < 8:
             pos = ""
         # Ensure that the length of the merged chunk does not exceed chunk_token_num  
