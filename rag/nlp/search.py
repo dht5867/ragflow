@@ -267,7 +267,7 @@ class Dealer:
                vtweight=0.7, cfield="content_ltks"):
         _, keywords = self.qryr.question(query)
 
-        es_logger.info('------3-------')
+        logging.info('------3-------')
         for i in sres.ids:
             if isinstance(sres.field[i].get("important_kwd", []), str):
                 sres.field[i]["important_kwd"] = [sres.field[i]["important_kwd"]]
@@ -293,7 +293,7 @@ class Dealer:
     def retrieval(self, question, embd_mdl, tenant_ids, kb_ids, page, page_size, similarity_threshold=0.2,
                   vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True, rerank_mdl=None, highlight=False):
         ranks = {"total": 0, "chunks": [], "doc_aggs": {}}
-        es_logger.info('------start rerank--------')
+        logging.info('------start rerank--------')
         if not question:
             return ranks
 
@@ -314,17 +314,17 @@ class Dealer:
         ranks["total"] = sres.total
 
         if page <= RERANK_PAGE_LIMIT:
-            es_logger.info('------3----1---')
+            logging.info('------3----1---')
             if rerank_mdl:
                 sim, tsim, vsim = self.rerank_by_model(rerank_mdl,
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
             else:
-                es_logger.info('------4-------')
+                logging.info('------4-------')
                 sim, tsim, vsim = self.rerank(
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
             idx = np.argsort(sim * -1)[(page-1)*page_size:page*page_size]
         else:
-            es_logger.info('------5-------')
+            logging.info('------5-------')
             sim = tsim = vsim = [1]*len(sres.ids)
             idx = list(range(len(sres.ids)))
 

@@ -495,7 +495,7 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
         }
         threads.append(exe.submit(FACTORY.get(d["parser_id"], naive).chunk, d["name"], blob, **kwargs))
 
-    stat_logger.info('---start parse --')
+    logging.info.info('---start parse --')
 
     for (docinfo, _), th in zip(files, threads):
         docs = []

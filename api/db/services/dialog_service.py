@@ -29,7 +29,7 @@ from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
 from api import settings
 from api.db.services.user_service import UserTenantService
-from api.settings import chat_logger, retrievaler, kg_retrievaler
+from api.settings import  retrievaler, kg_retrievaler
 from rag.app.resume import forbidden_select_fields4resume
 from rag.nlp.search import index_name
 from rag.utils import rmSpace, num_tokens_from_string, encoder
@@ -317,8 +317,8 @@ def chat(dialog, messages, stream=True, **kwargs):
     st = timer()
     llm_id, fid = TenantLLMService.split_model_name_and_factory(dialog.llm_id)
     llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
-    chat_logger.info('llm-------')
-    chat_logger.info(llm)
+    logging.info('llm-------')
+    logging.info(llm)
     if not llm:
         llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
             TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
@@ -397,7 +397,7 @@ def chat(dialog, messages, stream=True, **kwargs):
             keyword_tm = timer()
 
         tenant_ids = list(set([kb.tenant_id for kb in kbs]))
-        chat_logger.info(tenant_ids)
+        logging.info(tenant_ids)
         kbinfos = retr.retrieval(" ".join(questions), embd_mdl, tenant_ids, dialog.kb_ids, 1, dialog.top_n,
                                         dialog.similarity_threshold,
                                         dialog.vector_similarity_weight,
@@ -432,8 +432,8 @@ def chat(dialog, messages, stream=True, **kwargs):
     logging.debug(
         "{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
     retrieval_tm = timer()
-    chat_logger.info('-----knowledges')
-    chat_logger.info(knowledges)
+    logging.info('-----knowledges')
+    logging.info(knowledges)
 
     
     if not knowledges and prompt_config.get("empty_response"):
@@ -443,25 +443,25 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     kwargs["knowledge"] = "\n\n------\n\n".join(knowledges)
     gen_conf = dialog.llm_setting
-    chat_logger.info('---------kwargs----')
-    chat_logger.info(kwargs)
+    logging.info('---------kwargs----')
+    logging.info(kwargs)
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
 
-    chat_logger.info('---chat--')
-    chat_logger.info(msg)
+    logging.info('---chat--')
+    logging.info(msg)
 
     prompt = msg[0]["content"]
     prompt += "\n\n### Query:\n%s" % " ".join(questions)
 
-    chat_logger.info('prompt----------------')
-    chat_logger.info(prompt)
+    logging.info('prompt----------------')
+    logging.info(prompt)
 
-    chat_logger.info('history----------------')
-    chat_logger.info( msg[1:])
+    logging.info('history----------------')
+    logging.info( msg[1:])
 
     if "max_tokens" in gen_conf:
         gen_conf["max_tokens"] = min(
@@ -501,7 +501,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         return {"answer": answer, "reference": refs, "prompt": prompt}
 
     if stream:
-        chat_logger.info("--stream---")
+        logging.info("--stream---")
         last_ans = ""
         answer = ""
         for ans in chat_mdl.chat_streamly(prompt, msg[1:], gen_conf):
@@ -516,7 +516,7 @@ def chat(dialog, messages, stream=True, **kwargs):
             yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
         yield decorate_answer(answer)
     else:
-        chat_logger.info("--chatchat---")
+        logging.info("--chatchat---")
         answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
         logging.debug("User: {}|Assistant: {}".format(
             msg[-1]["content"], answer))
@@ -532,8 +532,8 @@ def get_index_id(uid):
         return uid
     else:
         users = UserTenantService.get_tenants_by_user_id(uid)
-        chat_logger.info('------------users-------------')
-        chat_logger.info(users)
+        logging.info('------------users-------------')
+        logging.info(users)
         if users:
             for u in users:
                 if u["invited_by"]=='':
@@ -585,11 +585,11 @@ def file_chat(dialog, messages, stream=True, **kwargs):
 
     is_kg = all([kb.parser_id == ParserType.KG for kb in kbs])
     retr = retrievaler if not is_kg else kg_retrievaler
-    chat_logger.info('---------kwargs----')
-    chat_logger.info(kwargs)
+    logging.info('---------kwargs----')
+    logging.info(kwargs)
     questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
-    chat_logger.info('---------questions')
-    chat_logger.info(questions)
+    logging.info('---------questions')
+    logging.info(questions)
 
     attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
     if "doc_ids" in messages[-1]:
@@ -598,8 +598,8 @@ def file_chat(dialog, messages, stream=True, **kwargs):
             if "doc_ids" in m:
                 attachments.extend(m["doc_ids"])
 
-    chat_logger.info('---------attachments')
-    chat_logger.info(attachments)
+    logging.info('---------attachments')
+    logging.info(attachments)
     embd_mdl = LLMBundle(dialog.tenant_id, LLMType.EMBEDDING, embd_nms[0])
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
@@ -607,19 +607,19 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
     prompt_config = dialog.prompt_config
-    chat_logger.info('---prompt_config-----')
+    logging.info('---prompt_config-----')
 
-    chat_logger.info(prompt_config)
+    logging.info(prompt_config)
 
     field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
     tts_mdl = None
     if prompt_config.get("tts"):
         tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
     # try to use sql if field mapping is good to go
-    chat_logger.info('---field_map-----')
-    chat_logger.info(field_map)
+    logging.info('---field_map-----')
+    logging.info(field_map)
     if field_map:
-        chat_logger.info("Use SQL to retrieval:{}".format(questions[-1]))
+        logging.info("Use SQL to retrieval:{}".format(questions[-1]))
         ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
         if ans:
             yield ans
@@ -634,9 +634,9 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     #         prompt_config["system"] = prompt_config["system"].replace(
     #             "{%s}" % p["key"], " ")
     prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')   
-    chat_logger.info('--2222-prompt_config-----')
+    logging.info('--2222-prompt_config-----')
 
-    chat_logger.info(prompt_config)
+    logging.info(prompt_config)
     
     if len(questions) > 1 and prompt_config.get("refine_multiturn"):
         questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
@@ -652,7 +652,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     if "knowledge" not in [p["key"] for p in prompt_config["parameters"]]:
         kbinfos = {"total": 0, "chunks": [], "doc_aggs": []}
     else:
-        chat_logger.info('---------retrieval---')
+        logging.info('---------retrieval---')
         if prompt_config.get("keyword", False):
             questions[-1] += keyword_extraction(chat_mdl, questions[-1])
         tenant_ids = list(set([kb.tenant_id for kb in kbs]))
@@ -662,9 +662,9 @@ def file_chat(dialog, messages, stream=True, **kwargs):
                                         doc_ids=attachments,
                                         top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl)
     knowledges = [ck["content_with_weight"] for ck in kbinfos["chunks"]]
-    chat_logger.info('-----knowledges')
-    chat_logger.info(knowledges)
-    chat_logger.info("{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
+    logging.info('-----knowledges')
+    logging.info(knowledges)
+    logging.info("{}->{}".format(" ".join(questions), "\n->".join(knowledges)))
     retrieval_tm = timer()
 
     if not knowledges and prompt_config.get("empty_response"):
@@ -674,14 +674,14 @@ def file_chat(dialog, messages, stream=True, **kwargs):
 
     kwargs["knowledge"] = "\n\n------\n\n".join(knowledges)
    
-    chat_logger.info('-----kwargs')
-    chat_logger.info(kwargs)
+    logging.info('-----kwargs')
+    logging.info(kwargs)
 
     gen_conf = dialog.llm_setting
 
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
-    chat_logger.info('msg---------')
-    chat_logger.info(msg)
+    logging.info('msg---------')
+    logging.info(msg)
 
 
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
@@ -692,9 +692,9 @@ def file_chat(dialog, messages, stream=True, **kwargs):
     #prompt += "\n\n### Query:\n%s" % " ".join(questions)
 
 
-    chat_logger.info('=====prompt=====')
+    logging.info('=====prompt=====')
 
-    chat_logger.info(prompt)
+    logging.info(prompt)
 
     if "max_tokens" in gen_conf:
         gen_conf["max_tokens"] = min(
@@ -747,7 +747,7 @@ def file_chat(dialog, messages, stream=True, **kwargs):
             yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
         yield decorate_answer(answer)
     else:
-        chat_logger.info("--chatchat---")
+        logging.info("--chatchat---")
         answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
         logging.debug("User: {}|Assistant: {}".format(
             msg[-1]["content"], answer))
@@ -763,16 +763,16 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
 
     #qwen2.5:14b@Ollama
     tmp = dialog.llm_id.split("@")
-    chat_logger.info('dialog-------')
-    chat_logger.info(dialog)
+    logging.info('dialog-------')
+    logging.info(dialog)
     fid = None
     llm_id = tmp[0]
     if len(tmp)>1: fid = tmp[1]
     #如果fid为False，则只根据llm_name查询LLMService；
     #如果fid不为False，则在查询时还会根据fid进行过滤。
     llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
-    chat_logger.info('llm-------')
-    chat_logger.info(llm)
+    logging.info('llm-------')
+    logging.info(llm)
     if not llm:
         llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
             TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
@@ -790,9 +790,9 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
 
     prompt_config = dialog.prompt_config
  
-    chat_logger.info('------------only_chat2---------')
+    logging.info('------------only_chat2---------')
 
-    chat_logger.info(prompt_config)
+    logging.info(prompt_config)
 
     # 配置提示词的参数
     if select_skill=='知识库':
@@ -809,9 +809,9 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
     
-    chat_logger.info('------------only_chat3---------')
+    logging.info('------------only_chat3---------')
 
-    chat_logger.info(gen_conf)
+    logging.info(gen_conf)
     # 计算token使用量
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
@@ -828,21 +828,21 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
         return {"answer": answer, "reference": refs}
 
-    chat_logger.info('---only_chat4--')
-    chat_logger.info(msg)
+    logging.info('---only_chat4--')
+    logging.info(msg)
     # 根据stream选项处理模型的对话响应
     if stream:
         answer = ""
-        chat_logger.info('---only_chat5--')
+        logging.info('---only_chat5--')
         for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], gen_conf):
-            chat_logger.info(ans)
+            logging.info(ans)
 
             answer = ans
             yield {"answer": answer, "reference": {}}
         yield decorate_answer(answer)
     else:
         answer = chat_mdl.chat(msg[0]["content"], msg[1:], gen_conf)
-        chat_logger.info("User: {}|Assistant: {}".format(msg[-1]["content"], answer))
+        logging.info("User: {}|Assistant: {}".format(msg[-1]["content"], answer))
         yield decorate_answer(answer)
 
 def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):

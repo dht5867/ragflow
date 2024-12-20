@@ -37,7 +37,7 @@ export default defineConfig({
       target: 'http://127.0.0.1:9380/',
       changeOrigin: true,
       ws: true,
-      logger: console,
+      //logger: console,
       // pathRewrite: { '^/v1': '/v1' },
     },
   ],

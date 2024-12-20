@@ -1,10 +1,11 @@
 # 该文件封装了对api.py的请求，可以被不同的webui使用
 # 通过ApiRequest和AsyncApiRequest支持同步/异步调用
 
+import logging
 from typing import *
 from pathlib import Path
  
-from api.settings import HTTPX_DEFAULT_TIMEOUT, api_address,cmdb_api_address,cmdb_chat_address,log_verbose,chat_logger
+from api.settings import HTTPX_DEFAULT_TIMEOUT, api_address,cmdb_api_address,cmdb_chat_address,log_verbose
 
 import httpx
 import contextlib
@@ -100,7 +101,7 @@ class ApiRequest:
                     return self.client.get(url, params=params, **kwargs)
             except Exception as e:
                 msg = f"error when get {url}: {e}"
-                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                logging.error(f'{e.__class__.__name__}: {msg}',
                              exc_info=e if log_verbose else None)
                 retry -= 1
 
@@ -122,7 +123,7 @@ class ApiRequest:
                     return self.client.post(url, data=data, json=json, **kwargs)
             except Exception as e:
                 msg = f"error when post {url}: {e}"
-                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                logging.error(f'{e.__class__.__name__}: {msg}',
                              exc_info=e if log_verbose else None)
                 retry -= 1
 
@@ -143,7 +144,7 @@ class ApiRequest:
                     return self.client.delete(url, data=data, json=json, **kwargs)
             except Exception as e:
                 msg = f"error when delete {url}: {e}"
-                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                logging.error(f'{e.__class__.__name__}: {msg}',
                              exc_info=e if log_verbose else None)
                 retry -= 1
 
@@ -173,22 +174,22 @@ class ApiRequest:
                                 yield data
                             except Exception as e:
                                 msg = f"接口返回json错误： ‘{chunk}’。错误信息是：{e}。"
-                                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                                logging.error(f'{e.__class__.__name__}: {msg}',
                                              exc_info=e if log_verbose else None)
                         else:
                             # print(chunk, end="", flush=True)
                             yield chunk
             except httpx.ConnectError as e:
                 msg = f"无法连接API服务器，请确认 ‘api.py’ 已正常启动。({e})"
-                chat_logger.error(msg)
+                logging.error(msg)
                 yield {"code": 500, "msg": msg}
             except httpx.ReadTimeout as e:
                 msg = f"API通信超时，请确认已启动FastChat与API服务（详见Wiki '5. 启动 API 服务或 Web UI'）。（{e}）"
-                chat_logger.error(msg)
+                logging.error(msg)
                 yield {"code": 500, "msg": msg}
             except Exception as e:
                 msg = f"API通信遇到错误：{e}"
-                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                logging.error(f'{e.__class__.__name__}: {msg}',
                              exc_info=e if log_verbose else None)
                 yield {"code": 500, "msg": msg}
 
@@ -209,22 +210,22 @@ class ApiRequest:
                                 yield data
                             except Exception as e:
                                 msg = f"接口返回json错误： ‘{chunk}’。错误信息是：{e}。"
-                                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                                logging.error(f'{e.__class__.__name__}: {msg}',
                                              exc_info=e if log_verbose else None)
                         else:
                             # print(chunk, end="", flush=True)
                             yield chunk
             except httpx.ConnectError as e:
                 msg = f"无法连接API服务器，请确认 ‘api.py’ 已正常启动。({e})"
-                chat_logger.error(msg)
+                logging.error(msg)
                 yield {"code": 500, "msg": msg}
             except httpx.ReadTimeout as e:
                 msg = f"API通信超时，请确认已启动FastChat与API服务（详见Wiki '5. 启动 API 服务或 Web UI'）。（{e}）"
-                chat_logger.error(msg)
+                logging.error(msg)
                 yield {"code": 500, "msg": msg}
             except Exception as e:
                 msg = f"API通信遇到错误：{e}"
-                chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                logging.error(f'{e.__class__.__name__}: {msg}',
                              exc_info=e if log_verbose else None)
                 yield {"code": 500, "msg": msg}
 
@@ -251,7 +252,7 @@ class ApiRequest:
             except Exception as e:
                 msg = "API未能返回正确的JSON。" + str(e)
                 if log_verbose:
-                    chat_logger.error(f'{e.__class__.__name__}: {msg}',
+                    logging.error(f'{e.__class__.__name__}: {msg}',
                                  exc_info=e if log_verbose else None)
                 return {"code": 500, "msg": msg, "data": None}
 
