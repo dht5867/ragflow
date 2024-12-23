@@ -13,7 +13,9 @@ import {
   SearchOutlined,
   ToolOutlined,
   UserOutlined,
-  TeamOutlined
+  TeamOutlined,
+  DeploymentUnitOutlined
+  
 } from '@ant-design/icons';
 import { useTranslate } from '@/hooks/common-hooks';
 import { ReactComponent as FileIcon } from '@/assets/svg/file-management.svg';
@@ -58,6 +60,11 @@ const App: React.FC = () => {
         label: t('automation'),
         key: '/automation',
         icon: <ToolOutlined />,
+      },
+      {
+        label: t('flow'),
+        key: '/flow',
+        icon: <DeploymentUnitOutlined />,
       },
       {
         label: t('model'),
