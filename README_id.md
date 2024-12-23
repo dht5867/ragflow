@@ -20,7 +20,7 @@
         <img alt="Lencana Daring" src="https://img.shields.io/badge/Online-Demo-4e6b99">
     </a>
     <a href="https://hub.docker.com/r/infiniflow/ragflow" target="_blank">
-        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.14.1-brightgreen" alt="docker pull infiniflow/ragflow:v0.14.1">
+        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.15.0-brightgreen" alt="docker pull infiniflow/ragflow:v0.15.0">
     </a>
     <a href="https://github.com/infiniflow/ragflow/releases/latest">
         <img src="https://img.shields.io/github/v/release/infiniflow/ragflow?color=blue&label=Rilis%20Terbaru" alt="Rilis Terbaru">
@@ -72,11 +72,12 @@ Coba demo kami di [https://demo.ragflow.io](https://demo.ragflow.io).
 
 ## 🔥 Pembaruan Terbaru
 
+- 2024-12-18 Meningkatkan model Analisis Tata Letak Dokumen di Deepdoc.
 - 2024-12-04 Mendukung skor pagerank ke basis pengetahuan.
 - 2024-11-22 Peningkatan definisi dan penggunaan variabel di Agen.
-- 2024-11-01: Penambahan ekstraksi kata kunci dan pembuatan pertanyaan terkait untuk meningkatkan akurasi pengambilan.
-- 2024-08-22: Dukungan untuk teks ke pernyataan SQL melalui RAG.
-- 2024-08-02: Dukungan GraphRAG yang terinspirasi oleh [graphrag](https://github.com/microsoft/graphrag) dan mind map.
+- 2024-11-01 Penambahan ekstraksi kata kunci dan pembuatan pertanyaan terkait untuk meningkatkan akurasi pengambilan.
+- 2024-08-22 Dukungan untuk teks ke pernyataan SQL melalui RAG.
+- 2024-08-02 Dukungan GraphRAG yang terinspirasi oleh [graphrag](https://github.com/microsoft/graphrag) dan mind map.
 
 ## 🎉 Tetap Terkini
 
@@ -160,24 +161,19 @@ Coba demo kami di [https://demo.ragflow.io](https://demo.ragflow.io).
 
 3. Bangun image Docker pre-built dan jalankan server:
 
-   > Perintah di bawah ini akan mengunduh versi v0.14.1 dari Docker image RAGFlow slim (`v0.14.1-slim`). Image RAGFlow slim
-   tidak termasuk model embedding atau library Python dan berukuran sekitar 1GB.
+   > Perintah di bawah ini mengunduh edisi v0.15.0-slim dari gambar Docker RAGFlow. Silakan merujuk ke tabel berikut untuk deskripsi berbagai edisi RAGFlow. Untuk mengunduh edisi RAGFlow yang berbeda dari v0.15.0-slim, perbarui variabel RAGFLOW_IMAGE di docker/.env sebelum menggunakan docker compose untuk memulai server. Misalnya, atur RAGFLOW_IMAGE=infiniflow/ragflow:v0.15.0 untuk edisi lengkap v0.15.0.
 
    ```bash
    $ cd ragflow
    $ docker compose -f docker/docker-compose.yml up -d
    ```
 
-   | RAGFLOW_IMAGE tag in docker/.env | size  | Including embedding models and related Python packages? | comments               |
-   | -------------------------------- | ----- | ------------------------------------------------------- | ---------------------- |
-   | v0.14.1                          | ~9 GB | YES                                                     | stable release         |
-   | v0.14.1-slim                     | ~2 GB | NO                                                      | stable release         |
-   | v0.15.0-dev1                     | ~9 GB | YES                                                     | unstable beta release  |
-   | v0.15.0-dev1-slim                | ~2 GB | NO                                                      | unstable beta release  |
-   | nightly                          | ~9 GB | YES                                                     | unstable nightly build |
-   | nightly-slim                     | ~2 GB | NO                                                      | unstable nightly build |
-
-
+   | RAGFlow image tag | Image size (GB) | Has embedding models? | Stable?                  |
+   | ----------------- | --------------- | --------------------- | ------------------------ |
+   | v0.15.0           | &approx;9       | :heavy_check_mark:    | Stable release           |
+   | v0.15.0-slim      | &approx;2       | ❌                    | Stable release           |
+   | nightly           | &approx;9       | :heavy_check_mark:    | *Unstable* nightly build |
+   | nightly-slim      | &approx;2       | ❌                    | *Unstable* nightly build |
 
 4. Periksa status server setelah server aktif dan berjalan:
 

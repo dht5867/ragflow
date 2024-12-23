@@ -23,6 +23,7 @@ from api.utils import get_uuid
 from api.utils.api_utils import get_json_result, server_error_response, validate_request, get_data_error_result
 from agent.canvas import Canvas
 from peewee import MySQLDatabase, PostgresqlDatabase
+from api.db.db_models import APIToken
 
 
 @manager.route('/templates', methods=['GET'])  # noqa: F821
@@ -80,6 +81,20 @@ def save():
 @manager.route('/get/<canvas_id>', methods=['GET'])  # noqa: F821
 @login_required
 def get(canvas_id):
+    e, c = UserCanvasService.get_by_id(canvas_id)
+    if not e:
+        return get_data_error_result(message="canvas not found.")
+    return get_json_result(data=c.to_dict())
+
+@manager.route('/getsse/<canvas_id>', methods=['GET'])  # type: ignore # noqa: F821
+def getsse(canvas_id):
+    token = request.headers.get('Authorization').split()
+    if len(token) != 2:
+        return get_data_error_result(message='Authorization is not valid!"')
+    token = token[1]
+    objs = APIToken.query(beta=token)
+    if not objs:
+        return get_data_error_result(message='Token is not valid!"')
     e, c = UserCanvasService.get_by_id(canvas_id)
     if not e:
         return get_data_error_result(message="canvas not found.")
@@ -186,6 +201,50 @@ def reset():
         return server_error_response(e)
 
 
+@manager.route('/input_elements', methods=['GET'])  # noqa: F821
+@login_required
+def input_elements():
+    cvs_id = request.args.get("id")
+    cpn_id = request.args.get("component_id")
+    try:
+        e, user_canvas = UserCanvasService.get_by_id(cvs_id)
+        if not e:
+            return get_data_error_result(message="canvas not found.")
+        if not UserCanvasService.query(user_id=current_user.id, id=cvs_id):
+            return get_json_result(
+                data=False, message='Only owner of canvas authorized for this operation.',
+                code=RetCode.OPERATING_ERROR)
+
+        canvas = Canvas(json.dumps(user_canvas.dsl), current_user.id)
+        return get_json_result(data=canvas.get_component_input_elements(cpn_id))
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route('/debug', methods=['POST'])  # noqa: F821
+@validate_request("id", "component_id", "params")
+@login_required
+def debug():
+    req = request.json
+    for p in req["params"]:
+        assert p.get("key")
+    try:
+        e, user_canvas = UserCanvasService.get_by_id(req["id"])
+        if not e:
+            return get_data_error_result(message="canvas not found.")
+        if not UserCanvasService.query(user_id=current_user.id, id=req["id"]):
+            return get_json_result(
+                data=False, message='Only owner of canvas authorized for this operation.',
+                code=RetCode.OPERATING_ERROR)
+
+        canvas = Canvas(json.dumps(user_canvas.dsl), current_user.id)
+        canvas.get_component(req["component_id"])["obj"]._param.debug_inputs = req["params"]
+        df = canvas.get_component(req["component_id"])["obj"].debug()
+        return get_json_result(data=df.to_dict(orient="records"))
+    except Exception as e:
+        return server_error_response(e)
+
+
 @manager.route('/test_db_connect', methods=['POST'])  # noqa: F821
 @validate_request("db_type", "database", "username", "host", "port", "password")
 @login_required
@@ -198,8 +257,26 @@ def test_db_connect():
         elif req["db_type"] == 'postgresql':
             db = PostgresqlDatabase(req["database"], user=req["username"], host=req["host"], port=req["port"],
                                     password=req["password"])
-        db.connect()
+        elif req["db_type"] == 'mssql':
+            import pyodbc
+            connection_string = (
+                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                f"SERVER={req['host']},{req['port']};"
+                f"DATABASE={req['database']};"
+                f"UID={req['username']};"
+                f"PWD={req['password']};"
+            )
+            db = pyodbc.connect(connection_string)
+            cursor = db.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+        else:
+            return server_error_response("Unsupported database type.")
+        if req["db_type"] != 'mssql':
+            db.connect()
         db.close()
+        
         return get_json_result(data="Database Connection Successful!")
     except Exception as e:
         return server_error_response(e)
+
