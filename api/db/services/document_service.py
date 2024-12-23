@@ -619,3 +619,32 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             doc_id, kb.id, token_counts[doc_id], chunk_counts[doc_id], 0)
 
     return [d["id"] for d, _ in files]
+
+
+def save_upload_and_parse(conversation_id, file_objs, user_id,doc_id):
+    from api.db.services.dialog_service import ConversationService, DialogService
+    from api.db.services.file_service import FileService
+    from api.db.services.llm_service import LLMBundle
+    from api.db.services.user_service import TenantService
+    from api.db.services.api_service import API4ConversationService
+
+    e, conv = ConversationService.get_by_id(conversation_id)
+    if not e:
+        e, conv = API4ConversationService.get_by_id(conversation_id)
+    assert e, "Conversation not found!"
+
+   #查找助手的所有知识库
+    e, dia = DialogService.get_by_id(conv.dialog_id)
+    kb_id = dia.kb_ids[0]
+    e, kb = KnowledgebaseService.get_by_id(kb_id)
+    if not e:
+        raise LookupError("Can't find this knowledgebase!")
+
+    err, files = FileService.save_document(kb, file_objs, user_id,doc_id)
+
+    logging.info('---upload and save --')
+
+    logging.info(files)
+    assert not err, "\n".join(err)
+
+    return [d["id"] for d, _ in files]  

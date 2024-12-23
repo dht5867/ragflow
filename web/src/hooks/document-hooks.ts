@@ -436,7 +436,7 @@ export const useUploadAndParseDocument = (uploadMethod: string) => {
           formData.append('file', file as any);
         });
         if (uploadMethod === 'upload_and_parse') {
-          const data = await kbService.upload_and_parse(formData);
+          const data = await kbService.log_upload_and_parse(formData);
           return data?.data;
         }
         const data = await chatService.uploadAndParseExternal(formData);

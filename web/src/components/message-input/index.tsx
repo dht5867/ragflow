@@ -132,7 +132,6 @@ const MessageInput = ({
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
   const [placeholderValue, setPlaceholderValue] = useState( t('')); // 输入框的值
-  console.log(placeholderValue)
 
   const handlePreview = async (file: UploadFile) => {
     if (!file.url && !file.preview) {
@@ -184,16 +183,16 @@ const MessageInput = ({
     setPlaceholderValue(`@${option}`);
   };
 
-  const { runDocumentByIds } = useRunNextDocument();
-  const runDocument = useCallback(
-    (run: number,doc_ids: any) => {
-      runDocumentByIds({
-        documentIds: doc_ids,
-        run,
-      });
-    },
-    [runDocumentByIds],
-  );
+  // const { runDocumentByIds } = useRunNextDocument();
+  // const runDocument = useCallback(
+  //   (run: number,doc_ids: any) => {
+  //     runDocumentByIds({
+  //       documentIds: doc_ids,
+  //       run,
+  //     });
+  //   },
+  //   [runDocumentByIds],
+  // );
 
   const handleChange: UploadProps['onChange'] = async ({
     //fileList: newFileList,
@@ -234,31 +233,31 @@ const MessageInput = ({
         ...file,
         originFileObj: file as any,
         response: ret,
-        percent: 50,
-        status: ret?.retcode === 0 ? 'uploading' : 'error',
+        percent: 100,
+        status: ret?.retcode === 0 ? 'done' : 'error',
       });
-
+      console.log(nextList)
       return nextList;
     });
-    if (ret?.retcode === 0) {
-      console.log('start parse');
-      const ids = ret.data;
-      console.log(ids);
-      runDocument(1, ids);
-      setFileList((list) => {
-        const nextList = list.filter((x) => x.uid !== file.uid);
-        nextList.push({
-          ...file,
-          originFileObj: file as any,
-          response: ret,
-          percent: 80,
-          status: ret?.retcode === 0 ? 'uploading' : 'error',
-        });
-        return nextList;
-      });
-      // Start polling document info
-      startPolling(ids);
-    }
+    // if (ret?.retcode === 0) {
+    //   //console.log('start parse');
+    //   const ids = ret.data;
+    //   console.log(ids);
+    //   //runDocument(1, ids);
+    //   setFileList((list) => {
+    //     const nextList = list.filter((x) => x.uid !== file.uid);
+    //     nextList.push({
+    //       ...file,
+    //       originFileObj: file as any,
+    //       response: ret,
+    //       percent: 100,
+    //       status: ret?.retcode === 0 ? 'done' : 'error',
+    //     });
+    //     return nextList;
+    //   });
+    //   // Start polling document info
+    //   startPolling(ids);
+    // }
   };
 
   // const getDocumentInfoById = useCallback(
@@ -268,61 +267,61 @@ const MessageInput = ({
   //   [documentInfos],
   // );
 
-  const POLLING_INTERVAL = 5000; // Polling every 5 seconds (adjust as necessary)
+  // const POLLING_INTERVAL = 5000; // Polling every 5 seconds (adjust as necessary)
 
-  const fetchDocumentInfo = async (ids: string[]) => {
-    try {
-      const { data } = await kbService.document_infos({ doc_ids: ids });
-      if (data.retcode === 0) {
-        return data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Failed to fetch document info:', error);
-      return [];
-    }
-  };
+  // const fetchDocumentInfo = async (ids: string[]) => {
+  //   try {
+  //     const { data } = await kbService.document_infos({ doc_ids: ids });
+  //     if (data.retcode === 0) {
+  //       return data.data;
+  //     }
+  //     return [];
+  //   } catch (error) {
+  //     console.error('Failed to fetch document info:', error);
+  //     return [];
+  //   }
+  // };
 
   // Start polling function
-  const startPolling = (ids: string[]) => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    intervalRef.current = setInterval(async () => {
-      console.log('startPolling');
-      const data = await fetchDocumentInfo(ids);
-      console.log(data);
+  // const startPolling = (ids: string[]) => {
+  //   if (intervalRef.current) {
+  //     clearInterval(intervalRef.current);
+  //   }
+  //   intervalRef.current = setInterval(async () => {
+  //     console.log('startPolling');
+  //     const data = await fetchDocumentInfo(ids);
+  //     console.log(data);
 
-      if (data.length > 0 && data[0].progress === 1) {
-        // Stop polling when progress is 1 (complete)
-        clearInterval(intervalRef.current as NodeJS.Timeout);
-        intervalRef.current = null;
+  //     if (data.length > 0 && data[0].progress === 1) {
+  //       // Stop polling when progress is 1 (complete)
+  //       clearInterval(intervalRef.current as NodeJS.Timeout);
+  //       intervalRef.current = null;
 
-        // Update the file status to 'done'
-        setFileList((fileList) => {
-          return fileList.map((file) => {
-            if (getFileId(file) === ids[0]) {
-              return {
-                ...file,
-                percent: 100,
-                status: 'done',
-              };
-            }
-            return file;
-          });
-        });
-      }
-    }, POLLING_INTERVAL);
-  };
+  //       // Update the file status to 'done'
+  //       setFileList((fileList) => {
+  //         return fileList.map((file) => {
+  //           if (getFileId(file) === ids[0]) {
+  //             return {
+  //               ...file,
+  //               percent: 100,
+  //               status: 'done',
+  //             };
+  //           }
+  //           return file;
+  //         });
+  //       });
+  //     }
+  //   }, POLLING_INTERVAL);
+  // };
 
   // Cleanup polling on component unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     if (intervalRef.current) {
+  //       clearInterval(intervalRef.current);
+  //     }
+  //   };
+  // }, []);
 
   // 同步外部的 value 到内部的 inputValue
   useEffect(() => {
@@ -334,6 +333,16 @@ const MessageInput = ({
   const handlePressEnter = useCallback(async () => {
     if (isUploadingFile) return;
     const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));
+    console.log(placeholderValue)
+    if(placeholderValue=="@LOG"||placeholderValue=="@日志分析"){
+      if(ids.length<=0){
+        notification.error({
+          message:  t('uploadfiletips'),
+          placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
+        });
+        return
+      }
+    }
 
     onPressEnter(ids);
     setFileList([]);
@@ -362,12 +371,12 @@ const MessageInput = ({
     [removeDocument, deleteDocument, isShared],
   );
 
-  const getDocumentInfoById = useCallback(
-    (id: string) => {
-      return documentInfos.find((x) => x.id === id);
-    },
-    [documentInfos],
-  );
+  // const getDocumentInfoById = useCallback(
+  //   (id: string) => {
+  //     return documentInfos.find((x) => x.id === id);
+  //   },
+  //   [documentInfos],
+  // );
 
   useEffect(() => {
     const ids = getFileIds(fileList);
@@ -468,8 +477,8 @@ conversationIdRef.current = conversationId;
           className={styles.listWrapper}
           renderItem={(item) => {
             const id = getFileId(item);
-            const documentInfo = getDocumentInfoById(id);
-            const fileExtension = getExtension(documentInfo?.name ?? '');
+            //const documentInfo = getDocumentInfoById(id);
+            const fileExtension = getExtension(item.originFileObj?.name ?? '');
             const fileName = item.originFileObj?.name ?? '';
 
             return (
@@ -510,7 +519,7 @@ conversationIdRef.current = conversationId;
                               <span>{fileExtension?.toUpperCase()},</span>
                               <span>
                                 {formatBytes(
-                                  getDocumentInfoById(id)?.size ?? 0,
+                                  item.originFileObj?.size ?? 0,
                                 )}
                               </span>
                             </Space>

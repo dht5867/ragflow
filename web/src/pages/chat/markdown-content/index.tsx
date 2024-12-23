@@ -71,8 +71,13 @@ const MarkdownContent = ({
         const latestAncestor = ancestors.at(-1);
         if (
           latestAncestor.tagName !== 'custom-typography' &&
-          latestAncestor.tagName !== 'code'
-        ) {
+          latestAncestor.tagName !== 'code'&&
+          latestAncestor.tagName !== 'table'&&
+          latestAncestor.tagName !== 'thead'&&
+          latestAncestor.tagName !== 'tbody'&&
+          latestAncestor.tagName !== 'tr'&&
+          latestAncestor.tagName !== 'td'
+        ){
           node.type = 'element';
           node.tagName = 'custom-typography';
           node.properties = {};
@@ -183,7 +188,7 @@ const MarkdownContent = ({
       components={
         {
           'custom-typography': ({ children }: { children: string }) =>
-            renderReference(children),
+          renderReference(children),
           code(props: any) {
             const { children, className, node, ...rest } = props;
             const match = /language-(\w+)/.exec(className || '');

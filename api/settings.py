@@ -212,13 +212,28 @@ class RetCode(IntEnum, CustomEnum):
 import sys
 DEFAULT_BIND_HOST = "0.0.0.0" if sys.platform != "win32" else "127.0.0.1"
 # httpx 请求默认超时时间（秒）。如果加载模型或对话较慢，出现超时错误，可以适当加大该值。
-HTTPX_DEFAULT_TIMEOUT = 3000.0
+HTTPX_DEFAULT_TIMEOUT = 30000.0
 
 # 是否显示详细日志
 log_verbose = False
 
+# 缓存临时向量库数量（针对FAISS），用于文件对话
+CACHED_MEMO_VS_NUM = 10
+
+# 知识库中单段文本长度(不适用MarkdownHeaderTextSplitter)
+CHUNK_SIZE = 250
+
+# 知识库中相邻文本重合长度(不适用MarkdownHeaderTextSplitter)
+OVERLAP_SIZE = 50
+
+# 是否开启中文标题加强，以及标题增强的相关配置
+# 通过增加标题判断，判断哪些文本为标题，并在metadata中进行标记；
+# 然后将文本与往上一级的标题进行拼合，实现文本信息的增强。
+ZH_TITLE_ENHANCE = False
+
+
 API_SERVER = {
-    "host": DEFAULT_BIND_HOST,
+    "host": "10.171.248.164",
     "port": 7861,
 }
 

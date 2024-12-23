@@ -29,6 +29,7 @@ const {
   knowledge_graph,
   document_infos,
   upload_and_parse,
+  log_upload_and_parse,
 } = api;
 
 const methods = {
@@ -137,6 +138,10 @@ const methods = {
   },
   upload_and_parse: {
     url: upload_and_parse,
+    method: 'post',
+  },
+  log_upload_and_parse: {
+    url: log_upload_and_parse,
     method: 'post',
   },
 };

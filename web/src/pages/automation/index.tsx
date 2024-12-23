@@ -16,7 +16,7 @@ const AutomationOps: React.FC = () => {
   return (
     <div className={styles.iframeContainer}>
       <iframe
-        src="http://10.171.248.164:8502/" // The URL to load
+        src="https://ansible.zerotrusts.cc/" // The URL to load
         title="自动化运维"
         width="100%"
         height="92%"

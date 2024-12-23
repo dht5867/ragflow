@@ -33,7 +33,7 @@ from api.db.services.user_service import UserTenantService
 from api.db.services import duplicate_name
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.task_service import TaskService
-from api.db.services.document_service import DocumentService, doc_upload_and_parse
+from api.db.services.document_service import DocumentService, doc_upload_and_parse, save_upload_and_parse
 from api.utils.api_utils import (
     server_error_response,
     get_data_error_result,
@@ -46,6 +46,8 @@ from rag.utils.storage_factory import STORAGE_IMPL
 from api.utils.file_utils import filename_type, thumbnail, get_project_base_directory
 from api.utils.web_utils import html2pdf, is_valid_url
 from api.constants import IMG_BASE64_PREFIX
+from api.utils.api_utils import server_error_response, get_data_error_result, validate_request
+from api.db.services.log_service import upload_temp_docs
 
 
 @manager.route('/upload', methods=['POST'])  # noqa: F821
@@ -377,6 +379,7 @@ def run():
                 doc = doc.to_dict()
                 doc["tenant_id"] = tenant_id
                 bucket, name = File2DocumentService.get_storage_address(doc_id=doc["id"])
+                #文件放入消息队列开始解析
                 queue_tasks(doc, bucket, name)
 
         return get_json_result(data=True)
@@ -593,3 +596,31 @@ def parse():
     txt = FileService.parse_docs(file_objs, current_user.id)
 
     return get_json_result(data=txt)
+
+@manager.route("/log_upload_and_parse", methods=["POST"])
+@validate_request("conversation_id")
+def upload_parse():
+    if "file" not in request.files:
+        return get_json_result(
+            data=False, retmsg="No file part!", code=settings.RetCode.ARGUMENT_ERROR)
+    file_objs = request.files.getlist("file")
+    for file_obj in file_objs:
+        if file_obj.filename == "":
+            return get_json_result(
+                data=False, retmsg="No file selected!", retcode=settings.RetCode.ARGUMENT_ERROR
+            )
+        
+     # 准备文件数据以转发到目标服务器
+    files = [
+        ('files', (file.filename, file.stream, file.content_type))
+        for file in file_objs
+    ]
+
+    result = upload_temp_docs(files)
+    doc_ids=[]
+    if "data" not in result:
+        return get_json_result(
+            data=False, retmsg="upload file failed!", code=settings.RetCode.ARGUMENT_ERROR)
+    doc_id=result.get("data", {}).get("id")
+    doc_ids = save_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id,doc_id)
+    return get_json_result(data=doc_ids)

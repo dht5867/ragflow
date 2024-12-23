@@ -422,7 +422,7 @@ export default {
       extensionTitle: 'Chrome 插件',
       tokenError: '請先創建 API Token!',
       betaError: '請先在系統設定中申請API密鑰。',
-      searching: '搜索中',
+      searching: '思考中',
       parsing: '解析中',
       uploading: '上傳中',
       uploadFailed: '上傳失敗',
@@ -437,6 +437,17 @@ export default {
         '在多輪對話的中，對去知識庫查詢的問題進行最佳化。會呼叫大模型額外消耗token。',
       howUseId: '如何使用聊天ID？',
       description: '助理描述',
+      msg:"你选择了",
+      skillplaceholder:"随时@小吉, 使用各种能力...",
+      selectSkillHolder:"请选择一个技能",
+      skills:{
+        chat: '自由对话',
+        code:'程序开发',
+        knowledge: '知识库',
+        log:'日志分析',
+        cmdb:'CMDB',
+      },
+      uploadfiletips:"请上传日志文件"
     },
     setting: {
       profile: '概述',

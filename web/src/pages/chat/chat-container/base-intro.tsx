@@ -112,13 +112,13 @@ const RenderIntro = ({ selectedValue ,language}) => {
       <div style={{ margin: '60px 20px', color: 'grey' }}>
         <Title level={4}>CMDB 提示词示例：</Title>
         <Divider />
-        <Paragraph>您可以问“北湖数据中心目前有多少设备”</Paragraph>
-        <Paragraph>您可以问“ 按设备类型分组，统计每种设备类型的数量”</Paragraph>
+        <Paragraph>您可以问“统计开发环境的主机数量”</Paragraph>
+        <Paragraph>您可以问“内存大于10G的主机”</Paragraph>
         <Paragraph>
-          您可以问“查询并统计设备类型为小型机在数据中心的分布情况”
+          您可以问“查找包含10.88.0.1的主机”
         </Paragraph>
         <Paragraph>
-          您可以问“查询并统计设备类型为ARM服务器采购时间的分布，以年为单位统计“
+          您可以问“统计物理机并且是系统角色包含kvm的所有机器“
         </Paragraph>
       </div>
     );

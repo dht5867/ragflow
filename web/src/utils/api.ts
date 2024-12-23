@@ -63,6 +63,7 @@ export default {
   document_infos: `${api_host}/document/infos`,
   upload_and_parse: `${api_host}/document/upload_and_parse`,
   parse: `${api_host}/document/parse`,
+  log_upload_and_parse: `${api_host}/document/log_upload_and_parse`,
 
   // chat
   setDialog: `${api_host}/dialog/set`,

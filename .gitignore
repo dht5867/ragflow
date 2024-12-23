@@ -37,5 +37,8 @@ sdk/python/ragflow.egg-info/
 sdk/python/build/
 sdk/python/dist/
 sdk/python/ragflow_sdk.egg-info/
+huggingface.co/*
+nltk_data/*
+
 huggingface.co/
 nltk_data/

@@ -24,12 +24,13 @@ from api.db.services.cmdb_service import cmdb_chat_stream
 from api.db.db_models import APIToken
 
 from api.db.services.conversation_service import ConversationService, structure_answer
+
 from api.db.services.user_service import UserTenantService
 from flask import request, Response
 from flask_login import login_required, current_user
 
 from api.db import LLMType
-from api.db.services.dialog_service import DialogService, ConversationService, chat, ask, file_chat, only_chat
+from api.db.services.dialog_service import DialogService, ConversationService, chat, ask, log_chat, log_chat, only_chat
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMBundle, TenantService, TenantLLMService
 from api import settings
@@ -272,7 +273,7 @@ def completion():
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                 elif selectedSkill=='日志分析' or selectedSkill=='LOG' :
                     logging.info('-------日志分析----')
-                    for ans in file_chat(dia, msg, True, **req):
+                    for ans in log_chat(dia, msg, True, **req):
                         fillin_conv(ans)
                         yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())

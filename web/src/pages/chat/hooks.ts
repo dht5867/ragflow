@@ -296,7 +296,20 @@ export const useSelectNextMessages = (selectedValue: string) => {
 
   const addPrologue = useCallback(() => {
     if (dialogId !== '' && isNew === 'true') {
-      const prologue = dialog.prompt_config?.prologue;
+      let prologue = dialog.prompt_config?.prologue;
+
+      if (selectedValue === "CMDB") {
+        prologue = `
+  ### CMDB的格式如下，关于CMDB有什么可以帮到你？
+  | 主机名        | 运行环境 | 可用域 | 系统角色                | 虚拟化角色 | CPU | 内存    | 操作系统 | 操作系统版本         | Kernel                     | 系统架构 | IP地址                                      |
+  |--------------|----------|--------|-------------------------|------------|-----|---------|----------|----------------------|----------------------------|-----------|---------------------------------------------|
+  | baremetal02  | 生产     | tok04  | kvm                     | 物理机     | 192 | 516 GB  | Ubuntu   | 20.04                | 5.4.0-88-generic           | x86_64     | 192.168.122.110, 10.88.0.1, 128.168.65.99, 10.192.2 |
+  | baremetal01  | 生产     | dal10  | nvidia, machine-learning, xiaoji | 物理机 | 192 | 258 GB  | Ubuntu   | 22.04                | 5.15.0-112-generic         | x86_64     | 192.168.67.2, 172.18.0.1, 10.171.248.164, 172.17.0 |
+  | ansible-builder | 测试   | tok04  | elasticsearch, grafana  | 虚拟机     | 2   | 3.73 GB | CentOS   | 8.0                  | 4.18.0-358.el8.x86_64      | x86_64     | 10.88.0.1, 172.16.0.2, 192.168.69.77        |
+  `;
+      }
+
+      
       const nextMessage = {
         role: MessageType.Assistant,
         content: prologue,
@@ -470,10 +483,14 @@ export const useSendNextMessage = (
     (documentIds: string[]) => {
       if (trim(value) === '') return;
       const id = uuid();
-
       console.log('0----' + selectedValue);
       console.log(documentIds);
       console.log('1----press enter ');
+      if (selectedValue === "LOG" || selectedValue == "日志分析") {
+        if (documentIds.length <=0){
+            return 
+        } 
+      }
 
       addNewestQuestion({
         content: value,

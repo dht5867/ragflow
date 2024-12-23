@@ -464,6 +464,7 @@ The above is the content you need to summarize.`,
       },
       howUseId: 'How to use chat ID?',
       description: 'Description of assistant',
+      uploadfiletips:"please upload log file "
     },
     setting: {
       profile: 'Profile',
