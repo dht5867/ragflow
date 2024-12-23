@@ -23,8 +23,9 @@ from copy import deepcopy
 from timeit import default_timer as timer
 import datetime
 from datetime import timedelta
+from typing import Optional
 from api.db import LLMType, ParserType, StatusEnum
-from api.db.db_models import Dialog, DB
+from api.db.db_models import Conversation, Dialog, DB
 from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
@@ -35,7 +36,6 @@ from rag.app.resume import forbidden_select_fields4resume
 from rag.nlp.search import index_name
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
-from rag.utils.es_conn import ELASTICSEARCH
 PROMPT_TEMPLATES = {
     "llm_chat": {
         "default":

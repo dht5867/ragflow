@@ -330,15 +330,11 @@ def completion():
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                     logging.info('---------CMDB end----------')
                 else:
-                    logging.info('-------chat----')
+                    logging.info('-------only_chat----')
                     for ans in only_chat(selectedSkill,dia, msg, True, **req):
                         yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                         fillin_conv(ans)
                     ConversationService.update_by_id(conv.id, conv.to_dict())            
-                for ans in chat(dia, msg, True, **req):
-                    ans = structure_answer(conv, ans, message_id, conv.id)
-                    yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
-                ConversationService.update_by_id(conv.id, conv.to_dict())
             except Exception as e:
                 traceback.print_exc()
                 yield "data:" + json.dumps({"code": 500, "message": str(e),
