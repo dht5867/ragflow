@@ -21,6 +21,9 @@ import traceback
 from copy import deepcopy
 from typing import Union
 from api.db.services.cmdb_service import cmdb_chat_stream
+from api.db.db_models import APIToken
+
+from api.db.services.conversation_service import ConversationService, structure_answer
 from api.db.services.user_service import UserTenantService
 from flask import request, Response
 from flask_login import login_required, current_user
@@ -33,7 +36,6 @@ from api import settings
 from api.utils.api_utils import get_json_result
 from api.utils.api_utils import server_error_response, get_data_error_result, validate_request
 from graphrag.mind_map_extractor import MindMapExtractor
-
 
 @manager.route('/set', methods=['POST'])  # noqa: F821
 @login_required
@@ -81,22 +83,64 @@ def set_conversation():
 def get():
     conv_id = request.args["conversation_id"]
     try:
+        
         e, conv = ConversationService.get_by_id(conv_id)
         if not e:
             return get_data_error_result(message="Conversation not found!")
         tenants = UserTenantService.query(user_id=current_user.id)
+        avatar =None
         for tenant in tenants:
-            if DialogService.query(tenant_id=tenant.tenant_id, id=conv.dialog_id):
+            dialog = DialogService.query(tenant_id=tenant.tenant_id, id=conv.dialog_id)
+            if dialog and len(dialog)>0:
+                avatar = dialog[0].icon
                 break
         else:
             return get_json_result(
                 data=False, message='Only owner of conversation authorized for this operation.',
                 code=settings.RetCode.OPERATING_ERROR)
+
+        def get_value(d, k1, k2):
+            return d.get(k1, d.get(k2))
+
+        for ref in conv.reference:
+            if isinstance(ref, list):
+                continue
+            ref["chunks"] = [{
+                "id": get_value(ck, "chunk_id", "id"),
+                "content": get_value(ck, "content", "content_with_weight"),
+                "document_id": get_value(ck, "doc_id", "document_id"),
+                "document_name": get_value(ck, "docnm_kwd", "document_name"),
+                "dataset_id": get_value(ck, "kb_id", "dataset_id"),
+                "image_id": get_value(ck, "image_id", "img_id"),
+                "positions": get_value(ck, "positions", "position_int"),
+            } for ck in ref.get("chunks", [])]
+
         conv = conv.to_dict()
+        conv["avatar"]=avatar
         return get_json_result(data=conv)
     except Exception as e:
         return server_error_response(e)
 
+@manager.route('/getsse/<dialog_id>', methods=['GET'])  # type: ignore # noqa: F821
+def getsse(dialog_id):
+    
+    token = request.headers.get('Authorization').split()
+    if len(token) != 2:
+        return get_data_error_result(message='Authorization is not valid!"')
+    token = token[1]
+    objs = APIToken.query(beta=token)
+    if not objs:
+        return get_data_error_result(message='Token is not valid!"')
+    try:
+        e, conv = DialogService.get_by_id(dialog_id)
+        if not e:
+            return get_data_error_result(message="Dialog not found!")
+        conv = conv.to_dict()
+        conv["avatar"]= conv["icon"]
+        del conv["icon"]
+        return get_json_result(data=conv)
+    except Exception as e:
+        return server_error_response(e)
 
 @manager.route('/rm', methods=['POST'])  # noqa: F821
 @login_required
@@ -134,6 +178,7 @@ def list_convsersation():
             dialog_id=dialog_id,
             order_by=ConversationService.model.create_time,
             reverse=True)
+
         convs = [d.to_dict() for d in convs]
         return get_json_result(data=convs)
     except Exception as e:
@@ -187,11 +232,6 @@ def completion():
         del req["conversation_id"]
         del req["messages"]
 
-        if not conv.reference:
-            conv.reference = []
-        conv.message.append({"role": "assistant", "content": "", "id": message_id})
-        conv.reference.append({"chunks": [], "doc_aggs": []})
-
         def fillin_conv(ans):
             nonlocal conv, message_id
             if not conv.reference:
@@ -200,7 +240,28 @@ def completion():
                 conv.reference[-1] = ans["reference"]
             conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
             ans["id"] = message_id
+        if not conv.reference:
+            conv.reference = []
+        else:
+            def get_value(d, k1, k2):
+                return d.get(k1, d.get(k2))
 
+            for ref in conv.reference:
+                if isinstance(ref, list):
+                    continue
+                ref["chunks"] = [{
+                    "id": get_value(ck, "chunk_id", "id"),
+                    "content": get_value(ck, "content", "content_with_weight"),
+                    "document_id": get_value(ck, "doc_id", "document_id"),
+                    "document_name": get_value(ck, "docnm_kwd", "document_name"),
+                    "dataset_id": get_value(ck, "kb_id", "dataset_id"),
+                    "image_id": get_value(ck, "image_id", "img_id"),
+                    "positions": get_value(ck, "positions", "position_int"),
+                } for ck in ref.get("chunks", [])]
+
+        if not conv.reference:
+            conv.reference = []
+        conv.reference.append({"chunks": [], "doc_aggs": []})
         def stream():
             nonlocal dia, msg, req, conv
             try:
@@ -274,6 +335,10 @@ def completion():
                         yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                         fillin_conv(ans)
                     ConversationService.update_by_id(conv.id, conv.to_dict())            
+                for ans in chat(dia, msg, True, **req):
+                    ans = structure_answer(conv, ans, message_id, conv.id)
+                    yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                ConversationService.update_by_id(conv.id, conv.to_dict())
             except Exception as e:
                 traceback.print_exc()
                 yield "data:" + json.dumps({"code": 500, "message": str(e),
@@ -292,8 +357,7 @@ def completion():
         else:
             answer = None
             for ans in chat(dia, msg, **req):
-                answer = ans
-                fillin_conv(ans)
+                answer = structure_answer(conv, ans, message_id, req["conversation_id"])
                 ConversationService.update_by_id(conv.id, conv.to_dict())
                 break
             return get_json_result(data=answer)

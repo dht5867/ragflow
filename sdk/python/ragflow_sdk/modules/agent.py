@@ -1,7 +1,7 @@
 from .base import Base
 from .session import Session
 import requests
-from typing import List
+
 
 class Agent(Base):
     def __init__(self,rag,res_dict):
@@ -51,8 +51,8 @@ class Agent(Base):
             super().__init__(rag,res_dict)
 
     @staticmethod
-    def create_session(id,rag) -> Session:
-        res = requests.post(f"{rag.api_url}/agents/{id}/sessions",headers={"Authorization": f"Bearer {rag.user_key}"},json={})
+    def create_session(id,rag,**kwargs) -> Session:
+        res = requests.post(f"{rag.api_url}/agents/{id}/sessions",headers={"Authorization": f"Bearer {rag.user_key}"},json=kwargs)
         res = res.json()
         if res.get("code") == 0:
             return Session(rag,res.get("data"))
@@ -60,7 +60,7 @@ class Agent(Base):
 
     @staticmethod
     def list_sessions(agent_id,rag,page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True,
-                      id: str = None) -> List[Session]:
+                      id: str = None) -> list[Session]:
         url = f"{rag.api_url}/agents/{agent_id}/sessions"
         headers = {"Authorization": f"Bearer {rag.user_key}"}
         params = {"page": page, "page_size": page_size, "orderby": orderby, "desc": desc, "id": id}

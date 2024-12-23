@@ -14,7 +14,7 @@
 #  limitations under the License.
 #
 import logging
-import hashlib
+import xxhash
 import json
 import random
 import re
@@ -284,6 +284,31 @@ class DocumentService(CommonService):
 
     @classmethod
     @DB.connection_context()
+    def get_chunking_config(cls, doc_id):
+        configs = (
+            cls.model.select(
+                cls.model.id,
+                cls.model.kb_id,
+                cls.model.parser_id,
+                cls.model.parser_config,
+                Knowledgebase.language,
+                Knowledgebase.embd_id,
+                Tenant.id.alias("tenant_id"),
+                Tenant.img2txt_id,
+                Tenant.asr_id,
+                Tenant.llm_id,
+            )
+            .join(Knowledgebase, on=(cls.model.kb_id == Knowledgebase.id))
+            .join(Tenant, on=(Knowledgebase.tenant_id == Tenant.id))
+            .where(cls.model.id == doc_id)
+        )
+        configs = configs.dicts()
+        if not configs:
+            return None
+        return configs[0]
+
+    @classmethod
+    @DB.connection_context()
     def get_doc_id_by_doc_name(cls, doc_name):
         fields = [cls.model.id]
         doc_id = cls.model.select(*fields) \
@@ -319,6 +344,8 @@ class DocumentService(CommonService):
                     old[k] = v
 
         dfs_update(d.parser_config, config)
+        if not config.get("raptor") and d.parser_config.get("raptor"):
+            del d.parser_config["raptor"]
         cls.update_by_id(id, {"parser_config": d.parser_config})
 
     @classmethod
@@ -407,17 +434,25 @@ class DocumentService(CommonService):
 
 
 def queue_raptor_tasks(doc):
+    chunking_config = DocumentService.get_chunking_config(doc["id"])
+    hasher = xxhash.xxh64()
+    for field in sorted(chunking_config.keys()):
+        hasher.update(str(chunking_config[field]).encode("utf-8"))
+
     def new_task():
         nonlocal doc
         return {
             "id": get_uuid(),
             "doc_id": doc["id"],
-            "from_page": 0,
-            "to_page": -1,
+            "from_page": 100000000,
+            "to_page": 100000000,
             "progress_msg": "Start to do RAPTOR (Recursive Abstractive Processing for Tree-Organized Retrieval)."
         }
 
     task = new_task()
+    for field in ["doc_id", "from_page", "to_page"]:
+        hasher.update(str(task.get(field, "")).encode("utf-8"))
+    task["digest"] = hasher.hexdigest()
     bulk_insert_into_db(Task, [task], True)
     task["type"] = "raptor"
     assert REDIS_CONN.queue_product(SVR_QUEUE_NAME, message=task), "Can't access Redis. Please check the Redis' status."
@@ -506,10 +541,7 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
         for ck in th.result():
             d = deepcopy(doc)
             d.update(ck)
-            md5 = hashlib.md5()
-            md5.update((ck["content_with_weight"] +
-                        str(d["doc_id"])).encode("utf-8"))
-            d["id"] = md5.hexdigest()
+            d["id"] = xxhash.xxh64((ck["content_with_weight"] + str(d["doc_id"])).encode("utf-8")).hexdigest()
             d["create_time"] = str(datetime.now()).replace("T", " ")[:19]
             d["create_timestamp_flt"] = datetime.now().timestamp()
             if not d.get("image"):

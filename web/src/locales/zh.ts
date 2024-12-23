@@ -33,6 +33,7 @@ export default {
       pleaseSelect: '请选择',
       pleaseInput: '请输入',
       submit: '提交',
+      embedIntoSite: '嵌入网站',
     },
     login: {
       login: '登录',
@@ -125,8 +126,8 @@ export default {
       view: '看法',
       filesSelected: '选定的文件',
       upload: '上传',
-      run: '启动',
-      runningStatus0: '未启动',
+      run: '解析',
+      runningStatus0: '未解析',
       runningStatus1: '解析中',
       runningStatus2: '取消',
       runningStatus3: '成功',
@@ -169,6 +170,7 @@ export default {
       autoKeywordsTip: `在查询此类关键词时，为每个块提取 N 个关键词以提高其排名得分。在“系统模型设置”中设置的 LLM 将消耗额外的 token。您可以在块列表中查看结果。`,
       autoQuestions: '自动问题',
       autoQuestionsTip: `在查询此类问题时，为每个块提取 N 个问题以提高其排名得分。在“系统模型设置”中设置的 LLM 将消耗额外的 token。您可以在块列表中查看结果。如果发生错误，此功能不会破坏整个分块过程，除了将空结果添加到原始块。`,
+      redo: '是否清空已有 {{chunkNum}}个 chunk？',
     },
     knowledgeConfiguration: {
       titleDescription: '在这里更新您的知识库详细信息，尤其是解析方法。',
@@ -438,6 +440,7 @@ export default {
       partialTitle: '部分嵌入',
       extensionTitle: 'Chrome 插件',
       tokenError: '请先创建 API Token!',
+      betaError: '请先在系统设置中申请API密钥。',
       searching: '搜索中',
       parsing: '解析中',
       uploading: '上传中',
@@ -599,7 +602,7 @@ export default {
         '请输入 Google Cloud Service Account Key in base64 format',
       addGoogleRegion: 'Google Cloud 区域',
       GoogleRegionMessage: '请输入 Google Cloud 区域',
-      modelProvidersWarn: `请先在<b>设置 > 模型提供程序</b>中添加嵌入模型和 LLM。然后在“系统模型设置”中设置它们。`,
+      modelProvidersWarn: `请先在<b>模型提供商</b>中添加嵌入模型和LLM，然后在“系统模型设置”中设置它们。`,
       apiVersion: 'API版本',
       apiVersionMessage: '请输入API版本!',
       add: '添加',
@@ -776,7 +779,7 @@ export default {
       sourceLang: '源语言',
       targetLang: '目标语言',
       gitHub: 'GitHub',
-      githubDescription:
+      gitHubDescription:
         '该组件用于从 https://github.com/ 搜索仓库。Top N 指定需要调整的搜索结果数量。',
       baiduFanyi: '百度翻译',
       baiduFanyiDescription:

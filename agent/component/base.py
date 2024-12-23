@@ -37,6 +37,7 @@ class ComponentParamBase(ABC):
         self.message_history_window_size = 22
         self.query = []
         self.inputs = []
+        self.debug_inputs = []
 
     def set_name(self, name: str):
         self._name = name
@@ -410,6 +411,7 @@ class ComponentBase(ABC):
     def run(self, history, **kwargs):
         logging.debug("{}, history: {}, kwargs: {}".format(self, json.dumps(history, ensure_ascii=False),
                                                               json.dumps(kwargs, ensure_ascii=False)))
+        self._param.debug_inputs = []
         try:
             res = self._run(history, **kwargs)
             self.set_output(res)
@@ -446,10 +448,13 @@ class ComponentBase(ABC):
         setattr(self._param, self._param.output_var_name, None)
         self._param.inputs = []
 
-    def set_output(self, v: partial | pd.DataFrame):
+    def set_output(self, v):
         setattr(self._param, self._param.output_var_name, v)
 
     def get_input(self):
+        if self._param.debug_inputs:
+            return pd.DataFrame([{"content": v["value"]} for v in self._param.debug_inputs])
+
         reversed_cpnts = []
         if len(self._canvas.path) > 1:
             reversed_cpnts.extend(self._canvas.path[-2])
@@ -476,7 +481,7 @@ class ComponentBase(ABC):
                     self._param.inputs.append({"component_id": q["component_id"],
                                                "content": "\n".join(
                                                    [str(d["content"]) for d in outs[-1].to_dict('records')])})
-                elif q["value"]:
+                elif q.get("value"):
                     self._param.inputs.append({"component_id": None, "content": q["value"]})
                     outs.append(pd.DataFrame([{"content": q["value"]}]))
             if outs:
@@ -526,6 +531,22 @@ class ComponentBase(ABC):
 
         return df
 
+    def get_input_elements(self):
+        assert self._param.query, "Please identify input parameters firstly."
+        eles = []
+        for q in self._param.query:
+            if q.get("component_id"):
+                cpn_id = q["component_id"]
+                if cpn_id.split("@")[0].lower().find("begin") >= 0:
+                    cpn_id, key = cpn_id.split("@")
+                    eles.extend(self._canvas.get_component(cpn_id)["obj"]._param.query)
+                    continue
+
+                eles.append({"name": self._canvas.get_compnent_name(cpn_id), "key": cpn_id})
+            else:
+                eles.append({"key": q["value"], "name": q["value"], "value": q["value"]})
+        return eles
+
     def get_stream_input(self):
         reversed_cpnts = []
         if len(self._canvas.path) > 1:
@@ -543,3 +564,6 @@ class ComponentBase(ABC):
 
     def get_component_name(self, cpn_id):
         return self._canvas.get_component(cpn_id)["obj"].component_name.lower()
+
+    def debug(self, **kwargs):
+        return self._run([], **kwargs)

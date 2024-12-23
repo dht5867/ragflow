@@ -1,3 +1,4 @@
+import { IReferenceChunk } from '@/interfaces/database/chat';
 import { IDocumentInfo } from '@/interfaces/database/document';
 import { IChunk } from '@/interfaces/database/knowledge';
 import { IChangeParserConfigRequestBody } from '@/interfaces/request/document';
@@ -32,7 +33,9 @@ export const useGetDocumentUrl = (documentId?: string) => {
   return getDocumentUrl;
 };
 
-export const useGetChunkHighlights = (selectedChunk: IChunk) => {
+export const useGetChunkHighlights = (
+  selectedChunk: IChunk | IReferenceChunk,
+) => {
   const [size, setSize] = useState({ width: 849, height: 1200 });
 
   const highlights: IHighlight[] = useMemo(() => {
@@ -310,13 +313,16 @@ export const useRunNextDocument = () => {
     mutationFn: async ({
       documentIds,
       run,
+      shouldDelete,
     }: {
       documentIds: string[];
       run: number;
+      shouldDelete: boolean;
     }) => {
       const ret = await kbService.document_run({
         doc_ids: documentIds,
         run,
+        delete: shouldDelete,
       });
       const code = get(ret, 'data.code');
       if (code === 0) {

@@ -17,6 +17,7 @@ import re
 from functools import partial
 import pandas as pd
 from api.db import LLMType
+from api.db.services.conversation_service import structure_answer
 from api.db.services.dialog_service import message_fit_in
 from api.db.services.llm_service import LLMBundle
 from api import settings
@@ -104,8 +105,15 @@ class Generate(ComponentBase):
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model providers -> API-Key'"
         res = {"content": answer, "reference": reference}
+        res = structure_answer(None, res, "", "")
 
         return res
+
+    def get_input_elements(self):
+        if self._param.parameters:
+            return [{"key": "user", "name": "User"}, *self._param.parameters]
+
+        return [{"key": "user", "name": "User"}]
 
     def _run(self, history, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
@@ -210,4 +218,17 @@ class Generate(ComponentBase):
             res = self.set_cite(retrieval_res, answer)
             yield res
 
-        self.set_output(res)
+        self.set_output(Generate.be_output(res))
+
+    def debug(self, **kwargs):
+        chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
+        prompt = self._param.prompt
+
+        for para in self._param.debug_inputs:
+            kwargs[para["key"]] = para.get("value", "")
+
+        for n, v in kwargs.items():
+            prompt = re.sub(r"\{%s\}" % re.escape(n), str(v).replace("\\", " "), prompt)
+
+        ans = chat_mdl.chat(prompt, [{"role": "user", "content": kwargs.get("user", "")}], self._param.gen_conf())
+        return pd.DataFrame([ans])

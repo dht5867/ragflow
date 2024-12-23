@@ -33,6 +33,7 @@ export default {
       pleaseSelect: '選択してください',
       pleaseInput: '入力してください',
       submit: '送信',
+      japanese: '日本語',
     },
     login: {
       login: 'ログイン',
@@ -119,8 +120,8 @@ export default {
       view: '表示',
       filesSelected: '選択されたファイル',
       upload: 'アップロード',
-      run: '実行',
-      runningStatus0: '未開始',
+      run: '解析する',
+      runningStatus0: '未解決',
       runningStatus1: 'パース中',
       runningStatus2: 'キャンセル',
       runningStatus3: '成功',

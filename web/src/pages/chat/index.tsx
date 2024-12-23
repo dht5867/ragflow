@@ -29,18 +29,21 @@ import {
   useSelectDerivedConversationList,
 } from './hooks';
 
+import EmbedModal from '@/components/api-service/embed-modal';
+import { useShowEmbedModal } from '@/components/api-service/hooks';
 import SvgIcon from '@/components/svg-icon';
 import { useTheme } from '@/components/theme-provider';
+import { SharedFrom } from '@/constants/chat';
 import {
   useClickConversationCard,
   useClickDialogCard,
   useFetchNextDialogList,
   useGetChatSearchParams,
 } from '@/hooks/chat-hooks';
-import { useSetModalState, useTranslate } from '@/hooks/common-hooks';
+import { useTranslate } from '@/hooks/common-hooks';
 import { useSetSelectedRecord } from '@/hooks/logic-hooks';
 import { IDialog } from '@/interfaces/database/chat';
-import ChatIdModal from './chat-id-modal';
+import { PictureInPicture2 } from 'lucide-react';
 import styles from './index.less';
 
 const { Text } = Typography;
@@ -82,15 +85,11 @@ const Chat = () => {
     showDialogEditModal,
   } = useEditDialog();
   const { t } = useTranslate('chat');
-  const {
-    visible: overviewVisible,
-    hideModal: hideOverviewModal,
-    showModal: showOverviewModal,
-  } = useSetModalState();
   const { currentRecord, setRecord } = useSetSelectedRecord<IDialog>();
   const [controller, setController] = useState(new AbortController());
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // 添加状态控制侧边栏
-
+  const { showEmbedModal, hideEmbedModal, embedVisible, beta } =
+  useShowEmbedModal();
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
@@ -125,7 +124,7 @@ const Chat = () => {
         info?.domEvent?.preventDefault();
         info?.domEvent?.stopPropagation();
         setRecord(dialog);
-        showOverviewModal();
+        showEmbedModal();
       };
 
   const handleRemoveConversation =
@@ -197,8 +196,9 @@ const Chat = () => {
         onClick: handleShowOverviewModal(dialog),
         label: (
           <Space>
-            <CloudOutlined />
-            {t('overview')}
+            {/* <KeyOutlined /> */}
+            <PictureInPicture2 className="size-4" />
+            {t('embedIntoSite', { keyPrefix: 'common' })}
           </Space>
         ),
       },
@@ -391,14 +391,16 @@ const Chat = () => {
         initialName={initialConversationName}
         loading={conversationRenameLoading}
       ></RenameModal>
-      {overviewVisible && (
-        <ChatIdModal
-          visible={overviewVisible}
-          hideModal={hideOverviewModal}
-          id={currentRecord.id}
-          name={currentRecord.name}
-          idKey="dialogId"
-        ></ChatIdModal>
+
+      {embedVisible && (
+        <EmbedModal
+          visible={embedVisible}
+          hideModal={hideEmbedModal}
+          token={currentRecord.id}
+          form={SharedFrom.Chat}
+          beta={beta}
+          isAgent={false}
+        ></EmbedModal>
       )}
     </Flex>
   );
