@@ -43,10 +43,6 @@ export const LanguageList = [
   'English',
   'Chinese',
   'Traditional Chinese',
-  'Indonesia',
-  'Spanish',
-  'Vietnamese',
-  'Japanese',
 ];
 
 export const LanguageMap = {
