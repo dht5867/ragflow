@@ -208,6 +208,7 @@ def completion():
     req = request.json
     msg = []
     logging.info('-------completion----')
+   
     logging.info(req)
     prompt = req["prompt"]
     selectedSkill = req["selectedSkill"]
@@ -218,6 +219,7 @@ def completion():
             continue
         msg.append(m)
     message_id = msg[-1].get("id")
+    logging.info(message_id)
     try:
         e, conv = ConversationService.get_by_id(req["conversation_id"])
         if not e:
@@ -229,14 +231,7 @@ def completion():
         del req["conversation_id"]
         del req["messages"]
 
-        def fillin_conv(ans):
-            nonlocal conv, message_id
-            if not conv.reference:
-                conv.reference.append(ans["reference"])
-            else:
-                conv.reference[-1] = ans["reference"]
-            conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
-            ans["id"] = message_id
+        
         if not conv.reference:
             conv.reference = []
         else:
@@ -260,18 +255,20 @@ def completion():
             conv.reference = []
         conv.reference.append({"chunks": [], "doc_aggs": []})
         def stream():
-            nonlocal dia, msg, req, conv
+            nonlocal dia, msg, req, conv,message_id
             try:
                 if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE':
                     for ans in chat(dia, msg, True, **req):
-                        fillin_conv(ans)
-                        yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                        ans = structure_answer(conv, ans, message_id, conv.id)
+                        yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                        #fillin_conv(ans)
+                        #yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                 elif selectedSkill=='日志分析' or selectedSkill=='LOG' :
                     logging.info('-------日志分析----')
                     for ans in log_chat(dia, msg, True, **req):
-                        fillin_conv(ans)
-                        yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                        ans = structure_answer(conv, ans, message_id, conv.id)
+                        yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                 elif selectedSkill=='CMDB':
                     logging.info('--------prompt----------')
@@ -285,8 +282,8 @@ def completion():
                                 logging.error(error_msg)
                                 answer=" 后台服务错误，请重试查询"
                                 ans = decorate_answer(answer)
-                                fillin_conv(ans)
-                                yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                ans = structure_answer(conv, ans, message_id, conv.id)
+                                yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                 ConversationService.update_by_id(conv.id, conv.to_dict())
                                 break
                             lines = line.split("\n")
@@ -307,15 +304,15 @@ def completion():
                                         if "steps" in json_data:
                                             answer +=json_data['steps'][0]['action']['log']
                                             ans = decorate_answer(answer)
-                                            fillin_conv(ans)
-                                            yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                            ans = structure_answer(conv, ans, message_id, conv.id)
+                                            yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                             
                                          #将output 翻译为中文
                                         if "output" in json_data:
                                             answer +=json_data['output']
                                             ans = decorate_answer(answer)
-                                            fillin_conv(ans)
-                                            yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                            ans = structure_answer(conv, ans, message_id, conv.id)
+                                            yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                             # output= json_data['output']
                                             # logging.info(output)
                                             # rr = cmdb_chat_chinese(
@@ -329,8 +326,8 @@ def completion():
                 else:
                     logging.info('-------only_chat----')
                     for ans in only_chat(selectedSkill,dia, msg, True, **req):
-                        yield "data:"+json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
-                        fillin_conv(ans)
+                        ans = structure_answer(conv, ans, message_id, conv.id)
+                        yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())            
             except Exception as e:
                 traceback.print_exc()
