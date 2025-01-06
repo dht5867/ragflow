@@ -316,7 +316,7 @@ class Dealer:
 
         if page <= RERANK_PAGE_LIMIT:
             logging.info('------3----1---')
-            if rerank_mdl:
+            if rerank_mdl and sres.total > 0:
                 sim, tsim, vsim = self.rerank_by_model(rerank_mdl,
                     sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
             else:
