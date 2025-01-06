@@ -42,3 +42,12 @@ nltk_data/*
 
 huggingface.co/
 nltk_data/
+.gitattributes
+deps/chrome-linux64-121-0-6167-85
+deps/chromedriver-linux64-121-0-6167-85
+deps/cl100k_base.tiktoken
+deps/libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+deps/libssl1.1_1.1.1f-1ubuntu2_arm64.deb
+deps/nltk_data.tar.gz
+deps/tika-server-standard-3.0.0.jar
+deps/tika-server-standard-3.0.0.jar.md5
