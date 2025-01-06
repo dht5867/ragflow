@@ -72,6 +72,7 @@ export const IconMap = {
   'nomic-ai': 'nomic-ai',
   jinaai: 'jina',
   'sentence-transformers': 'sentence-transformers',
+  'IBM WATSONX.AI': 'IBM_watsonx_logo'
 };
 
 export const TimezoneList = [

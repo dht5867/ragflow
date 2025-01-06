@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License
 #
+import logging
 import os.path
 import pathlib
 import re
@@ -615,8 +616,9 @@ def upload_parse():
         ('files', (file.filename, file.stream, file.content_type))
         for file in file_objs
     ]
-
+    logging.info("start upload_temp_docs ")
     result = upload_temp_docs(files)
+    logging.info(result)
     doc_ids=[]
     if "data" not in result:
         return get_json_result(

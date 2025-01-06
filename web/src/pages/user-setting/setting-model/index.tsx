@@ -38,6 +38,7 @@ import {
   useSubmitFishAudio,
   useSubmitGoogle,
   useSubmitHunyuan,
+  useSubmitIbm,
   useSubmitOllama,
   useSubmitSpark,
   useSubmitSystemModelSetting,
@@ -52,6 +53,7 @@ import SparkModal from './spark-modal';
 import SystemModelSettingModal from './system-model-setting-modal';
 import VolcEngineModal from './volcengine-modal';
 import YiyanModal from './yiyan-modal';
+import IBMWatsonxModal from './ibm-watsonx-modal';
 
 const { Text } = Typography;
 interface IModelCardProps {
@@ -242,6 +244,14 @@ const UserSettingModel = () => {
     AzureAddingLoading,
   } = useSubmitAzure();
 
+  const {
+    IbmAddingVisible,
+    hideIbmAddingModal,
+    showIbmAddingModal,
+    onIbmAddingOk,
+    IbmAddingLoading,
+  } = useSubmitIbm();
+
   const ModalMap = useMemo(
     () => ({
       Bedrock: showBedrockAddingModal,
@@ -253,6 +263,7 @@ const UserSettingModel = () => {
       'Tencent Cloud': showTencentCloudAddingModal,
       'Google Cloud': showGoogleAddingModal,
       'Azure-OpenAI': showAzureAddingModal,
+      'IBM WATSONX.AI': showIbmAddingModal,
     }),
     [
       showBedrockAddingModal,
@@ -450,6 +461,13 @@ const UserSettingModel = () => {
         loading={AzureAddingLoading}
         llmFactory={'Azure-OpenAI'}
       ></AzureOpenAIModal>
+       <IBMWatsonxModal
+        visible={IbmAddingVisible}
+        hideModal={hideIbmAddingModal}
+        onOk={onIbmAddingOk}
+        loading={IbmAddingLoading}
+        llmFactory={'IBM WATSONX.AI'}
+      ></IBMWatsonxModal>
     </section>
   );
 };

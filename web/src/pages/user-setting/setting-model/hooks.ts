@@ -380,6 +380,34 @@ export const useSubmitAzure = () => {
   };
 };
 
+export const useSubmitIbm = () => {
+  const { addLlm, loading } = useAddLlm();
+  const {
+    visible: IbmAddingVisible,
+    hideModal: hideIbmAddingModal,
+    showModal: showIbmAddingModal,
+  } = useSetModalState();
+
+  const onIbmAddingOk = useCallback(
+    async (payload: IAddLlmRequestBody) => {
+      const ret = await addLlm(payload);
+      if (ret === 0) {
+        hideIbmAddingModal();
+      }
+    },
+    [hideIbmAddingModal, addLlm],
+  );
+
+  return {
+    IbmAddingLoading: loading,
+    onIbmAddingOk,
+    IbmAddingVisible,
+    hideIbmAddingModal,
+    showIbmAddingModal,
+  };
+};
+
+
 export const useHandleDeleteLlm = (llmFactory: string) => {
   const { deleteLlm } = useDeleteLlm();
   const showDeleteConfirm = useShowDeleteConfirm();

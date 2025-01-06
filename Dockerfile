@@ -3,7 +3,7 @@ FROM ubuntu:22.04 AS base
 USER root
 SHELL ["/bin/bash", "-c"]
 
-ARG NEED_MIRROR=0
+ARG NEED_MIRROR=1
 ARG LIGHTEN=0
 ENV LIGHTEN=${LIGHTEN}
 
@@ -149,7 +149,7 @@ COPY docs docs
 RUN --mount=type=cache,id=ragflow_npm,target=/root/.npm,sharing=locked \
     cd web && npm install --force && npm run build
 
-COPY .git /ragflow/.git
+#COPY .git /ragflow/.git
 
 RUN version_info=$(git describe --tags --match=v* --first-parent --always); \
     if [ "$LIGHTEN" == "1" ]; then \

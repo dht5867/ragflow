@@ -2537,6 +2537,32 @@
             "tags": "TEXT EMBEDDING",
             "status": "1",
             "llm": []
+        },{
+            "name": "IBM WATSONX.AI",
+            "logo": "",
+            "tags": "LLM,TEXT EMBEDDING,SPEECH2TEXT,MODERATION",
+            "status": "1",
+            "llm": [
+                {
+                    "llm_name": "granite-8b-instruct",
+                    "tags": "LLM,CHAT,8K",
+                    "max_tokens": 8190,
+                    "model_type": "chat"
+                },
+                {
+                    "llm_name": "text-embedding-ada-002",
+                    "tags": "TEXT EMBEDDING,8K",
+                    "max_tokens": 8191,
+                    "model_type": "embedding"
+                },
+                
+                {
+                    "llm_name": "whisper-1",
+                    "tags": "SPEECH2TEXT",
+                    "max_tokens": 26214400,
+                    "model_type": "speech2text"
+                }
+            ]
         }
     ]
 }

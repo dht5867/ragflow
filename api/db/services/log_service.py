@@ -1,3 +1,4 @@
+import logging
 from api.apiutils import ApiRequest
 from typing import *
 
@@ -8,9 +9,10 @@ api = ApiRequest()
 
 def upload_temp_docs(files: Any):
     try:
+        logging.info("----upload_temp_docs")
         return api.upload_temp_docs(files)
     except Exception as e:
-        print(f"Error during upload_temp_docs: {e}")
+        logging.error(f"Error during upload_temp_docs: {e}")
         return None
  
 def log_file_chat(
@@ -23,8 +25,9 @@ def log_file_chat(
         prompt_name: str = "default",
     ):
     try:
+        logging.info("----query")
         return api.file_chat(query,knowledge_id,history,stream,model,max_tokens,prompt_name)
     except Exception as e:
-        print(f"file_chat: {e}")
+        logging.error(f"file_chat: {e}")
         return None
 
