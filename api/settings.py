@@ -240,7 +240,7 @@ API_SERVER = {
 # cmdb server
 CMDB_SERVER = {
     "host": "10.171.248.164",
-    "port": 8080,
+    "port": 8101,
 }
 # cmdb chat server
 
