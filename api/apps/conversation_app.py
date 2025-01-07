@@ -254,12 +254,20 @@ def completion():
         if not conv.reference:
             conv.reference = []
         conv.reference.append({"chunks": [], "doc_aggs": []})
+        def fillin_conv(ans):
+            nonlocal conv, message_id
+            if not conv.reference:
+                conv.reference.append(ans["reference"])
+            else:
+                conv.reference[-1] = ans["reference"]
+            conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
         def stream():
             nonlocal dia, msg, req, conv,message_id
             try:
                 if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE':
                     for ans in chat(dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
+                        conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                         yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                         #fillin_conv(ans)
                         #yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
@@ -268,6 +276,7 @@ def completion():
                     logging.info('-------日志分析----')
                     for ans in log_chat(dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
+                        conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                         yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                 elif selectedSkill=='CMDB':
@@ -283,6 +292,7 @@ def completion():
                                 answer=" 后台服务错误，请重试查询"
                                 ans = decorate_answer(answer)
                                 ans = structure_answer(conv, ans, message_id, conv.id)
+                                conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                                 yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                 ConversationService.update_by_id(conv.id, conv.to_dict())
                                 break
@@ -296,7 +306,6 @@ def completion():
                                     if "data:" in chunk:
                                         json_data=json.loads(chunk[6:]) 
                                         logging.info(json_data)
-                                        
                                     # 检查并打印run_id
                                         if "run_id" in json_data:
                                             message_id= json_data['run_id']
@@ -305,6 +314,7 @@ def completion():
                                             answer +=json_data['steps'][0]['action']['log']
                                             ans = decorate_answer(answer)
                                             ans = structure_answer(conv, ans, message_id, conv.id)
+                                            conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                                             yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                             
                                          #将output 翻译为中文
@@ -312,6 +322,8 @@ def completion():
                                             answer +=json_data['output']
                                             ans = decorate_answer(answer)
                                             ans = structure_answer(conv, ans, message_id, conv.id)
+                                            conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
+
                                             yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                                             # output= json_data['output']
                                             # logging.info(output)
@@ -327,6 +339,7 @@ def completion():
                     logging.info('-------only_chat----')
                     for ans in only_chat(selectedSkill,dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
+                        conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                         yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())            
             except Exception as e:
@@ -335,7 +348,6 @@ def completion():
                                             "data": {"answer": "**ERROR**: " + str(e), "reference": []}},
                                            ensure_ascii=False) + "\n\n"
             yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
-
         if req.get("stream", True):
             resp = Response(stream(), mimetype="text/event-stream")
             resp.headers.add_header("Cache-control", "no-cache")
@@ -348,6 +360,7 @@ def completion():
             answer = None
             for ans in chat(dia, msg, **req):
                 answer = structure_answer(conv, ans, message_id, req["conversation_id"])
+                conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                 ConversationService.update_by_id(conv.id, conv.to_dict())
                 break
             return get_json_result(data=answer)

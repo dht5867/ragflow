@@ -142,7 +142,7 @@ class ApiRequest:
         retry: int = 3,
         stream: bool = False,
         **kwargs: Any,
-    ) -> Union[httpx.Response, Iterator[httpx.Response], None]:
+    ) -> Any:
         while retry > 0:
             try:
                 # print(kwargs)
@@ -183,7 +183,7 @@ class ApiRequest:
 
     def _httpx_stream2generator(
         self,
-        response: contextlib._GeneratorContextManager,
+        response,
         as_json: bool = False,
     ):
         """
