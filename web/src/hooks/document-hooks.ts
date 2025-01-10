@@ -423,14 +423,17 @@ export const useUploadAndParseDocument = (uploadMethod: string) => {
   } = useMutation({
     mutationKey: ['uploadAndParseDocument'],
     mutationFn: async ({
+      skill,
       conversationId,
       fileList,
     }: {
+      skill:string,
       conversationId: string;
       fileList: UploadFile[];
     }) => {
       try {
         const formData = new FormData();
+        formData.append('skill', skill);
         formData.append('conversation_id', conversationId);
         fileList.forEach((file: UploadFile) => {
           formData.append('file', file as any);

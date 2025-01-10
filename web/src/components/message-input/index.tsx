@@ -221,8 +221,9 @@ const MessageInput = ({
     });
 
     console.log('start upload');
-
+    const skill=placeholderValue.replace("@","")
     const ret = await uploadAndParseDocument({
+      skill: skill,
       conversationId: nextConversationId,
       fileList: [file],
     });

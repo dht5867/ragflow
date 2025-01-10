@@ -610,19 +610,23 @@ def upload_parse():
             return get_json_result(
                 data=False, retmsg="No file selected!", retcode=settings.RetCode.ARGUMENT_ERROR
             )
-        
      # 准备文件数据以转发到目标服务器
     files = [
         ('files', (file.filename, file.stream, file.content_type))
         for file in file_objs
     ]
-    logging.info("start upload_temp_docs ")
-    result = upload_temp_docs(files)
-    logging.info(result)
-    doc_ids=[]
-    if "data" not in result:
-        return get_json_result(
-            data=False, retmsg="upload file failed!", code=settings.RetCode.ARGUMENT_ERROR)
-    doc_id=result.get("data", {}).get("id")
-    doc_ids = save_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id,doc_id)
+    skill = request.form.get("skill")
+    if  skill=='日志分析' or skill=='LOG':
+        logging.info("start upload_temp_docs ")
+        result = upload_temp_docs(files)
+        logging.info(result)
+        doc_ids=[]
+        if "data" not in result:
+            return get_json_result(
+                data=False, retmsg="upload file failed!", code=settings.RetCode.ARGUMENT_ERROR)
+        doc_id=result.get("data", {}).get("id")
+        doc_ids = save_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id,doc_id)
+    else:
+            doc_ids = doc_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id)
+
     return get_json_result(data=doc_ids)

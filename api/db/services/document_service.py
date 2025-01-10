@@ -469,37 +469,16 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
         e, conv = API4ConversationService.get_by_id(conversation_id)
     assert e, "Conversation not found!"
 
-   #查找助手的所有知识库
     e, dia = DialogService.get_by_id(conv.dialog_id)
     kb_id = dia.kb_ids[0]
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this knowledgebase!")
 
-    # kbs = KnowledgebaseService.get_by_ids(dia.kb_ids)
-    # if not kbs:
-    #     raise LookupError("Can't find this knowledgebase!")
-    # #找出名字中包含日志分析的知识库
-    # kb=None
-    # for log_kb in  kbs:
-    #     if '日志分析' in log_kb.name:
-    #         kb=log_kb
-    #         continue
-    # if(kb is None):
-    #      raise LookupError("please create log knowledgebase!")
-
-    idxnm = search.index_name(kb.tenant_id)
-    if not ELASTICSEARCH.indexExist(idxnm):
-        ELASTICSEARCH.createIdx(idxnm, json.load(
-            open(os.path.join(get_project_base_directory(), "conf", "mapping.json"), "r")))
-
     embd_mdl = LLMBundle(kb.tenant_id, LLMType.EMBEDDING, llm_name=kb.embd_id, lang=kb.language)
 
     err, files = FileService.upload_document(kb, file_objs, user_id)
-
     assert not err, "\n".join(err)
-
-    return [d["id"] for d, _ in files]  
 
     def dummy(prog=None, msg=""):
         pass
@@ -526,8 +505,6 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             "lang": kb.language
         }
         threads.append(exe.submit(FACTORY.get(d["parser_id"], naive).chunk, d["name"], blob, **kwargs))
-
-    logging.info.info('---start parse --')
 
     for (docinfo, _), th in zip(files, threads):
         docs = []
@@ -616,7 +593,6 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             doc_id, kb.id, token_counts[doc_id], chunk_counts[doc_id], 0)
 
     return [d["id"] for d, _ in files]
-
 
 def save_upload_and_parse(conversation_id, file_objs, user_id,doc_id):
     from api.db.services.dialog_service import ConversationService, DialogService
