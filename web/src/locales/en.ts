@@ -535,7 +535,7 @@ This procedure will improve precision of retrieval by adding more information to
       },
       howUseId: 'How to use chat ID?',
       description: 'Description of assistant',
-      uploadfiletips:"please upload log file "
+      uploadfiletips:"please upload log file ",
       useKnowledgeGraph: 'Use knowledge graph',
       useKnowledgeGraphTip:
         'It will retrieve descriptions of relevant entities,relations and community reports, which will enhance inference of multi-hop and complex question.',

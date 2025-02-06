@@ -83,10 +83,11 @@ const ChatContainer = ({ controller }: IProps) => {
                         sendLoading &&
                         derivedMessages.length - 1 === i
                       }
-                      key={message.id}
+                      key={buildMessageUuidWithRole(message)}
                       item={message}
                       nickname={userInfo.nickname}
                       avatar={userInfo.avatar}
+                      avatardialog={conversation.avatar}
                       reference={buildMessageItemReference(
                         {
                           message: derivedMessages,

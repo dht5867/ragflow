@@ -516,7 +516,7 @@ export default {
         log:'日志分析',
         cmdb:'CMDB',
       },
-      uploadfiletips:"请上传日志文件"
+      uploadfiletips:"请上传日志文件",
       useKnowledgeGraph: '使用知識圖譜',
       useKnowledgeGraph提示:
         '它將檢索相關實體、關係和社區報告的描述，這將增強多跳和複雜問題的推理。',
