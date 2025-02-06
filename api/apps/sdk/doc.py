@@ -16,11 +16,11 @@
 import pathlib
 import datetime
 
-from api.db.services.dialog_service import keyword_extraction
+from api.db.services.dialog_service import keyword_extraction, label_question
 from rag.app.qa import rmPrefix, beAdoc
 from rag.nlp import rag_tokenizer
 from api.db import LLMType, ParserType
-from api.db.services.llm_service import TenantLLMService
+from api.db.services.llm_service import TenantLLMService, LLMBundle
 from api import settings
 import xxhash
 import re
@@ -276,6 +276,7 @@ def update_doc(tenant_id, dataset_id, document_id):
             "one",
             "knowledge_graph",
             "email",
+            "tag"
         }
         if req.get("chunk_method") not in valid_chunk_method:
             return get_error_data_result(
@@ -722,7 +723,7 @@ def stop_parsing(tenant_id, dataset_id):
         doc = DocumentService.query(id=id, kb_id=dataset_id)
         if not doc:
             return get_error_data_result(message=f"You don't own the document {id}.")
-        if int(doc[0].progress) == 1 or int(doc[0].progress) == 0:
+        if int(doc[0].progress) == 1 or doc[0].progress == 0:
             return get_error_data_result(
                 "Can't stop parsing document with progress at 0 or 1"
             )
@@ -1296,15 +1297,15 @@ def retrieval_test(tenant_id):
     kb_ids = req["dataset_ids"]
     if not isinstance(kb_ids, list):
         return get_error_data_result("`dataset_ids` should be a list")
-    kbs = KnowledgebaseService.get_by_ids(kb_ids)
     for id in kb_ids:
         if not KnowledgebaseService.accessible(kb_id=id, user_id=tenant_id):
             return get_error_data_result(f"You don't own the dataset {id}.")
+    kbs = KnowledgebaseService.get_by_ids(kb_ids)
     embd_nms = list(set([kb.embd_id for kb in kbs]))
     if len(embd_nms) != 1:
         return get_result(
             message='Datasets use different embedding models."',
-            code=settings.RetCode.AUTHENTICATION_ERROR,
+            code=settings.RetCode.DATA_ERROR,
         )
     if "question" not in req:
         return get_error_data_result("`question` is required.")
@@ -1312,6 +1313,7 @@ def retrieval_test(tenant_id):
     size = int(req.get("page_size", 30))
     question = req["question"]
     doc_ids = req.get("document_ids", [])
+    use_kg = req.get("use_kg", False)
     if not isinstance(doc_ids, list):
         return get_error_data_result("`documents` should be a list")
     doc_ids_list = KnowledgebaseService.list_documents_by_ids(kb_ids)
@@ -1331,22 +1333,17 @@ def retrieval_test(tenant_id):
         e, kb = KnowledgebaseService.get_by_id(kb_ids[0])
         if not e:
             return get_error_data_result(message="Dataset not found!")
-        embd_mdl = TenantLLMService.model_instance(
-            kb.tenant_id, LLMType.EMBEDDING.value, llm_name=kb.embd_id
-        )
+        embd_mdl = LLMBundle(kb.tenant_id, LLMType.EMBEDDING, llm_name=kb.embd_id)
 
         rerank_mdl = None
         if req.get("rerank_id"):
-            rerank_mdl = TenantLLMService.model_instance(
-                kb.tenant_id, LLMType.RERANK.value, llm_name=req["rerank_id"]
-            )
+            rerank_mdl = LLMBundle(kb.tenant_id, LLMType.RERANK, llm_name=req["rerank_id"])
 
         if req.get("keyword", False):
-            chat_mdl = TenantLLMService.model_instance(kb.tenant_id, LLMType.CHAT)
+            chat_mdl = LLMBundle(kb.tenant_id, LLMType.CHAT)
             question += keyword_extraction(chat_mdl, question)
 
-        retr = settings.retrievaler if kb.parser_id != ParserType.KG else settings.kg_retrievaler
-        ranks = retr.retrieval(
+        ranks = settings.retrievaler.retrieval(
             question,
             embd_mdl,
             kb.tenant_id,
@@ -1359,7 +1356,17 @@ def retrieval_test(tenant_id):
             doc_ids,
             rerank_mdl=rerank_mdl,
             highlight=highlight,
+            rank_feature=label_question(question, kbs)
         )
+        if use_kg:
+            ck = settings.kg_retrievaler.retrieval(question,
+                                                   [k.tenant_id for k in kbs],
+                                                   kb_ids,
+                                                   embd_mdl,
+                                                   LLMBundle(kb.tenant_id, LLMType.CHAT))
+            if ck["content_with_weight"]:
+                ranks["chunks"].insert(0, ck)
+
         for c in ranks["chunks"]:
             c.pop("vector", None)
 

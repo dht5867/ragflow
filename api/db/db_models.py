@@ -760,6 +760,7 @@ class Document(DataBaseModel):
         default="")
     process_begin_at = DateTimeField(null=True, index=True)
     process_duation = FloatField(default=0)
+    meta_fields = JSONField(null=True, default={})
 
     run = CharField(
         max_length=1,
@@ -1051,11 +1052,6 @@ def migrate_db():
         except Exception:
             pass
         try:
-            DB.execute_sql('ALTER TABLE llm DROP PRIMARY KEY;')
-            DB.execute_sql('ALTER TABLE llm ADD PRIMARY KEY (llm_name,fid);')
-        except Exception:
-            pass
-        try:
             migrate(
                 migrator.add_column('task', 'retry_count', IntegerField(default=0))
             )
@@ -1109,6 +1105,13 @@ def migrate_db():
             migrate(
                 migrator.add_column("conversation", "user_id",
                                     CharField(max_length=255, null=True, help_text="user_id", index=True))
+            )
+        except Exception:
+            pass
+        try:
+            migrate(
+                migrator.add_column("document", "meta_fields",
+                                    JSONField(null=True, default={}))
             )
         except Exception:
             pass

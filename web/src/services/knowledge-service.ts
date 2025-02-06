@@ -1,6 +1,7 @@
+import { IRenameTag } from '@/interfaces/database/knowledge';
 import api from '@/utils/api';
 import registerServer from '@/utils/register-server';
-import request from '@/utils/request';
+import request, { post } from '@/utils/request';
 
 const {
   create_kb,
@@ -30,6 +31,8 @@ const {
   document_infos,
   upload_and_parse,
   log_upload_and_parse,
+  listTagByKnowledgeIds,
+  setMeta,
 } = api;
 
 const methods = {
@@ -54,7 +57,7 @@ const methods = {
     url: kb_list,
     method: 'get',
   },
-  // 文件管理
+  // document manager
   get_document_list: {
     url: get_document_list,
     method: 'get',
@@ -97,6 +100,10 @@ const methods = {
   },
   document_infos: {
     url: document_infos,
+    method: 'post',
+  },
+  setMeta: {
+    url: setMeta,
     method: 'post',
   },
   // chunk管理
@@ -142,10 +149,29 @@ const methods = {
   },
   log_upload_and_parse: {
     url: log_upload_and_parse,
-    method: 'post',
+    method: 'post'
+  },
+  listTagByKnowledgeIds: {
+    url: listTagByKnowledgeIds,
+    method: 'get',
   },
 };
 
 const kbService = registerServer<keyof typeof methods>(methods, request);
+
+export const listTag = (knowledgeId: string) =>
+  request.get(api.listTag(knowledgeId));
+
+export const removeTag = (knowledgeId: string, tags: string[]) =>
+  post(api.removeTag(knowledgeId), { tags });
+
+export const renameTag = (
+  knowledgeId: string,
+  { fromTag, toTag }: IRenameTag,
+) => post(api.renameTag(knowledgeId), { fromTag, toTag });
+
+export function getKnowledgeGraph(knowledgeId: string) {
+  return request.get(api.getKnowledgeGraph(knowledgeId));
+}
 
 export default kbService;

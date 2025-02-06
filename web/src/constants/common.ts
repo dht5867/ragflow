@@ -53,6 +53,7 @@ export const LanguageMap = {
   Spanish: 'Español',
   Vietnamese: 'Tiếng việt',
   Japanese: '日本語',
+  'Portuguese BR': 'Português BR',
 };
 
 export const LanguageTranslationMap = {
@@ -63,6 +64,7 @@ export const LanguageTranslationMap = {
   Spanish: 'es',
   Vietnamese: 'vi',
   Japanese: 'ja',
+  'Portuguese BR': 'pt-br',
 };
 
 export enum FileMimeType {

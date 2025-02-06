@@ -73,6 +73,7 @@ export const IconMap = {
   jinaai: 'jina',
   'sentence-transformers': 'sentence-transformers',
   'IBM WATSONX.AI': 'IBM_watsonx_logo'
+  GPUStack: 'gpustack',
 };
 
 export const TimezoneList = [

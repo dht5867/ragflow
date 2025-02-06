@@ -19,6 +19,7 @@ import {
   useGetChatSearchParams,
 } from '@/hooks/chat-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
+import { buildMessageUuidWithRole } from '@/utils/chat';
 import { memo } from 'react';
 import AssistantIntro from './assistant-intro'; // 根据文件路径引入组件
 import RenderIntro from './base-intro'; // 根据文件路径引入组件

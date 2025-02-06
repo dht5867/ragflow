@@ -3,7 +3,7 @@ sidebar_position: 1
 slug: /http_api_reference
 ---
 
-# HTTP API Reference
+# HTTP API
 
 A complete reference for RAGFlow's RESTful API. Before proceeding, please ensure you [have your RAGFlow API key ready for authentication](https://ragflow.io/docs/dev/acquire_ragflow_api_key).
 
@@ -1256,7 +1256,7 @@ curl --request POST \
 - `"vector_similarity_weight"`: (*Body parameter*), `float`  
   The weight of vector cosine similarity. Defaults to `0.3`. If x represents the weight of vector cosine similarity, then (1 - x) is the term similarity weight.
 - `"top_k"`: (*Body parameter*), `integer`  
-  The number of chunks engaged in vector cosine computaton. Defaults to `1024`.
+  The number of chunks engaged in vector cosine computation. Defaults to `1024`.
 - `"rerank_id"`: (*Body parameter*), `integer`  
   The ID of the rerank model.
 - `"keyword"`: (*Body parameter*), `boolean`  
@@ -1726,7 +1726,7 @@ Creates a session with a chat assistant.
   - `'Authorization: Bearer <YOUR_API_KEY>'`
 - Body:
   - `"name"`: `string`
-  - `"user_id"`: `string`(optional)
+  - `"user_id"`: `string` (optional)
 
 ##### Request example
 
@@ -1801,7 +1801,7 @@ Updates a session of a specified chat assistant.
   - `'Authorization: Bearer <YOUR_API_KEY>'`
 - Body:
   - `"name`: `string`
-  - `"user_id`: `string`(optional)
+  - `"user_id`: `string` (optional)
 
 ##### Request example
 
@@ -2013,8 +2013,8 @@ Asks a specified chat assistant a question to start an AI-powered conversation.
 - Body:
   - `"question"`: `string`
   - `"stream"`: `boolean`
-  - `"session_id"`: `string`(optional)
-  - `"user_id`: `string`(optional)
+  - `"session_id"`: `string` (optional)
+  - `"user_id`: `string` (optional)
 
 ##### Request example
 
