@@ -17,6 +17,7 @@ import logging
 import binascii
 import os
 import json
+import json_repair
 import re
 from collections import defaultdict
 from copy import deepcopy
@@ -26,11 +27,14 @@ from datetime import timedelta
 from api.db import LLMType, ParserType, StatusEnum
 from api.db.db_models import Dialog, DB
 from api.db.services.common_service import CommonService
+from api.db.services.document_service import DocumentService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
 from api import settings
+from graphrag.utils import get_tags_from_cache, set_tags_to_cache
 from rag.app.resume import forbidden_select_fields4resume
 from rag.nlp.search import index_name
+from rag.settings import TAG_FLD
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
 
@@ -120,19 +124,47 @@ def kb_prompt(kbinfos, max_tokens):
             knowledges = knowledges[:i]
             break
 
-    doc2chunks = defaultdict(list)
-    for i, ck in enumerate(kbinfos["chunks"]):
-        if i >= chunks_num:
-            break
-        doc2chunks[ck["docnm_kwd"]].append(ck["content_with_weight"])
+    docs = DocumentService.get_by_ids([ck["doc_id"] for ck in kbinfos["chunks"][:chunks_num]])
+    docs = {d.id: d.meta_fields for d in docs}
+
+    doc2chunks = defaultdict(lambda: {"chunks": [], "meta": []})
+    for ck in kbinfos["chunks"][:chunks_num]:
+        doc2chunks[ck["docnm_kwd"]]["chunks"].append(ck["content_with_weight"])
+        doc2chunks[ck["docnm_kwd"]]["meta"] = docs.get(ck["doc_id"], {})
 
     knowledges = []
-    for nm, chunks in doc2chunks.items():
-        txt = f"Document: {nm} \nContains the following relevant fragments:\n"
-        for i, chunk in enumerate(chunks, 1):
+    for nm, cks_meta in doc2chunks.items():
+        txt = f"Document: {nm} \n"
+        for k,v in cks_meta["meta"].items():
+            txt += f"{k}: {v}\n"
+        txt += "Relevant fragments as following:\n"
+        for i, chunk in enumerate(cks_meta["chunks"], 1):
             txt += f"{i}. {chunk}\n"
         knowledges.append(txt)
     return knowledges
+
+
+def label_question(question, kbs):
+    tags = None
+    tag_kb_ids = []
+    for kb in kbs:
+        if kb.parser_config.get("tag_kb_ids"):
+            tag_kb_ids.extend(kb.parser_config["tag_kb_ids"])
+    if tag_kb_ids:
+        all_tags = get_tags_from_cache(tag_kb_ids)
+        if not all_tags:
+            all_tags = settings.retrievaler.all_tags_in_portion(kb.tenant_id, tag_kb_ids)
+            set_tags_to_cache(all_tags, tag_kb_ids)
+        else:
+            all_tags = json.loads(all_tags)
+        tag_kbs = KnowledgebaseService.get_by_ids(tag_kb_ids)
+        tags = settings.retrievaler.tag_query(question,
+                                              list(set([kb.tenant_id for kb in tag_kbs])),
+                                              tag_kb_ids,
+                                              all_tags,
+                                              kb.parser_config.get("topn_tags", 3)
+                                              )
+    return tags
 
 
 def chat(dialog, messages, stream=True, **kwargs):
@@ -166,8 +198,7 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     embedding_model_name = embedding_list[0]
 
-    is_knowledge_graph = all([kb.parser_id == ParserType.KG for kb in kbs])
-    retriever = settings.retrievaler if not is_knowledge_graph else settings.kg_retrievaler
+    retriever = settings.retrievaler
 
     questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
     attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
@@ -236,11 +267,22 @@ def chat(dialog, messages, stream=True, **kwargs):
             generate_keyword_ts = timer()
 
         tenant_ids = list(set([kb.tenant_id for kb in kbs]))
+
         kbinfos = retriever.retrieval(" ".join(questions), embd_mdl, tenant_ids, dialog.kb_ids, 1, dialog.top_n,
                                       dialog.similarity_threshold,
                                       dialog.vector_similarity_weight,
                                       doc_ids=attachments,
-                                      top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl)
+                                      top=dialog.top_k, aggs=False, rerank_mdl=rerank_mdl,
+                                      rank_feature=label_question(" ".join(questions), kbs)
+                                      )
+        if prompt_config.get("use_kg"):
+            ck = settings.kg_retrievaler.retrieval(" ".join(questions),
+                                              tenant_ids,
+                                              dialog.kb_ids,
+                                              embd_mdl,
+                                              LLMBundle(dialog.tenant_id, LLMType.CHAT))
+            if ck["content_with_weight"]:
+                kbinfos["chunks"].insert(0, ck)
 
     retrieval_ts = timer()
 
@@ -253,7 +295,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         yield {"answer": empty_res, "reference": kbinfos, "audio_binary": tts(tts_mdl, empty_res)}
         return {"answer": prompt_config["empty_response"], "reference": kbinfos}
 
-    kwargs["knowledge"] = "\n\n------\n\n".join(knowledges)
+    kwargs["knowledge"] = "\n------\n" + "\n\n------\n\n".join(knowledges)
     gen_conf = dialog.llm_setting
 
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
@@ -312,7 +354,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         generate_result_time_cost = (finish_chat_ts - retrieval_ts) * 1000
 
         prompt = f"{prompt}\n\n - Total: {total_time_cost:.1f}ms\n  - Check LLM: {check_llm_time_cost:.1f}ms\n  - Create retriever: {create_retriever_time_cost:.1f}ms\n  - Bind embedding: {bind_embedding_time_cost:.1f}ms\n  - Bind LLM: {bind_llm_time_cost:.1f}ms\n  - Tune question: {refine_question_time_cost:.1f}ms\n  - Bind reranker: {bind_reranker_time_cost:.1f}ms\n  - Generate keyword: {generate_keyword_time_cost:.1f}ms\n  - Retrieval: {retrieval_time_cost:.1f}ms\n  - Generate answer: {generate_result_time_cost:.1f}ms"
-        return {"answer": answer, "reference": refs, "prompt": prompt}
+        return {"answer": answer, "reference": refs, "prompt": re.sub(r"\n", "  \n", prompt)}
 
     if stream:
         last_ans = ""
@@ -650,7 +692,10 @@ def ask(question, kb_ids, tenant_id):
     chat_mdl = LLMBundle(tenant_id, LLMType.CHAT)
     max_tokens = chat_mdl.max_length
     tenant_ids = list(set([kb.tenant_id for kb in kbs]))
-    kbinfos = retriever.retrieval(question, embd_mdl, tenant_ids, kb_ids, 1, 12, 0.1, 0.3, aggs=False)
+    kbinfos = retriever.retrieval(question, embd_mdl, tenant_ids, kb_ids,
+                                  1, 12, 0.1, 0.3, aggs=False,
+                                  rank_feature=label_question(question, kbs)
+                                  )
     knowledges = kb_prompt(kbinfos, max_tokens)
     prompt = """
     Role: You're a smart assistant. Your name is Miss R.
@@ -700,3 +745,64 @@ def ask(question, kb_ids, tenant_id):
         answer = ans
         yield {"answer": answer, "reference": {}}
     yield decorate_answer(answer)
+
+
+def content_tagging(chat_mdl, content, all_tags, examples, topn=3):
+    prompt = f"""
+Role: You're a text analyzer. 
+
+Task: Tag (put on some labels) to a given piece of text content based on the examples and the entire tag set.
+
+Steps:: 
+  - Comprehend the tag/label set.
+  - Comprehend examples which all consist of both text content and assigned tags with relevance score in format of JSON.
+  - Summarize the text content, and tag it with top {topn} most relevant tags from the set of tag/label and the corresponding relevance score.
+
+Requirements
+  - The tags MUST be from the tag set.
+  - The output MUST be in JSON format only, the key is tag and the value is its relevance score.
+  - The relevance score must be range from 1 to 10.
+  - Keywords ONLY in output.
+
+# TAG SET
+{", ".join(all_tags)}
+
+"""
+    for i, ex in enumerate(examples):
+        prompt += """
+# Examples {}
+### Text Content
+{}
+
+Output:
+{}
+
+        """.format(i, ex["content"], json.dumps(ex[TAG_FLD], indent=2, ensure_ascii=False))
+
+    prompt += f"""
+# Real Data
+### Text Content
+{content}
+
+"""
+    msg = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": "Output: "}
+    ]
+    _, msg = message_fit_in(msg, chat_mdl.max_length)
+    kwd = chat_mdl.chat(prompt, msg[1:], {"temperature": 0.5})
+    if isinstance(kwd, tuple):
+        kwd = kwd[0]
+    if kwd.find("**ERROR**") >= 0:
+        raise Exception(kwd)
+
+    try:
+        return json_repair.loads(kwd)
+    except json_repair.JSONDecodeError:
+        try:
+            result = kwd.replace(prompt[:-1], '').replace('user', '').replace('model', '').strip()
+            result = '{' + result.split('{')[1].split('}')[0] + '}'
+            return json_repair.loads(result)
+        except Exception as e:
+            logging.exception(f"JSON parsing error: {result} -> {e}")
+            raise e

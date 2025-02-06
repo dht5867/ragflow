@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+#  AFTER UPDATING THIS FILE, PLEASE ENSURE THAT docs/references/supported_models.mdx IS ALSO UPDATED for consistency!
+#
 from .embedding_model import (
     OllamaEmbed,
     LocalAIEmbed,
@@ -42,6 +44,7 @@ from .embedding_model import (
     VoyageEmbed,
     HuggingFaceEmbed,
     VolcEngineEmbed,
+    GPUStackEmbed,
 )
 from .chat_model import (
     GptTurbo,
@@ -80,6 +83,7 @@ from .chat_model import (
     AnthropicChat,
     GoogleChat,
     HuggingFaceChat,
+    GPUStackChat,
 )
 
 from .cv_model import (
@@ -116,6 +120,7 @@ from .rerank_model import (
     BaiduYiyanRerank,
     VoyageRerank,
     QWenRerank,
+    GPUStackRerank,
 )
 from .sequence2txt_model import (
     GPTSeq2txt,
@@ -123,6 +128,7 @@ from .sequence2txt_model import (
     AzureSeq2txt,
     XinferenceSeq2txt,
     TencentCloudSeq2txt,
+    GPUStackSeq2txt,
 )
 from .tts_model import (
     FishAudioTTS,
@@ -130,6 +136,7 @@ from .tts_model import (
     OpenAITTS,
     SparkTTS,
     XinferenceTTS,
+    GPUStackTTS,
 )
 
 EmbeddingModel = {
@@ -161,6 +168,7 @@ EmbeddingModel = {
     "Voyage AI": VoyageEmbed,
     "HuggingFace": HuggingFaceEmbed,
     "VolcEngine": VolcEngineEmbed,
+    "GPUStack": GPUStackEmbed,
 }
 
 CvModel = {
@@ -220,6 +228,7 @@ ChatModel = {
     "Anthropic": AnthropicChat,
     "Google Cloud": GoogleChat,
     "HuggingFace": HuggingFaceChat,
+    "GPUStack": GPUStackChat,
 }
 
 RerankModel = {
@@ -237,6 +246,7 @@ RerankModel = {
     "BaiduYiyan": BaiduYiyanRerank,
     "Voyage AI": VoyageRerank,
     "Tongyi-Qianwen": QWenRerank,
+    "GPUStack": GPUStackRerank,
 }
 
 Seq2txtModel = {
@@ -245,6 +255,7 @@ Seq2txtModel = {
     "Azure-OpenAI": AzureSeq2txt,
     "Xinference": XinferenceSeq2txt,
     "Tencent Cloud": TencentCloudSeq2txt,
+    "GPUStack": GPUStackSeq2txt,
 }
 
 TTSModel = {
@@ -253,4 +264,5 @@ TTSModel = {
     "OpenAI": OpenAITTS,
     "XunFei Spark": SparkTTS,
     "Xinference": XinferenceTTS,
+    "GPUStack": GPUStackTTS,
 }

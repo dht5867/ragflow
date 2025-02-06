@@ -251,10 +251,7 @@ class FileService(CommonService):
     def insert(cls, file):
         if not cls.save(**file):
             raise RuntimeError("Database error (File)!")
-        e, file = cls.get_by_id(file["id"])
-        if not e:
-            raise RuntimeError("Database error (File retrieval)!")
-        return file
+        return File(**file)
 
     @classmethod
     @DB.connection_context()
@@ -404,7 +401,7 @@ class FileService(CommonService):
             ParserType.AUDIO.value: audio,
             ParserType.EMAIL.value: email
         }
-        parser_config = {"chunk_token_num": 16096, "delimiter": "\n!?;。；！？", "layout_recognize": False}
+        parser_config = {"chunk_token_num": 16096, "delimiter": "\n!?;。；！？", "layout_recognize": "Plain Text"}
         exe = ThreadPoolExecutor(max_workers=12)
         threads = []
         for file in file_objs:
