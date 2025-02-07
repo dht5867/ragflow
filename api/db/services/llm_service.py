@@ -72,7 +72,7 @@ class TenantLLMService(CommonService):
             return model_name, None
         if len(arr) > 2:
             return "@".join(arr[0:-1]), arr[-1]
-
+        #glm-4v@ZHIPU-AI
         # model name must be xxx@yyy
         try:
             model_factories = json.load(open(os.path.join(get_project_base_directory(), "conf/llm_factories.json"), "r"))["factory_llm_infos"]
@@ -140,6 +140,7 @@ class TenantLLMService(CommonService):
         if llm_type == LLMType.IMAGE2TEXT.value:
             if model_config["llm_factory"] not in CvModel:
                 return
+            logging.info(CvModel[model_config["llm_factory"]])
             return CvModel[model_config["llm_factory"]](
                 model_config["api_key"], model_config["llm_name"], lang,
                 base_url=model_config["api_base"]
@@ -292,9 +293,27 @@ class LLMBundle(object):
                 "LLMBundle.chat can't update token usage for {}/CHAT llm_name: {}, used_tokens: {}".format(self.tenant_id, self.llm_name,
                                                                                                            used_tokens))
         return txt
+    def chat_image(self, system, history, gen_conf,image):
+        txt, used_tokens = self.mdl.chat(system, history, gen_conf,image)
+        if isinstance(txt, int) and not TenantLLMService.increase_usage(
+                self.tenant_id, self.llm_type, used_tokens, self.llm_name):
+            logging.error(
+                "LLMBundle.chat can't update token usage for {}/CHAT llm_name: {}, used_tokens: {}".format(self.tenant_id, self.llm_name,
+                                                                                                           used_tokens))
+        return txt
 
     def chat_streamly(self, system, history, gen_conf):
         for txt in self.mdl.chat_streamly(system, history, gen_conf):
+            if isinstance(txt, int):
+                if not TenantLLMService.increase_usage(
+                        self.tenant_id, self.llm_type, txt, self.llm_name):
+                    logging.error(
+                        "LLMBundle.chat_streamly can't update token usage for {}/CHAT llm_name: {}, content: {}".format(self.tenant_id, self.llm_name,
+                                                                                                                        txt))
+                return
+            yield txt
+    def chat_streamly_image(self, system, history, gen_conf,image):
+        for txt in self.mdl.chat_streamly(system, history, gen_conf,image):
             if isinstance(txt, int):
                 if not TenantLLMService.increase_usage(
                         self.tenant_id, self.llm_type, txt, self.llm_name):

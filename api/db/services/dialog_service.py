@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import base64
+from io import BytesIO
 import logging
 import binascii
 import os
@@ -41,6 +43,8 @@ from rag.settings import TAG_FLD
 from rag.utils import rmSpace, num_tokens_from_string, encoder
 from api.utils.file_utils import get_project_base_directory
 from api.db.services.log_service import log_file_chat
+from api.db.services.file2document_service import File2DocumentService
+from rag.utils.storage_factory import STORAGE_IMPL
 
 PROMPT_TEMPLATES = {
     "llm_chat": {
@@ -311,13 +315,14 @@ def message_fit_in(msg, max_length=4000):
 
 
 def llm_id2llm_type(llm_id):
+    #glm-4v@ZHIPU-AI
     llm_id, _ = TenantLLMService.split_model_name_and_factory(llm_id)
     fnm = os.path.join(get_project_base_directory(), "conf")
     llm_factories = json.load(open(os.path.join(fnm, "llm_factories.json"), "r"))
     for llm_factory in llm_factories["factory_llm_infos"]:
         for llm in llm_factory["llm"]:
             if llm_id == llm["llm_name"]:
-                return llm["model_type"].strip(",")[-1]
+                return llm["model_type"].strip(",")
 
 
 def kb_prompt(kbinfos, max_tokens):
@@ -867,7 +872,162 @@ def file_chat(dialog, messages, stream=True, **kwargs):
         res = decorate_answer(answer)
         res["audio_binary"] = tts(tts_mdl, answer)
         yield res
-        
+
+def get_storage_binary(bucket, name):
+    return STORAGE_IMPL.get(bucket, name)
+
+def image2base64(image):
+    if isinstance(image, bytes):
+            return base64.b64encode(image).decode("utf-8")
+    if isinstance(image, BytesIO):
+        return base64.b64encode(image.getvalue()).decode("utf-8")
+    buffered = BytesIO()
+    try:
+            image.save(buffered, format="JPEG")
+    except Exception:
+            image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
+    assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    refs = []
+    # 查询LLM模型服务
+
+    #qwen2.5:14b@Ollama
+    tmp = dialog.llm_id.split("@")
+    logging.info('dialog-------')
+    logging.info(dialog)
+    fid = None
+    llm_id = tmp[0]
+    if len(tmp)>1: fid = tmp[1]
+    #如果fid为False，则只根据llm_name查询LLMService；
+    #如果fid不为False，则在查询时还会根据fid进行过滤。
+    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    logging.info('llm-------')
+    logging.info(llm)
+    logging.info(dialog.llm_id)
+    if not llm:
+        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
+            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
+        if not llm:
+            #
+            raise LookupError("LLM(%s) not found" % dialog.llm_id)
+        max_tokens = 8192
+    else:
+        max_tokens = llm[0].max_tokens
+    questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
+    attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
+    if "doc_ids" in messages[-1]:
+        attachments = messages[-1]["doc_ids"]
+        for m in messages[:-1]:
+            if "doc_ids" in m:
+                attachments.extend(m["doc_ids"])
+    image =""
+    logging.info(questions)
+
+    if len(attachments)>0:
+        bucket, name = File2DocumentService.get_storage_address(doc_id=attachments[0])
+        imageBytes = get_storage_binary(bucket, name)
+        image=image2base64(imageBytes)
+    # 确定使用的模型类型
+    logging.info("--model_type")
+    logging.info (llm_id2llm_type(dialog.llm_id))
+   
+    if llm_id2llm_type(dialog.llm_id) == "image2text":
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
+    else:
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
+
+    prompt_config = dialog.prompt_config
+
+    logging.info(prompt_config)
+
+    # 配置提示词的参数
+    if select_skill=='知识库':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'default')
+    elif select_skill=='日志分析':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')
+    else:
+        prompt_config["system"]  = get_prompt_template("llm_chat", 'default')
+   
+  
+    # 准备消息内容
+    gen_conf = dialog.llm_setting
+    msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
+    msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
+                for m in messages if m["role"] != "system"])
+    logging.info('------------only_chat3---------')
+
+    logging.info(gen_conf)
+    # 计算token使用量
+    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
+    assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
+    prompt = msg[0]["content"]
+    prompt += "\n\n### Query:\n%s" % " ".join(questions)
+
+    prompt_config = dialog.prompt_config
+    field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
+    tts_mdl = None
+    if prompt_config.get("tts"):
+        tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
+    # try to use sql if field mapping is good to go
+    if field_map:
+        logging.debug("Use SQL to retrieval:{}".format(questions[-1]))
+        ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
+        if ans:
+            yield ans
+            return
+
+    for p in prompt_config["parameters"]:
+        if p["key"] == "knowledge":
+            continue
+        if p["key"] not in kwargs and not p["optional"]:
+            raise KeyError("Miss parameter: " + p["key"])
+        if p["key"] not in kwargs:
+            prompt_config["system"] = prompt_config["system"].replace(
+                "{%s}" % p["key"], " ")
+
+    if len(questions) > 1 and prompt_config.get("refine_multiturn"):
+        questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
+    else:
+        questions = questions[-1:]
+
+    # 调整生成的最大tokens数
+    if "max_tokens" in gen_conf:
+        gen_conf["max_tokens"] = min(
+            gen_conf["max_tokens"],
+            max_tokens - used_token_count)
+
+    # 生成答案的装饰器
+    def decorate_answer(answer):
+        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
+            answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
+        return {"answer": answer, "reference": refs}
+
+   
+    if stream:
+            last_ans = ""
+            answer = ""
+            for ans in chat_mdl.chat_streamly_image(prompt, msg[1:], gen_conf,image):
+                answer = ans
+                delta_ans = ans[len(last_ans):]
+                if num_tokens_from_string(delta_ans) < 16:
+                    continue
+                last_ans = answer
+                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+            delta_ans = answer[len(last_ans):]
+            if delta_ans:
+                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+            yield decorate_answer(answer)
+    else:
+            answer = chat_mdl.chat_image(prompt, msg[1:], gen_conf,image)
+            logging.debug("User: {}|Assistant: {}".format(
+                msg[-1]["content"], answer))
+            res = decorate_answer(answer)
+            res["audio_binary"] = tts(tts_mdl, answer)
+            yield res
+     
+
 #文字对话实现        
 def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
@@ -895,6 +1055,15 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
         max_tokens = 8192
     else:
         max_tokens = llm[0].max_tokens
+    
+    questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
+    attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
+    if "doc_ids" in messages[-1]:
+        attachments = messages[-1]["doc_ids"]
+        for m in messages[:-1]:
+            if "doc_ids" in m:
+                attachments.extend(m["doc_ids"])
+   
     # 确定使用的模型类型
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
@@ -902,10 +1071,12 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
     prompt_config = dialog.prompt_config
- 
+
     logging.info('------------only_chat2---------')
 
     logging.info(prompt_config)
+
+    logging.info(chat_mdl.llm_name)
 
     # 配置提示词的参数
     if select_skill=='知识库':
@@ -921,6 +1092,7 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
+ 
     
     logging.info('------------only_chat3---------')
 
@@ -928,6 +1100,35 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     # 计算token使用量
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
+    prompt = msg[0]["content"]
+    prompt += "\n\n### Query:\n%s" % " ".join(questions)
+
+    prompt_config = dialog.prompt_config
+    field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
+    tts_mdl = None
+    if prompt_config.get("tts"):
+        tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
+    # try to use sql if field mapping is good to go
+    if field_map:
+        logging.debug("Use SQL to retrieval:{}".format(questions[-1]))
+        ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
+        if ans:
+            yield ans
+            return
+
+    for p in prompt_config["parameters"]:
+        if p["key"] == "knowledge":
+            continue
+        if p["key"] not in kwargs and not p["optional"]:
+            raise KeyError("Miss parameter: " + p["key"])
+        if p["key"] not in kwargs:
+            prompt_config["system"] = prompt_config["system"].replace(
+                "{%s}" % p["key"], " ")
+
+    if len(questions) > 1 and prompt_config.get("refine_multiturn"):
+        questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
+    else:
+        questions = questions[-1:]
 
     # 调整生成的最大tokens数
     if "max_tokens" in gen_conf:
@@ -945,18 +1146,26 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     logging.info(msg)
     # 根据stream选项处理模型的对话响应
     if stream:
-        answer = ""
-        logging.info('---only_chat5--')
-        for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], gen_conf):
-            logging.info(ans)
-
-            answer = ans
-            yield {"answer": answer, "reference": {}}
-        yield decorate_answer(answer)
+            last_ans = ""
+            answer = ""
+            for ans in chat_mdl.chat_streamly(prompt, msg[1:], gen_conf):
+                answer = ans
+                delta_ans = ans[len(last_ans):]
+                if num_tokens_from_string(delta_ans) < 16:
+                    continue
+                last_ans = answer
+                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+            delta_ans = answer[len(last_ans):]
+            if delta_ans:
+                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
+            yield decorate_answer(answer)
     else:
-        answer = chat_mdl.chat(msg[0]["content"], msg[1:], gen_conf)
-        logging.info("User: {}|Assistant: {}".format(msg[-1]["content"], answer))
-        yield decorate_answer(answer)
+            answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
+            logging.debug("User: {}|Assistant: {}".format(
+                msg[-1]["content"], answer))
+            res = decorate_answer(answer)
+            res["audio_binary"] = tts(tts_mdl, answer)
+            yield res
 
 def use_sql(question, field_map, tenant_id, chat_mdl, quota=True):
     sys_prompt = "You are a Database Administrator. You need to check the fields of the following tables based on the user's list of questions and write the SQL corresponding to the last question."

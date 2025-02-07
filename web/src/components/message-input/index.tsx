@@ -119,6 +119,8 @@ const MessageInput = ({
     '知识库',
     '日志分析',
     'CMDB',
+    '图片解析',
+    '图片生成'
   ]; // 选择框的选项
   const optionsEn = [
     'CHAT',
@@ -126,6 +128,8 @@ const MessageInput = ({
     'KNOWLEDGE',
     'LOG',
     'CMDB',
+    'Image2Txt',
+    'Txt2Image'
   ]; // 选择框的选项
  
 

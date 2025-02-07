@@ -30,7 +30,7 @@ from flask import request, Response
 from flask_login import login_required, current_user
 
 from api.db import LLMType
-from api.db.services.dialog_service import DialogService, ConversationService, chat, ask, log_chat, log_chat, only_chat, label_question
+from api.db.services.dialog_service import DialogService, ConversationService, chat, ask, image_chat, log_chat, log_chat, only_chat, label_question
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMBundle, TenantService
 from api import settings
@@ -336,6 +336,13 @@ def completion():
                                             
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                     logging.info('---------CMDB end----------')
+                elif selectedSkill=='图片解析'or selectedSkill=='Image2Txt' :
+                    logging.info('-------only_chat----')
+                    for ans in image_chat(selectedSkill,dia, msg, True, **req):
+                        ans = structure_answer(conv, ans, message_id, conv.id)
+                        conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
+                        yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                    ConversationService.update_by_id(conv.id, conv.to_dict())    
                 else:
                     logging.info('-------only_chat----')
                     for ans in only_chat(selectedSkill,dia, msg, True, **req):

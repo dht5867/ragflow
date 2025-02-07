@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import logging
 from openai.lib.azure import AzureOpenAI
 from zhipuai import ZhipuAI
 import io
@@ -330,16 +331,15 @@ class Zhipu4V(Base):
             return "**ERROR**: " + str(e), 0
 
     def chat_streamly(self, system, history, gen_conf, image=""):
+        logging.info('Zhipu4V----image---------')
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
-
         ans = ""
         tk_count = 0
         try:
             for his in history:
                 if his["role"] == "user":
                     his["content"] = self.chat_prompt(his["content"], image)
-
             response = self.client.chat.completions.create(
                 model=self.model_name, 
                 messages=history,
