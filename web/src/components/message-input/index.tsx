@@ -119,7 +119,7 @@ const MessageInput = ({
     '知识库',
     '日志分析',
     'CMDB',
-    '图片解析',
+    '图片理解',
     '图片生成'
   ]; // 选择框的选项
   const optionsEn = [

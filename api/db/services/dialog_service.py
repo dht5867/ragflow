@@ -930,9 +930,9 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
         imageBytes = get_storage_binary(bucket, name)
         image=image2base64(imageBytes)
     # 确定使用的模型类型
-    logging.info("--model_type")
-    logging.info (llm_id2llm_type(dialog.llm_id))
-   
+    if image =="":
+      raise LookupError("please upload image ")
+
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
     else:
@@ -956,7 +956,7 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
-    logging.info('------------only_chat3---------')
+    logging.info('------------image_chat3---------')
 
     logging.info(gen_conf)
     # 计算token使用量
@@ -1067,6 +1067,7 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     # 确定使用的模型类型
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
+        raise LookupError("please change LLM(%s)  model to Chat Model" % dialog.llm_id)
     else:
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 

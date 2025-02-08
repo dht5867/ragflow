@@ -189,8 +189,7 @@ class AzureGptV4(Base):
 
 class QWenCV(Base):
     def __init__(self, key, model_name="qwen-vl-chat-v1", lang="Chinese", **kwargs):
-        import dashscope
-        dashscope.api_key = key
+        self.client = OpenAI(api_key=key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",)
         self.model_name = model_name
         self.lang = lang
 
@@ -216,50 +215,34 @@ class QWenCV(Base):
             }
         ]
 
-    def chat_prompt(self, text, b64):
-        return [
-            {"image": f"{b64}"},
-            {"text": text},
-        ]
+    # def chat_prompt(self, text, b64):
+    #     return [
+    #         {"image": f"{b64}"},
+    #         {"text": text},
+    #     ]
     
     def describe(self, image, max_tokens=300):
-        from http import HTTPStatus
-        from dashscope import MultiModalConversation
-        response = MultiModalConversation.call(model=self.model_name,
+        response  = self.client.chat.completions.create(model=self.model_name,
                                                messages=self.prompt(image))
-        if response.status_code == HTTPStatus.OK:
-            return response.output.choices[0]['message']['content'][0]["text"], response.usage.output_tokens
-        return response.message, 0
+        return response.choices[0].message.content.strip(), response.usage.output_tokens
+
 
     def chat(self, system, history, gen_conf, image=""):
-        from http import HTTPStatus
-        from dashscope import MultiModalConversation
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
 
         for his in history:
             if his["role"] == "user":
                 his["content"] = self.chat_prompt(his["content"], image)
-        response = MultiModalConversation.call(model=self.model_name, messages=history,
+        response = self.client.chat.completions.create(model=self.model_name, messages=history,
                                                max_tokens=gen_conf.get("max_tokens", 1000),
                                                temperature=gen_conf.get("temperature", 0.3),
                                                top_p=gen_conf.get("top_p", 0.7))
 
-        ans = ""
-        tk_count = 0
-        if response.status_code == HTTPStatus.OK:
-            ans += response.output.choices[0]['message']['content']
-            tk_count += response.usage.total_tokens
-            if response.output.choices[0].get("finish_reason", "") == "length":
-                ans += "...\nFor the content length reason, it stopped, continue?" if is_english(
-                    [ans]) else "······\n由于长度的原因，回答被截断了，要继续吗？"
-            return ans, tk_count
+        return response.choices[0].message.content.strip(), response.usage.output_tokens
 
-        return "**ERROR**: " + response.message, tk_count
 
     def chat_streamly(self, system, history, gen_conf, image=""):
-        from http import HTTPStatus
-        from dashscope import MultiModalConversation
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
 
@@ -270,22 +253,30 @@ class QWenCV(Base):
         ans = ""
         tk_count = 0
         try:
-            response = MultiModalConversation.call(model=self.model_name, messages=history,
+            response = self.client.chat.completions.create(model=self.model_name, messages=history,
                                                    max_tokens=gen_conf.get("max_tokens", 1000),
                                                    temperature=gen_conf.get("temperature", 0.3),
                                                    top_p=gen_conf.get("top_p", 0.7),
-                                                   stream=True)
+                                                   stream=True,
+                                                   stream_options={"include_usage": True})
             for resp in response:
-                if resp.status_code == HTTPStatus.OK:
-                    ans = resp.output.choices[0]['message']['content']
+                logging.info(resp)
+                if resp.usage and resp.usage.total_tokens:
                     tk_count = resp.usage.total_tokens
-                    if resp.output.choices[0].get("finish_reason", "") == "length":
-                        ans += "...\nFor the content length reason, it stopped, continue?" if is_english(
-                            [ans]) else "······\n由于长度的原因，回答被截断了，要继续吗？"
-                    yield ans
-                else:
-                    yield ans + "\n**ERROR**: " + resp.message if str(resp.message).find(
-                        "Access") < 0 else "Out of credit. Please set the API key in **settings > Model providers.**"
+                if not resp.choices:
+                     continue
+                if not resp.choices[0].delta.content:
+                    continue
+                delta = resp.choices[0].delta.content
+                ans += delta
+                if resp.choices[0].finish_reason == "length":
+                    ans += "...\nFor the content length reason, it stopped, continue?" if is_english(
+                        [ans]) else "······\n由于长度的原因，回答被截断了，要继续吗？"
+                    tk_count = resp.usage.total_tokens
+                # if resp.choices[0].finish_reason == "stop":
+                #     tk_count = resp.usage.total_tokens
+                
+                yield ans
         except Exception as e:
             yield ans + "\n**ERROR**: " + str(e)
 
@@ -331,7 +322,6 @@ class Zhipu4V(Base):
             return "**ERROR**: " + str(e), 0
 
     def chat_streamly(self, system, history, gen_conf, image=""):
-        logging.info('Zhipu4V----image---------')
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
         ans = ""

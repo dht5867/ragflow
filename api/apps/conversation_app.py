@@ -336,8 +336,8 @@ def completion():
                                             
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                     logging.info('---------CMDB end----------')
-                elif selectedSkill=='图片解析'or selectedSkill=='Image2Txt' :
-                    logging.info('-------only_chat----')
+                elif selectedSkill=='图片理解'or selectedSkill=='Image2Txt' :
+                    logging.info('-------image_chat----')
                     for ans in image_chat(selectedSkill,dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
                         conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
