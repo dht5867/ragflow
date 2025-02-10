@@ -38,9 +38,10 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   reference: IReference;
   loading?: boolean;
   sendLoading?: boolean;
+  visibleAvatar?: boolean;
   nickname?: string;
   avatar?: string;
-  avatardialog?: string | null;
+  avatarDialog?: string | null;
   clickDocumentButton?: (documentId: string, chunk: IReferenceChunk) => void;
   index: number;
   showLikeButton?: boolean;
@@ -53,7 +54,7 @@ const MessageItem = ({
   reference,
   loading = false,
   avatar,
-  avatardialog,
+  avatarDialog,
   sendLoading = false,
   clickDocumentButton,
   index,
@@ -62,6 +63,7 @@ const MessageItem = ({
   showLikeButton = true,
   selectedSkill,
   showLoudspeaker = true,
+  visibleAvatar = true,
 }: IProps) => {
   const { theme } = useTheme();
   const isAssistant = item.role === MessageType.Assistant;
