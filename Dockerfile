@@ -3,7 +3,7 @@ FROM ubuntu:22.04 AS base
 USER root
 SHELL ["/bin/bash", "-c"]
 
-ARG NEED_MIRROR=1
+ARG NEED_MIRROR=0
 ARG LIGHTEN=0
 ENV LIGHTEN=${LIGHTEN}
 
@@ -102,8 +102,8 @@ RUN cargo --version && rustc --version
 # macOS ARM64 environment, install msodbcsql18.
 # general x86_64 environment, install msodbcsql17.
 RUN --mount=type=cache,id=ragflow_apt,target=/var/cache/apt,sharing=locked \
-    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-    curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    #curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+   # curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
     apt update && \
     arch="$(uname -m)"; \
     if [ "$arch" = "arm64" ] || [ "$arch" = "aarch64" ]; then \
@@ -111,9 +111,10 @@ RUN --mount=type=cache,id=ragflow_apt,target=/var/cache/apt,sharing=locked \
         ACCEPT_EULA=Y apt install -y unixodbc-dev msodbcsql18; \
     else \
         # x86_64 or others
+        #apt install libodbc
         ACCEPT_EULA=Y apt install -y unixodbc-dev msodbcsql17; \
     fi || \
-    { echo "Failed to install ODBC driver"; exit 1; }
+    { echo "Failed to install ODBC driver";  }
 
 
 
@@ -203,7 +204,7 @@ COPY docker/entrypoint.sh docker/entrypoint-parser.sh ./
 RUN chmod +x ./entrypoint*.sh
 
 # Copy compiled web pages
-COPY --from=builder /ragflow/web/dist /ragflow/web/dist
+#COPY --from=builder /ragflow/web/dist /ragflow/web/dist
 
 COPY --from=builder /ragflow/VERSION /ragflow/VERSION
 ENTRYPOINT ["./entrypoint.sh"]

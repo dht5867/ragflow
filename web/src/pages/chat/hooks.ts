@@ -43,6 +43,7 @@ import {
   IMessage,
   VariableTableDataType,
 } from './interface';
+import i18n from '@/locales/config';
 
 export const useSetChatRouteParams = () => {
   const [currentQueryParameters, setSearchParams] = useSearchParams();
@@ -397,11 +398,13 @@ export const useSendNextMessage = (
       currentConversationId,
       messages,
       selectedSkill,
+      language,
     }: {
       message: Message;
       currentConversationId?: string;
       messages?: Message[];
       selectedSkill: string;
+      language:string;
     }) => {
       const res = await send(
         {
@@ -409,6 +412,7 @@ export const useSendNextMessage = (
           selectedSkill: selectedSkill,
           conversation_id: currentConversationId ?? conversationId,
           messages: [...(messages ?? derivedMessages ?? []), message],
+          language:language
         },
 
         controller,
@@ -434,9 +438,9 @@ export const useSendNextMessage = (
   const handleSendMessage = useCallback(
     async (message: Message) => {
       const isNew = getConversationIsNew();
-
+      const language= i18n.language
       if (isNew !== 'true') {
-        sendMessage({ message, selectedSkill: message.selectedSkill });
+        sendMessage({ message, selectedSkill: message.selectedSkill,language });
       } else {
         const data = await setConversation(
           message.content,
@@ -452,6 +456,7 @@ export const useSendNextMessage = (
             currentConversationId: id,
             messages: data.data.message,
             selectedSkill: message.selectedSkill,
+            language
           });
         }
       }

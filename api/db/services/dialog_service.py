@@ -50,7 +50,7 @@ PROMPT_TEMPLATES = {
     "llm_chat": {
         "default":
             '当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”\n'
-            '{{ input }}',
+            '{input}',
 
         "with_history":
             'The following is a friendly conversation between a human and an AI. '
@@ -360,6 +360,7 @@ def log_chat(dialog, messages, stream=True, **kwargs):
     #qwen2.5:14b@Ollama
     refs = []
     tmp = dialog.llm_id.split("@")
+    
     fid = None
     llm_id = tmp[0]
     if len(tmp)>1: fid = tmp[1]
@@ -455,6 +456,7 @@ def label_question(question, kbs):
 
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    language=kwargs["language"]
 
     chat_start_ts = timer()
 
@@ -587,6 +589,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
+    
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
     prompt = msg[0]["content"]
@@ -1038,6 +1041,8 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     tmp = dialog.llm_id.split("@")
     logging.info('dialog-------')
     logging.info(dialog)
+    language=kwargs["language"]
+
     fid = None
     llm_id = tmp[0]
     if len(tmp)>1: fid = tmp[1]
