@@ -366,7 +366,14 @@
             "logo": "",
             "tags": "LLM,TEXT EMBEDDING,TTS,SPEECH2TEXT,MODERATION,TEXT RE-RANK",
             "status": "1",
-            "llm": []
+            "llm": [   
+                {
+                "llm_name": "qwen-vl-chat",
+                "tags": "LLM,CHAT,IMAGE2TEXT",
+                "max_tokens": 2000,
+                "model_type": "image2text"
+            }
+        ]
         },
         {
             "name": "Youdao",
