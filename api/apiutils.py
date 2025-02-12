@@ -381,6 +381,7 @@ class ApiRequest:
         model: str,
         max_tokens: int = None,
         prompt_name: str = "default",
+        lang: str="zh",
     ):
         """
         对应api.py/chat/file_chat接口
@@ -393,6 +394,7 @@ class ApiRequest:
             "model_name": model,
             "max_tokens": max_tokens,
             "prompt_name": prompt_name,
+            "lang":lang
         }
         logging.info('----file_chat---')
         logging.info(data)

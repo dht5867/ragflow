@@ -50,7 +50,7 @@ PROMPT_TEMPLATES = {
     "llm_chat": {
         "default":
             '当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”\n'
-            '{input}',
+            '以下是问题 【 {prompt} 】\n',
 
         "with_history":
             'The following is a friendly conversation between a human and an AI. '
@@ -58,7 +58,7 @@ PROMPT_TEMPLATES = {
             'If the AI does not know the answer to a question, it truthfully says it does not know.\n\n'
             'Current conversation:\n'
             '{history}\n'
-            'Human: {input}\n'
+            'Human: {prompt}\n'
             'AI:',
 
         "py":
@@ -360,6 +360,7 @@ def log_chat(dialog, messages, stream=True, **kwargs):
     #qwen2.5:14b@Ollama
     refs = []
     tmp = dialog.llm_id.split("@")
+    lang=kwargs['language']
     
     fid = None
     llm_id = tmp[0]
@@ -409,7 +410,7 @@ def log_chat(dialog, messages, stream=True, **kwargs):
     if stream:
         answer = ""
         logging.info('--- stream rest log_chat--')
-        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default"):
+        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default",lang):
             if error_msg := check_error_msg(d):  # check whether error occured
                         logging.error(error_msg)
                         answer=" 后台服务错误，请重试对话"
@@ -456,7 +457,7 @@ def label_question(question, kbs):
 
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
-    language=kwargs["language"]
+    lang=kwargs["language"]
 
     chat_start_ts = timer()
 
@@ -585,7 +586,8 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     kwargs["knowledge"] = "\n------\n" + "\n\n------\n\n".join(knowledges)
     gen_conf = dialog.llm_setting
-
+    if lang=="en":
+        prompt_config["system"]='As an intelligent assistant, I will summarize the contents of the knowledge base to answer your questions. I will list the details from the knowledge base in my response. If none of the contents in the knowledge base are relevant to your question, my response must include the sentence "No answer found in the knowledge base!" The response should take into account the chat history.Here is the knowledge base:{knowledge} This is the knowledge base. Please respond in English.'
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
@@ -599,7 +601,9 @@ def chat(dialog, messages, stream=True, **kwargs):
         gen_conf["max_tokens"] = min(
             gen_conf["max_tokens"],
             max_tokens - used_token_count)
-
+    logging.info(msg)
+    logging.info('--prompt---')
+    logging.info(prompt)
     def decorate_answer(answer):
         nonlocal prompt_config, knowledges, kwargs, kbinfos, prompt, retrieval_ts
 
@@ -1041,8 +1045,7 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     tmp = dialog.llm_id.split("@")
     logging.info('dialog-------')
     logging.info(dialog)
-    language=kwargs["language"]
-
+    lang=kwargs["language"]
     fid = None
     llm_id = tmp[0]
     if len(tmp)>1: fid = tmp[1]
@@ -1092,16 +1095,14 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     else:
         prompt_config["system"]  = get_prompt_template("llm_chat", 'default')
    
+    if lang=="en":
+        prompt_config["system"]='When a user asks who you are, or during self-introduction, please respond with I am Xiao Ji, your IT operations and maintenance assistant. \n Please respond the question 【 {prompt} 】 in English .  '
   
     # 准备消息内容
     gen_conf = dialog.llm_setting
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
- 
-    
-    logging.info('------------only_chat3---------')
-
     logging.info(gen_conf)
     # 计算token使用量
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
@@ -1147,9 +1148,9 @@ def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
         return {"answer": answer, "reference": refs}
-
-    logging.info('---only_chat4--')
     logging.info(msg)
+    logging.info('--prompt---')
+    logging.info(prompt)    
     # 根据stream选项处理模型的对话响应
     if stream:
             last_ans = ""

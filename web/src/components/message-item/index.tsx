@@ -73,7 +73,7 @@ const MessageItem = ({
     useFetchDocumentThumbnailsByIds();
   const { visible, hideModal, showModal } = useSetModalState();
   const [clickedDocumentId, setClickedDocumentId] = useState('');
-  const { t } = useTranslate('chat');
+  const { t ,i18n} = useTranslate('chat');
 
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
@@ -96,7 +96,16 @@ const MessageItem = ({
     } else if (selectedSkill && selectedSkill.trim() !== '') {
       return selectedSkill;
     } else {
-      return '自由对话';
+      if ( i18n.language === 'zh' ){
+        return '自由对话'
+      }
+      if ( i18n.language === 'zh-TRADITIONAL' ){
+        return '自由對話'
+      }
+      if ( i18n.language === 'en' ){
+        return 'CHAT'
+      }
+      return 'CHAT'
     }
   }, [item.selectedSkill, selectedSkill]);
 
@@ -174,6 +183,7 @@ const MessageItem = ({
               )}
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
+            
             <b>{isAssistant ? `【${skill || '自由对话'}】` : ''}</b>
 
             <div
@@ -207,7 +217,7 @@ const MessageItem = ({
             </div>
             {isAssistant &&
               referenceDocumentList.length > 0 &&
-              item.selectedSkill === '知识库' && (
+              item.selectedSkill === (i18n.language === 'zh' ? 'KNOWLEDGE' : '知识库') && (
                 <List
                   bordered
                   dataSource={referenceDocumentList}

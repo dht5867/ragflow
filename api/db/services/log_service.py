@@ -23,10 +23,11 @@ def log_file_chat(
         model: str,
         max_tokens: int = None,
         prompt_name: str = "default",
+        lang: str="zh"
     ):
     try:
         logging.info("----query")
-        return api.file_chat(query,knowledge_id,history,stream,model,max_tokens,prompt_name)
+        return api.file_chat(query,knowledge_id,history,stream,model,max_tokens,prompt_name,lang)
     except Exception as e:
         logging.error(f"file_chat: {e}")
         return None

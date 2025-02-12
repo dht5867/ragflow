@@ -67,6 +67,8 @@ const isUploadSuccess = (file: UploadFile) => {
   return typeof code === 'number' && code === 0;
 };
 
+
+
 interface IProps {
   disabled: boolean;
   value: string;
@@ -122,6 +124,15 @@ const MessageInput = ({
     '图片理解',
     '图片生成'
   ]; // 选择框的选项
+  const optionsZh_Tr = [
+    '自由對話',
+    '程序開發',
+    '知識庫',
+    '日誌分析',
+    'CMDB',
+    '圖片理解',
+    '圖片生成'
+  ]; // 选择框的选项
   const optionsEn = [
     'CHAT',
     'CODE',
@@ -132,7 +143,16 @@ const MessageInput = ({
     'Txt2Image'
   ]; // 选择框的选项
  
-
+  const optionsMap = {
+    'zh': optionsZh,
+    'en': optionsEn,
+    'zh-TRADITIONAL': optionsZh_Tr
+  };
+  const optionTipsMap = {
+    'zh': '随时@小吉, 使用各种能力...',
+    'en': 'Call @ IntelliOps at any time, using  skills...',
+    'zh-TRADITIONAL': '隨時@小吉，使用各種能力...'
+  };
   const [popoverVisible, setPopoverVisible] = useState(false); // 控制 Popover 是否可见
   const [inputValue, setInputValue] = useState(value); // 输入框的值
   const [placeholderValue, setPlaceholderValue] = useState( t('')); // 输入框的值
@@ -339,7 +359,7 @@ const MessageInput = ({
     if (isUploadingFile) return;
     const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));
     console.log(placeholderValue)
-    if(placeholderValue=="@LOG"||placeholderValue=="@日志分析"){
+    if(placeholderValue=="@LOG"||placeholderValue=="@日志分析"||placeholderValue=="@日誌分析"){
       if(ids.length<=0){
         notification.error({
           message:  t('uploadfiletips'),
@@ -403,7 +423,7 @@ conversationIdRef.current = conversationId;
       <Popover
         content={
           <List
-            dataSource={ i18n.language === 'zh' ? optionsZh : optionsEn}
+            dataSource={ optionsMap[i18n.language]}
             renderItem={(item: ChangeEvent<HTMLInputElement>) => (
               <List.Item
                 onClick={() => handleSelect(item)}
@@ -422,7 +442,7 @@ conversationIdRef.current = conversationId;
       ></Popover>
       <Input
         size="large"
-        placeholder={ placeholderValue =='chat.' ? (i18n.language === 'en' ? 'Call @ IntelliOps at any time, using  skills...' :'随时@小吉, 使用各种能力...' ):placeholderValue }
+        placeholder={ placeholderValue =='chat.' ? (optionTipsMap[i18n.language]):placeholderValue }
         value={value}
         disabled={disabled}
         className={classNames({ [styles.inputWrapper]: fileList.length === 0 })}

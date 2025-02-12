@@ -265,7 +265,7 @@ def completion():
         def stream():
             nonlocal dia, msg, req, conv,message_id
             try:
-                if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE':
+                if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE' or selectedSkill=='知識庫':
                     for ans in chat(dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
                         conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
@@ -273,7 +273,7 @@ def completion():
                         #fillin_conv(ans)
                         #yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
-                elif selectedSkill=='日志分析' or selectedSkill=='LOG' :
+                elif selectedSkill=='日志分析' or selectedSkill=='LOG' or selectedSkill=='日誌分析' :
                     logging.info('-------日志分析----')
                     for ans in log_chat(dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
@@ -336,7 +336,7 @@ def completion():
                                             
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                     logging.info('---------CMDB end----------')
-                elif selectedSkill=='图片理解'or selectedSkill=='Image2Txt' :
+                elif selectedSkill=='图片理解'or selectedSkill=='Image2Txt' or selectedSkill=='圖片理解' :
                     logging.info('-------image_chat----')
                     for ans in image_chat(selectedSkill,dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)

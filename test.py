@@ -1,9 +1,10 @@
+from openai import OpenAI
 import openai
 
-client = openai.Client(
-    api_key="cannot be empty",
-    base_url=f"http://10.171.248.164:9997/v1"
-)
+# client = openai.Client(
+#     api_key="cannot be empty",
+#     base_url=f"http://10.171.248.164:9997/v1"
+# )
 import os
 import base64
 
@@ -11,10 +12,11 @@ import base64
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
+    
 
-base64_image = encode_image("/Users/daihongtao/Downloads/test.jpg")
+base64_image = encode_image("/Users/daihongtao/Documents/project/ragflow/dht/0.15/ragflow/web/src/assets/yay.jpg")
 
-
+client= OpenAI(api_key="key", base_url=f"http://10.171.248.164:9997/v1")
 response = client.chat.completions.create(
     model="qwen-vl-chat", # qwen-vl-chat 或者 yi-vl-chat
     messages=[
@@ -33,4 +35,6 @@ response = client.chat.completions.create(
         }
     ],
 )
+
+
 print(response.choices[0])
