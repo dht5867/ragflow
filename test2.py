@@ -1,7 +1,7 @@
 import requests
 
 # 配置你的API密钥和端点
-api_key = "sk-3b129c4114374f66a90c9072a20ff862"
+api_key = ""
 endpoint = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis"  # 例如 "https://dashscope-api.aliyuncs.com/v1/dashscope/visions/generation"
 
 from http import HTTPStatus
