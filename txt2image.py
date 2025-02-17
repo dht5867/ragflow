@@ -1,5 +1,5 @@
 from zhipuai import ZhipuAI
-client = ZhipuAI(api_key="058cd7709affe668afdcf4d71bceb31a.bMTgK0Eg4R46B5Jl")
+client = ZhipuAI(api_key="")
 
 response = client.images.generations(
     model="cogView-4", #填写需要调用的模型编码
