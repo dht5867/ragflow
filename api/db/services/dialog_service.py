@@ -454,6 +454,52 @@ def label_question(question, kbs):
                                               )
     return tags
 
+def image2base64(image):
+        if isinstance(image, bytes):
+            return base64.b64encode(image).decode("utf-8")
+        if isinstance(image, BytesIO):
+            return base64.b64encode(image.getvalue()).decode("utf-8")
+        buffered = BytesIO()
+        try:
+            image.save(buffered, format="JPEG")
+        except Exception:
+            image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+def txt_image_chat(dialog, messages, stream=True, **kwargs):
+    assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
+    #qwen2.5:14b@Ollama
+    refs = []
+    tmp = dialog.llm_id.split("@")
+    lang=kwargs['language']
+    fid = None
+    llm_id = tmp[0]
+    if len(tmp)>1: fid = tmp[1]
+    #如果fid为False，则只根据llm_name查询LLMService；
+    #如果fid不为False，则在查询时还会根据fid进行过滤。
+    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
+    if not llm:
+        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
+            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
+        if not llm:
+            #
+            raise LookupError("LLM(%s) not found" % dialog.llm_id)
+    prompt=kwargs['prompt']
+   
+    # 生成答案的装饰器
+    def decorate_answer(answer):
+        return {"answer": answer, "reference": refs}
+    
+    # 根据stream选项处理模型的对话响应
+    if stream:
+        base64image=""
+        #base64image = txt_image(prompt,llm_id,lang)
+        with open(os.path.join(get_project_base_directory(), "web/src/assets/yay.jpg"), "rb") as f:
+            base64image=image2base64(f.read())
+        alt_text = "Generated Image"  # 可以根据需要动态生成
+        answer = f'data:image/jpeg;base64,{base64image}'
+        yield {"answer": answer, "reference": {}}
+        yield decorate_answer(answer)
 
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."

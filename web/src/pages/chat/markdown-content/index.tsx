@@ -183,9 +183,14 @@ const MarkdownContent = ({
     },
     [getPopoverContent],
   );
+  const isBase64Image = (text) => {
+    return /^data:image\/(png|jpeg|jpg|gif|svg|webp);base64,/.test(text.trim());
+  };
 
   return (
-    <Markdown
+    isBase64Image(content) ? (
+      <img style={{ maxWidth: '100%' }} src={content}  alt="Base64 Image" />
+    ) : <Markdown
       rehypePlugins={[rehypeWrapReference, rehypeKatex, rehypeRaw]}
       remarkPlugins={[remarkGfm, remarkMath]}
       components={
@@ -204,7 +209,7 @@ const MarkdownContent = ({
                 {children}
               </code>
             );
-          },
+          }
         } as any
       }
     >
