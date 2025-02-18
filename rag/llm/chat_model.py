@@ -73,7 +73,13 @@ class Base(ABC):
                     continue
                 if not resp.choices[0].delta.content:
                     resp.choices[0].delta.content = ""
-                ans += resp.choices[0].delta.content
+                if hasattr(resp.choices[0].delta, "reasoning_content") and resp.choices[0].delta.reasoning_content:
+                    if ans.find("<think>") < 0:
+                        ans += "<think>"
+                    ans = ans.replace("</think>", "")
+                    ans += resp.choices[0].delta.reasoning_content + "</think>"
+                else:
+                    ans += resp.choices[0].delta.content
 
                 tol = self.total_token_count(resp)
                 if not tol:
@@ -943,6 +949,13 @@ class OpenAI_APIChat(Base):
         if base_url.split("/")[-1] != "v1":
             base_url = os.path.join(base_url, "v1")
         model_name = model_name.split("___")[0]
+        super().__init__(key, model_name, base_url)
+
+
+class PPIOChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.ppinfra.com/v3/openai"):
+        if not base_url:
+            base_url = "https://api.ppinfra.com/v3/openai"
         super().__init__(key, model_name, base_url)
 
 
