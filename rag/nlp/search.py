@@ -15,6 +15,7 @@
 #
 import logging
 import re
+import json
 from dataclasses import dataclass
 
 from rag.settings import TAG_FLD, PAGERANK_FLD
@@ -258,7 +259,7 @@ class Dealer:
         q_denor = np.sqrt(np.sum([s*s for t,s in query_rfea.items() if t != PAGERANK_FLD]))
         for i in search_res.ids:
             nor, denor = 0, 0
-            for t, sc in eval(search_res.field[i].get(TAG_FLD, "{}")).items():
+            for t, sc in json.loads(search_res.field[i].get(TAG_FLD, "{}")).items():
                 if t in query_rfea:
                     nor += query_rfea[t] * sc
                 denor += sc * sc
@@ -452,6 +453,8 @@ class Dealer:
         return res
 
     def all_tags(self, tenant_id: str, kb_ids: list[str], S=1000):
+        if not self.docStoreConn.indexExist(index_name(tenant_id), kb_ids[0]):
+            return []
         res = self.dataStore.search([], [], {}, [], OrderByExpr(), 0, 0, index_name(tenant_id), kb_ids, ["tag_kwd"])
         return self.dataStore.getAggregation(res, "tag_kwd")
 
