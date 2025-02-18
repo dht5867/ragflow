@@ -966,6 +966,7 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     else:
         max_tokens = llm[0].max_tokens
     questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
+    logging.info(questions)
     attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
     if "doc_ids" in messages[-1]:
         attachments = messages[-1]["doc_ids"]
@@ -980,16 +981,14 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
         imageBytes = get_storage_binary(bucket, name)
         image=image2base64(imageBytes)
     # 确定使用的模型类型
-    if image =="":
+    if image ==""  or len(image)<10:
       raise LookupError("please upload image ")
-
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
     else:
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
     prompt_config = dialog.prompt_config
-
     logging.info(prompt_config)
 
     # 配置提示词的参数
@@ -1000,48 +999,28 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     else:
         prompt_config["system"]  = get_prompt_template("llm_chat", 'default')
    
-  
     # 准备消息内容
     gen_conf = dialog.llm_setting
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
                 for m in messages if m["role"] != "system"])
-    logging.info('------------image_chat3---------')
-
+    
+    logging.info(msg)
     logging.info(gen_conf)
     # 计算token使用量
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
-    prompt = msg[0]["content"]
-    prompt += "\n\n### Query:\n%s" % " ".join(questions)
+    #prompt = msg[0]["content"]
+    prompt=kwargs['prompt']
 
+    #prompt = "\n\n### Query:\n%s" % " ".join(questions)
+    logging.info(prompt)
     prompt_config = dialog.prompt_config
-    field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
     tts_mdl = None
     if prompt_config.get("tts"):
         tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
     # try to use sql if field mapping is good to go
-    if field_map:
-        logging.debug("Use SQL to retrieval:{}".format(questions[-1]))
-        ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
-        if ans:
-            yield ans
-            return
-
-    for p in prompt_config["parameters"]:
-        if p["key"] == "knowledge":
-            continue
-        if p["key"] not in kwargs and not p["optional"]:
-            raise KeyError("Miss parameter: " + p["key"])
-        if p["key"] not in kwargs:
-            prompt_config["system"] = prompt_config["system"].replace(
-                "{%s}" % p["key"], " ")
-
-    if len(questions) > 1 and prompt_config.get("refine_multiturn"):
-        questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
-    else:
-        questions = questions[-1:]
-
+  
     # 调整生成的最大tokens数
     if "max_tokens" in gen_conf:
         gen_conf["max_tokens"] = min(
