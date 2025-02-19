@@ -34,6 +34,7 @@ from api.db.services.document_service import DocumentService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
 from api import settings
+from api.db.services.txt2image_service import txt_image
 from api.db.services.user_service import UserTenantService
 from api.settings import  retrievaler, kg_retrievaler
 from graphrag.utils import get_tags_from_cache, set_tags_to_cache
@@ -493,10 +494,10 @@ def txt_image_chat(dialog, messages, stream=True, **kwargs):
     # 根据stream选项处理模型的对话响应
     if stream:
         base64image=""
-        #base64image = txt_image(prompt,llm_id,lang)
-        with open(os.path.join(get_project_base_directory(), "web/src/assets/yay.jpg"), "rb") as f:
-            base64image=image2base64(f.read())
-        alt_text = "Generated Image"  # 可以根据需要动态生成
+        base64image = txt_image(prompt,llm_id,lang)
+        # with open(os.path.join(get_project_base_directory(), "web/src/assets/yay.jpg"), "rb") as f:
+        #     base64image=image2base64(f.read())
+        #alt_text = "Generated Image"  # 可以根据需要动态生成
         answer = f'data:image/jpeg;base64,{base64image}'
         yield {"answer": answer, "reference": {}}
         yield decorate_answer(answer)
