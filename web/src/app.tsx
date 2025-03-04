@@ -64,7 +64,7 @@ function Root({ children }: React.PropsWithChildren) {
         }}
         locale={locale}
       >
-        <App> {children}</App>
+        <App>{children}</App>
       </ConfigProvider>
       <ReactQueryDevtools buttonPosition={'top-left'} />
     </>

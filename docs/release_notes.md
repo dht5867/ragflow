@@ -3,7 +3,7 @@ sidebar_position: 2
 slug: /release_notes
 ---
 
-# Release notes
+# Releases
 
 Key features, improvements and bug fixes in the latest releases.
 
@@ -14,11 +14,12 @@ Released on February 6, 2025.
 ### New features
 
 - Supports DeepSeek R1 and DeepSeek V3.
-- GraphRAG refactor: Knowledge graph is dynamically built on an entire knowledge base (dataset) rather than on an individual file, and automatically updated when files are added or removed.
-- Adds an **Iteration** agent component and a **Research report generator** agent template.
+- GraphRAG refactor: Knowledge graph is dynamically built on an entire knowledge base (dataset) rather than on an individual file, and automatically updated when a newly uploaded file starts parsing. See [here](https://ragflow.io/docs/dev/construct_knowledge_graph).
+- Adds an **Iteration** agent component and a **Research report generator** agent template. See [here](./guides/agent/agent_component_reference/iteration.mdx).
 - New UI language: Portuguese.
-- Allows setting metadata for a specific file in a knowledge base to support AI-powered chats.
+- Allows setting metadata for a specific file in a knowledge base to enhance AI-powered chats. See [here](./guides/dataset/set_metadata.md).
 - Upgrades RAGFlow's document engine [Infinity](https://github.com/infiniflow/infinity) to v0.6.0.dev3.
+- Supports GPU acceleration for DeepDoc (see [docker-compose-gpu.yml](https://github.com/infiniflow/ragflow/blob/main/docker/docker-compose-gpu.yml)).
 - Supports creating and referencing a **Tag** knowledge base as a key milestone towards bridging the semantic gap between query and response.
 
 :::danger IMPORTANT
@@ -29,19 +30,21 @@ The **Tag knowledge base** feature is *unavailable* on the [Infinity](https://gi
 
 #### Added documents
 
-- [Begin component](https://ragflow.io/docs/dev/begin_component)
-- [Generate component](https://ragflow.io/docs/dev/generate_component)
-- [Interact component](https://ragflow.io/docs/dev/interact_component)
-- [Retrieval component](https://ragflow.io/docs/dev/retrieval_component)
-- [Categorize component](https://ragflow.io/docs/dev/categorize_component)
-- [Keyword component](https://ragflow.io/docs/dev/keyword_component)
-- [Message component](https://ragflow.io/docs/dev/message_component)
-- [Rewrite component](https://ragflow.io/docs/dev/rewrite_component)
-- [Switch component](https://ragflow.io/docs/dev/switch_component)
-- [Concentrator component](https://ragflow.io/docs/dev/concentrator_component)
-- [Template component](https://ragflow.io/docs/dev/template_component)
-- [Iteration component](https://ragflow.io/docs/dev/iteration_component)
-- [Note component](https://ragflow.io/docs/dev/note_component)
+- [Construct knowledge graph](./guides/dataset/construct_knowledge_graph.md)
+- [Set metadata](./guides/dataset/set_metadata.md)
+- [Begin component](./guides/agent/agent_component_reference/begin.mdx)
+- [Generate component](./guides/agent/agent_component_reference/generate.mdx)
+- [Interact component](./guides/agent/agent_component_reference/interact.mdx)
+- [Retrieval component](./guides/agent/agent_component_reference/retrieval.mdx)
+- [Categorize component](./guides/agent/agent_component_reference/categorize.mdx)
+- [Keyword component](./guides/agent/agent_component_reference/keyword.mdx)
+- [Message component](./guides/agent/agent_component_reference/message.mdx)
+- [Rewrite component](./guides/agent/agent_component_reference/rewrite.mdx)
+- [Switch component](./guides/agent/agent_component_reference/switch.mdx)
+- [Concentrator component](./guides/agent/agent_component_reference/concentrator.mdx)
+- [Template component](./guides/agent/agent_component_reference/template.mdx)
+- [Iteration component](./guides/agent/agent_component_reference/iteration.mdx)
+- [Note component](./guides/agent/agent_component_reference/note.mdx)
 
 ## v0.15.1
 
@@ -96,7 +99,7 @@ Released on December 18, 2024.
 
 ### Improvements
 
-- Upgrades the Document Layout Analysis model in Deepdoc.
+- Upgrades the Document Layout Analysis model in DeepDoc.
 - Significantly enhances the retrieval performance when using [Infinity](https://github.com/infiniflow/infinity) as document engine.
 
 ### Related APIs
@@ -202,9 +205,9 @@ pip install ragflow-sdk==0.13.0
 
 #### Added documents
 
-- [Acquire a RAGFlow API key](https://ragflow.io/docs/dev/acquire_ragflow_api_key)
-- [HTTP API Reference](https://ragflow.io/docs/dev/http_api_reference)
-- [Python API Reference](https://ragflow.io/docs/dev/python_api_reference)
+- [Acquire a RAGFlow API key](./develop/acquire_ragflow_api_key.md)
+- [HTTP API Reference](./references/http_api_reference.md)
+- [Python API Reference](./references/python_api_reference.md)
 
 ## v0.12.0
 
@@ -312,7 +315,7 @@ Released on May 31, 2024.
 :::danger IMPORTANT
 While we also test RAGFlow on ARM64 platforms, we do not maintain RAGFlow Docker images for ARM.
 
-If you are on an ARM platform, follow [this guide](https://ragflow.io/docs/dev/build_docker_image) to build a RAGFlow Docker image.
+If you are on an ARM platform, follow [this guide](./develop/build_docker_image.mdx) to build a RAGFlow Docker image.
 :::
 
 ### Related APIs

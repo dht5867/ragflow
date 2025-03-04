@@ -21,7 +21,7 @@
         <img alt="Static Badge" src="https://img.shields.io/badge/Online-Demo-4e6b99">
     </a>
     <a href="https://hub.docker.com/r/infiniflow/ragflow" target="_blank">
-        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.16.0-brightgreen" alt="docker pull infiniflow/ragflow:v0.16.0">
+        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.17.0-brightgreen" alt="docker pull infiniflow/ragflow:v0.17.0">
     </a>
     <a href="https://github.com/infiniflow/ragflow/releases/latest">
         <img src="https://img.shields.io/github/v/release/infiniflow/ragflow?color=blue&label=Latest%20Release" alt="Latest Release">
@@ -56,7 +56,7 @@
 
 - 2025-02-05 更新「SILICONFLOW」的型號清單並新增 Deepseek-R1/DeepSeek-V3 的支援。
 - 2025-01-26 最佳化知識圖譜的擷取與應用，提供了多種配置選擇。
-- 2024-12-18 升級了 Deepdoc 的文檔佈局分析模型。
+- 2024-12-18 升級了 DeepDoc 的文檔佈局分析模型。
 - 2024-12-04 支援知識庫的 Pagerank 分數。
 - 2024-11-22 完善了 Agent 中的變數定義和使用。
 - 2024-11-01 對解析後的 chunk 加入關鍵字抽取和相關問題產生以提高回想的準確度。
@@ -145,19 +145,19 @@
 
 3. 進入 **docker** 資料夾，利用事先編譯好的 Docker 映像啟動伺服器：
 
-   > 執行以下指令會自動下載 RAGFlow slim Docker 映像 `v0.16.0-slim`。請參考下表查看不同 Docker 發行版的說明。如需下載不同於 `v0.16.0-slim` 的 Docker 映像，請在執行 `docker compose` 啟動服務之前先更新 **docker/.env** 檔案內的 `RAGFLOW_IMAGE` 變數。例如，你可以透過設定 `RAGFLOW_IMAGE=infiniflow/ragflow:v0.16.0` 來下載 RAGFlow 鏡像的 `v0.16.0` 完整發行版。
+   > 執行以下指令會自動下載 RAGFlow slim Docker 映像 `v0.17.0-slim`。請參考下表查看不同 Docker 發行版的說明。如需下載不同於 `v0.17.0-slim` 的 Docker 映像，請在執行 `docker compose` 啟動服務之前先更新 **docker/.env** 檔案內的 `RAGFLOW_IMAGE` 變數。例如，你可以透過設定 `RAGFLOW_IMAGE=infiniflow/ragflow:v0.17.0` 來下載 RAGFlow 鏡像的 `v0.17.0` 完整發行版。
 
    ```bash
-   $ cd ragflow
-   $ docker compose -f docker/docker-compose.yml up -d
+   $ cd ragflow/docker
+   $ docker compose -f docker-compose.yml up -d
    ```
 
    | RAGFlow image tag | Image size (GB) | Has embedding models? | Stable?                  |
    | ----------------- | --------------- | --------------------- | ------------------------ |
-   | v0.16.0           | &approx;9       | :heavy_check_mark:    | Stable release           |
-   | v0.16.0-slim      | &approx;2       | ❌                    | Stable release           |
+   | v0.17.0           | &approx;9       | :heavy_check_mark:    | Stable release           |
+   | v0.17.0-slim      | &approx;2       | ❌                    | Stable release           |
    | nightly           | &approx;9       | :heavy_check_mark:    | _Unstable_ nightly build |
-   | nightly-slim      | &approx;2       | ❌                    | _Unstable_ nightly build |
+   | nightly-slim      | &approx;2       | ❌                     | _Unstable_ nightly build |
 
    > [!TIP]
    > 如果你遇到 Docker 映像檔拉不下來的問題，可以在 **docker/.env** 檔案內根據變數 `RAGFLOW_IMAGE` 的註解提示選擇華為雲或阿里雲的對應映像。
@@ -181,9 +181,6 @@
     /_/ |_|/_/  |_|\____//_/    /_/ \____/ |__/|__/
 
     * Running on all addresses (0.0.0.0)
-    * Running on http://127.0.0.1:9380
-    * Running on http://x.x.x.x:9380
-    INFO:werkzeug:Press CTRL+C to quit
    ```
 
    > 如果您跳過這一步驟系統確認步驟就登入 RAGFlow，你的瀏覽器有可能會提示 `network anormal` 或 `網路異常`，因為 RAGFlow 可能並未完全啟動成功。
@@ -200,7 +197,7 @@
 
 系統配置涉及以下三份文件：
 
-- [.env](./docker/.env)：存放一些基本的系統環境變量，例如 `SVR_HTTP_PORT`、`MYSQL_PASSWORD`、`MINIO_PASSWORD` 等。
+- [.env](./docker/.env)：存放一些系統環境變量，例如 `SVR_HTTP_PORT`、`MYSQL_PASSWORD`、`MINIO_PASSWORD` 等。
 - [service_conf.yaml.template](./docker/service_conf.yaml.template)：設定各類別後台服務。
 - [docker-compose.yml](./docker/docker-compose.yml): 系統依賴該檔案完成啟動。
 
@@ -215,7 +212,7 @@
 > 所有系統配置都需要透過系統重新啟動生效：
 >
 > ```bash
-> $ docker compose -f docker/docker-compose.yml up -d
+> $ docker compose -f docker-compose.yml up -d
 > ```
 
 ###把文檔引擎從 Elasticsearch 切換成為 Infinity
@@ -227,13 +224,14 @@ RAGFlow 預設使用 Elasticsearch 儲存文字和向量資料. 如果要切換�
    ```bash
    $ docker compose -f docker/docker-compose.yml down -v
    ```
+   Note: `-v` 將會刪除 docker 容器的 volumes，已有的資料會被清空。
 
 2. 設定 **docker/.env** 目錄中的 `DOC_ENGINE` 為 `infinity`.
 
 3. 啟動容器:
 
    ```bash
-   $ docker compose -f docker/docker-compose.yml up -d
+   $ docker compose -f docker-compose.yml up -d
    ```
 
 > [!WARNING]
@@ -265,7 +263,7 @@ docker build --build-arg NEED_MIRROR=1 -f Dockerfile -t infiniflow/ragflow:night
 
    ```bash
    pipx install uv
-   export UV_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+   export UV_INDEX=https://mirrors.aliyun.com/pypi/simple
    ```
 
 2. 下載原始碼並安裝 Python 依賴：

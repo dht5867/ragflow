@@ -15,6 +15,8 @@ from collections import defaultdict
 from copy import deepcopy
 from hashlib import md5
 from typing import Any, Callable
+import os
+import trio
 
 import networkx as nx
 import numpy as np
@@ -28,6 +30,7 @@ from rag.utils.redis_conn import REDIS_CONN
 
 ErrorHandlerFn = Callable[[BaseException | None, str | None, dict | None], None]
 
+chat_limiter = trio.CapacityLimiter(int(os.environ.get('MAX_CONCURRENT_CHATS', 100)))
 
 def perform_variable_replacements(
     input: str, history: list[dict] | None = None, variables: dict | None = None
@@ -524,7 +527,7 @@ def rebuild_graph(tenant_id, kb_id):
     src_ids = []
     flds = ["entity_kwd", "entity_type_kwd", "from_entity_kwd", "to_entity_kwd", "weight_int", "knowledge_graph_kwd", "source_id"]
     bs = 256
-    for i in range(0, 10000, bs):
+    for i in range(0, 39*bs, bs):
         es_res = settings.docStoreConn.search(flds, [],
                                  {"kb_id": kb_id, "knowledge_graph_kwd": ["entity", "relation"]},
                                  [],
