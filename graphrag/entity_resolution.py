@@ -99,16 +99,19 @@ class EntityResolution(Extractor):
             for candidate_resolution_i in candidate_resolution.items():
                 if not candidate_resolution_i[1]:
                     continue
-                nursery.start_soon(self._resolve_candidate(candidate_resolution_i, resolution_result))
+                nursery.start_soon(lambda: self._resolve_candidate(candidate_resolution_i, resolution_result))
 
         connect_graph = nx.Graph()
         removed_entities = []
         connect_graph.add_edges_from(resolution_result)
+        all_entities_data = []
+        all_relationships_data = []
+
         for sub_connect_graph in nx.connected_components(connect_graph):
             sub_connect_graph = connect_graph.subgraph(sub_connect_graph)
             remove_nodes = list(sub_connect_graph.nodes)
             keep_node = remove_nodes.pop()
-            self._merge_nodes(keep_node, self._get_entity_(remove_nodes))
+            await self._merge_nodes(keep_node, self._get_entity_(remove_nodes), all_entities_data)
             for remove_node in remove_nodes:
                 removed_entities.append(remove_node)
                 remove_node_neighbors = graph[remove_node]
@@ -124,7 +127,7 @@ class EntityResolution(Extractor):
                     if not rel:
                         continue
                     if graph.has_edge(keep_node, remove_node_neighbor):
-                        self._merge_edges(keep_node, remove_node_neighbor, [rel])
+                        await self._merge_edges(keep_node, remove_node_neighbor, [rel], all_relationships_data)
                     else:
                         pair = sorted([keep_node, remove_node_neighbor])
                         graph.add_edge(pair[0], pair[1], weight=rel['weight'])

@@ -54,6 +54,7 @@
 
 ## 🔥 近期更新
 
+- 2025-02-28 結合網路搜尋（Tavily），對於任意大模型實現類似 Deep Research 的推理功能.
 - 2025-02-05 更新「SILICONFLOW」的型號清單並新增 Deepseek-R1/DeepSeek-V3 的支援。
 - 2025-01-26 最佳化知識圖譜的擷取與應用，提供了多種配置選擇。
 - 2024-12-18 升級了 DeepDoc 的文檔佈局分析模型。
@@ -144,6 +145,10 @@
    ```
 
 3. 進入 **docker** 資料夾，利用事先編譯好的 Docker 映像啟動伺服器：
+
+> [!CAUTION]
+> 所有 Docker 映像檔都是為 x86 平台建置的。目前，我們不提供 ARM64 平台的 Docker 映像檔。
+> 如果您使用的是 ARM64 平台，請使用 [這份指南](https://ragflow.io/docs/dev/build_docker_image) 來建置適合您系統的 Docker 映像檔。
 
    > 執行以下指令會自動下載 RAGFlow slim Docker 映像 `v0.17.0-slim`。請參考下表查看不同 Docker 發行版的說明。如需下載不同於 `v0.17.0-slim` 的 Docker 映像，請在執行 `docker compose` 啟動服務之前先更新 **docker/.env** 檔案內的 `RAGFLOW_IMAGE` 變數。例如，你可以透過設定 `RAGFLOW_IMAGE=infiniflow/ragflow:v0.17.0` 來下載 RAGFlow 鏡像的 `v0.17.0` 完整發行版。
 

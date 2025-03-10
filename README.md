@@ -78,6 +78,7 @@ Try our demo at [https://demo.ragflow.io](https://demo.ragflow.io).
 
 ## 🔥 Latest Updates
 
+- 2025-02-28 Combined with Internet search (Tavily), supports reasoning like Deep Research for any LLMs.
 - 2025-02-05 Updates the model list of 'SILICONFLOW' and adds support for Deepseek-R1/DeepSeek-V3.
 - 2025-01-26 Optimizes knowledge graph extraction and application, offering various configuration options.
 - 2024-12-18 Upgrades Document Layout Analysis model in DeepDoc.
@@ -173,7 +174,11 @@ releases! 🌟
 
 3. Start up the server using the pre-built Docker images:
 
-   > The command below downloads the `v0.17.0-slim` edition of the RAGFlow Docker image. Refer to the following table for descriptions of different RAGFlow editions. To download a RAGFlow edition different from `v0.17.0-slim`, update the `RAGFLOW_IMAGE` variable accordingly in **docker/.env** before using `docker compose` to start the server. For example: set `RAGFLOW_IMAGE=infiniflow/ragflow:v0.17.0` for the full edition `v0.17.0`.
+> [!CAUTION]
+> All Docker images are built for x86 platforms. We don't currently offer Docker images for ARM64.
+> If you are on an ARM64 platform, follow [this guide](https://ragflow.io/docs/dev/build_docker_image) to build a Docker image compatible with your system.
+
+   > The command below downloads the `v0.17.0-slim` edition of the RAGFlow Docker image. See the following table for descriptions of different RAGFlow editions. To download a RAGFlow edition different from `v0.17.0-slim`, update the `RAGFLOW_IMAGE` variable accordingly in **docker/.env** before using `docker compose` to start the server. For example: set `RAGFLOW_IMAGE=infiniflow/ragflow:v0.17.0` for the full edition `v0.17.0`.
 
    ```bash
    $ cd ragflow/docker
@@ -183,9 +188,9 @@ releases! 🌟
    | RAGFlow image tag | Image size (GB) | Has embedding models? | Stable?                  |
    |-------------------|-----------------|-----------------------|--------------------------|
    | v0.17.0           | &approx;9       | :heavy_check_mark:    | Stable release           |
-   | v0.17.0-slim      | &approx;2       | ❌                     | Stable release           |
+   | v0.17.0-slim      | &approx;2       | ❌                   | Stable release            |
    | nightly           | &approx;9       | :heavy_check_mark:    | _Unstable_ nightly build |
-   | nightly-slim      | &approx;2       | ❌                     | _Unstable_ nightly build |
+   | nightly-slim      | &approx;2       | ❌                   | _Unstable_ nightly build  |
 
 4. Check the server status after having the server up and running:
 

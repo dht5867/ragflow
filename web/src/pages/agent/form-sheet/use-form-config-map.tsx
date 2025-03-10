@@ -99,8 +99,15 @@ export function useFormConfigMap() {
     },
     [Operator.Categorize]: {
       component: CategorizeForm,
-      defaultValues: {},
-      schema: z.object({}),
+      defaultValues: { message_history_window_size: 1 },
+      schema: z.object({
+        message_history_window_size: z.number(),
+        items: z.array(
+          z.object({
+            name: z.string().min(1, t('flow.nameMessage')).trim(),
+          }),
+        ),
+      }),
     },
     [Operator.Message]: {
       component: MessageForm,
@@ -158,8 +165,11 @@ export function useFormConfigMap() {
     },
     [Operator.PubMed]: {
       component: PubMedForm,
-      defaultValues: {},
-      schema: z.object({}),
+      defaultValues: { top_n: 10 },
+      schema: z.object({
+        top_n: z.number(),
+        email: z.string(),
+      }),
     },
     [Operator.ArXiv]: {
       component: ArXivForm,

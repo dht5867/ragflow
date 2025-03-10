@@ -75,6 +75,7 @@ Experimente nossa demo em [https://demo.ragflow.io](https://demo.ragflow.io).
 
 ## 🔥 Últimas Atualizações
 
+- 28/02/2025 combinado com a pesquisa na Internet (T AVI LY), suporta pesquisas profundas para qualquer LLM.
 - 05-02-2025 Atualiza a lista de modelos de 'SILICONFLOW' e adiciona suporte para Deepseek-R1/DeepSeek-V3.
 - 26-01-2025 Otimize a extração e aplicação de gráficos de conhecimento e forneça uma variedade de opções de configuração.
 - 18-12-2024 Atualiza o modelo de Análise de Layout de Documentos no DeepDoc.
@@ -165,6 +166,10 @@ Experimente nossa demo em [https://demo.ragflow.io](https://demo.ragflow.io).
     ```
 
 3.  Inicie o servidor usando as imagens Docker pré-compiladas:
+
+> [!CAUTION]
+> Todas as imagens Docker são construídas para plataformas x86. Atualmente, não oferecemos imagens Docker para ARM64.
+> Se você estiver usando uma plataforma ARM64, por favor, utilize [este guia](https://ragflow.io/docs/dev/build_docker_image) para construir uma imagem Docker compatível com o seu sistema.
 
     > O comando abaixo baixa a edição `v0.17.0-slim` da imagem Docker do RAGFlow. Consulte a tabela a seguir para descrições de diferentes edições do RAGFlow. Para baixar uma edição do RAGFlow diferente da `v0.17.0-slim`, atualize a variável `RAGFLOW_IMAGE` conforme necessário no **docker/.env** antes de usar `docker compose` para iniciar o servidor. Por exemplo: defina `RAGFLOW_IMAGE=infiniflow/ragflow:v0.17.0` para a edição completa `v0.17.0`.
 

@@ -20,9 +20,7 @@ import random
 import sys
 
 from api.utils.log_utils import initRootLogger, get_project_base_directory
-from graphrag.general.index import WithCommunity, WithResolution, Dealer
-from graphrag.light.graph_extractor import GraphExtractor as LightKGExt
-from graphrag.general.graph_extractor import GraphExtractor as GeneralKGExt
+from graphrag.general.index import run_graphrag
 from graphrag.utils import get_llm_cache, set_llm_cache, get_tags_from_cache, set_tags_to_cache
 from rag.prompts import keyword_extraction, question_proposal, content_tagging
 
@@ -45,6 +43,7 @@ import tracemalloc
 import resource
 import signal
 import trio
+import exceptiongroup
 
 import numpy as np
 from peewee import DoesNotExist
@@ -193,7 +192,7 @@ async def collect():
         FAILED_TASKS += 1
         logging.warning(f"collect task {msg['id']} {state}")
         redis_msg.ack()
-        return None
+        return None, None
     task["task_type"] = msg.get("task_type", "")
     return redis_msg, task
 
@@ -297,7 +296,7 @@ async def build_chunks(task, progress_callback):
             return
         async with trio.open_nursery() as nursery:
             for d in docs:
-                nursery.start_soon(doc_keyword_extraction, chat_mdl, d, task["parser_config"]["auto_keywords"])
+                nursery.start_soon(lambda: doc_keyword_extraction(chat_mdl, d, task["parser_config"]["auto_keywords"]))
         progress_callback(msg="Keywords generation {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     if task["parser_config"].get("auto_questions", 0):
@@ -316,7 +315,7 @@ async def build_chunks(task, progress_callback):
                 d["question_tks"] = rag_tokenizer.tokenize("\n".join(d["question_kwd"]))
         async with trio.open_nursery() as nursery:
             for d in docs:
-                nursery.start_soon(doc_question_proposal, chat_mdl, d, task["parser_config"]["auto_questions"])
+                nursery.start_soon(lambda: doc_question_proposal(chat_mdl, d, task["parser_config"]["auto_questions"]))
         progress_callback(msg="Question generation {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     if task["kb_parser_config"].get("tag_kb_ids", []):
@@ -356,7 +355,7 @@ async def build_chunks(task, progress_callback):
                 d[TAG_FLD] = json.loads(cached)
         async with trio.open_nursery() as nursery:
             for d in docs_to_tag:
-                nursery.start_soon(doc_content_tagging, chat_mdl, d, topn_tags)
+                nursery.start_soon(lambda: doc_content_tagging(chat_mdl, d, topn_tags))
         progress_callback(msg="Tagging {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     return docs
@@ -453,24 +452,6 @@ async def run_raptor(row, chat_mdl, embd_mdl, vector_size, callback=None):
     return res, tk_count
 
 
-async def run_graphrag(row, chat_model, language, embedding_model, callback=None):
-    chunks = []
-    for d in settings.retrievaler.chunk_list(row["doc_id"], row["tenant_id"], [str(row["kb_id"])],
-                                             fields=["content_with_weight", "doc_id"]):
-        chunks.append((d["doc_id"], d["content_with_weight"]))
-
-    dealer = Dealer(LightKGExt if row["parser_config"]["graphrag"]["method"] != 'general' else GeneralKGExt,
-                    row["tenant_id"],
-                    str(row["kb_id"]),
-                    chat_model,
-                    chunks=chunks,
-                    language=language,
-                    entity_types=row["parser_config"]["graphrag"]["entity_types"],
-                    embed_bdl=embedding_model,
-                    callback=callback)
-    await dealer()
-
-
 async def do_handle_task(task):
     task_id = task["id"]
     task_from_page = task["from_page"]
@@ -521,30 +502,15 @@ async def do_handle_task(task):
         chunks, token_count = await run_raptor(task, chat_model, embedding_model, vector_size, progress_callback)
     # Either using graphrag or Standard chunking methods
     elif task.get("task_type", "") == "graphrag":
+        graphrag_conf = task_parser_config.get("graphrag", {})
+        if not graphrag_conf.get("use_graphrag", False):
+            return
         start_ts = timer()
         chat_model = LLMBundle(task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language)
-        await run_graphrag(task, chat_model, task_language, embedding_model, progress_callback)
-        progress_callback(prog=1.0, msg="Knowledge Graph is done ({:.2f}s)".format(timer() - start_ts))
-        return
-    elif task.get("task_type", "") == "graph_resolution":
-        start_ts = timer()
-        chat_model = LLMBundle(task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language)
-        with_res = WithResolution(
-            task["tenant_id"], str(task["kb_id"]),chat_model, embedding_model,
-            progress_callback
-        )
-        await with_res()
-        progress_callback(prog=1.0, msg="Knowledge Graph resolution is done ({:.2f}s)".format(timer() - start_ts))
-        return
-    elif task.get("task_type", "") == "graph_community":
-        start_ts = timer()
-        chat_model = LLMBundle(task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language)
-        with_comm = WithCommunity(
-            task["tenant_id"], str(task["kb_id"]), chat_model, embedding_model,
-            progress_callback
-        )
-        await with_comm()
-        progress_callback(prog=1.0, msg="GraphRAG community reports generation is done ({:.2f}s)".format(timer() - start_ts))
+        with_resolution = graphrag_conf.get("resolution", False)
+        with_community = graphrag_conf.get("community", False)
+        await run_graphrag(task, task_language, with_resolution, with_community, chat_model, embedding_model, progress_callback)
+        progress_callback(prog=1.0, msg="Knowledge Graph done ({:.2f}s)".format(timer() - start_ts))
         return
     else:
         # Standard chunking methods
@@ -623,7 +589,11 @@ async def handle_task():
         FAILED_TASKS += 1
         CURRENT_TASKS.pop(task["id"], None)
         try:
-            set_progress(task["id"], prog=-1, msg=f"[Exception]: {e}")
+            err_msg = str(e)
+            while isinstance(e, exceptiongroup.ExceptionGroup):
+                e = e.exceptions[0]
+                err_msg += ' -- ' + str(e)
+            set_progress(task["id"], prog=-1, msg=f"[Exception]: {err_msg}")
         except Exception:
             pass
         logging.exception(f"handle_task got exception for task {json.dumps(task)}")

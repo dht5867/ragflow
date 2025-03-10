@@ -82,7 +82,6 @@ RAGFlow.create_dataset(
     avatar: str = "",
     description: str = "",
     embedding_model: str = "BAAI/bge-large-zh-v1.5",
-    language: str = "English",
     permission: str = "me", 
     chunk_method: str = "naive",
     parser_config: DataSet.ParserConfig = None
@@ -97,11 +96,6 @@ Creates a dataset.
 
 The unique name of the dataset to create. It must adhere to the following requirements:
 
-- Permitted characters include:
-  - English letters (a-z, A-Z)
-  - Digits (0-9)
-  - "_" (underscore)
-- Must begin with an English letter or underscore.
 - Maximum 65,535 characters.
 - Case-insensitive.
 
@@ -113,12 +107,6 @@ Base64 encoding of the avatar. Defaults to `""`
 
 A brief description of the dataset to create. Defaults to `""`.
 
-##### language: `str`
-
-The language setting of the dataset to create. Available options:
-
-- `"English"` (default)
-- `"Chinese"`
 
 ##### permission
 
@@ -313,9 +301,6 @@ A dictionary representing the attributes to update, with the following keys:
   - `"picture"`: Picture
   - `"one"`: One
   - `"email"`: Email
-  - `"knowledge_graph"`: Knowledge Graph  
-    Ensure your LLM is properly configured on the **Settings** page before selecting this. Please also note that Knowledge Graph consumes a large number of Tokens!
-  - `"meta_fields"`: `dict[str, Any]` The meta fields of the dataset.
 
 #### Returns
 
@@ -384,6 +369,7 @@ Updates configurations for the current document.
 A dictionary representing the attributes to update, with the following keys:
 
 - `"display_name"`: `str` The name of the document to update.
+- `"meta_fields"`: `dict[str, Any]` The meta fields of the document.
 - `"chunk_method"`: `str` The parsing method to apply to the document.
   - `"naive"`: General
   - `"manual`: Manual
