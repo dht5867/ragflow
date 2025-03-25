@@ -113,6 +113,9 @@ ENV TIKA_SERVER_JAR="file:///ragflow/tika-server-standard.jar"
 # Copy compiled web pages
 COPY --from=builder /ragflow/web/dist /ragflow/web/dist
 
+# 安装依赖
+RUN apt install unixodbc odbcinst
+
 # Copy Python environment and packages
 ENV VIRTUAL_ENV=/ragflow/.venv
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
