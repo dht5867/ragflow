@@ -196,6 +196,7 @@ export default {
         '该文档与知识图谱相关联。删除后，相关节点和关系信息将被删除，但图不会立即更新。更新图动作是在解析承载知识图谱提取任务的新文档的过程中执行的。',
       plainText: 'Naive',
       reRankModelWaring: '重排序模型非常耗时。',
+      theDocumentBeingParsedCannotBeDeleted: '正在解析的文档不能被删除',
     },
     knowledgeConfiguration: {
       titleDescription: '在这里更新您的知识库详细信息，尤其是切片方法。',
@@ -416,7 +417,7 @@ General：实体和关系提取提示来自 GitHub - microsoft/graphrag：基于
       chat: '聊天',
       newChat: '新建聊天',
       send: '发送',
-      sendPlaceholder: '消息概要助手...',
+      sendPlaceholder: '给助理发送消息...',
       chatConfiguration: '聊天配置',
       chatConfigurationDescription: '为你的知识库配置专属聊天助手！ 💕',
       assistantName: '助理姓名',

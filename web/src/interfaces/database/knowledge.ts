@@ -23,8 +23,13 @@ export interface IKnowledge {
   update_time: number;
   vector_similarity_weight: number;
   embd_id: string;
-  nickname?: string;
+  nickname: string;
   operator_permission: number;
+}
+
+export interface IKnowledgeResult {
+  kbs: IKnowledge[];
+  total: number;
 }
 
 export interface Raptor {
@@ -133,6 +138,13 @@ export interface ITestingDocument {
 export interface ITestingResult {
   chunks: ITestingChunk[];
   documents: ITestingDocument[];
+  total: number;
+  labels?: Record<string, number>;
+}
+
+export interface INextTestingResult {
+  chunks: ITestingChunk[];
+  doc_aggs: ITestingDocument[];
   total: number;
   labels?: Record<string, number>;
 }

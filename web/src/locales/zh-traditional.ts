@@ -196,6 +196,7 @@ export default {
         '該文件與知識圖譜相關聯。刪除後，相關節點和關係資訊將被刪除，但圖不會立即更新。更新圖動作是在解析承載知識圖譜提取任務的新文件的過程中執行的。 ',
       plainText: 'Naive',
       reRankModelWaring: '重排序模型非常耗時。',
+      theDocumentBeingParsedCannotBeDeleted: '正在解析的文檔不能被刪除',
     },
     knowledgeConfiguration: {
       titleDescription: '在這裡更新您的知識庫詳細信息，尤其是切片方法。',
@@ -399,7 +400,7 @@ export default {
       chat: '聊天',
       newChat: '新建聊天',
       send: '發送',
-      sendPlaceholder: '消息概要助手...',
+      sendPlaceholder: '給助理髮送消息...',
       chatConfiguration: '聊天配置',
       chatConfigurationDescription: '為你的知識庫配置專屬聊天助手！💕',
       assistantName: '助理姓名',
