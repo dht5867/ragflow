@@ -302,6 +302,7 @@ export const useSelectNextMessages = (selectedValue: string) => {
     removeMessagesAfterCurrentMessage,
   } = useSelectDerivedMessages(selectedValue);
   const { data: conversation, loading } = useFetchNextConversation();
+  const { data: dialog } = useFetchNextDialog();
   const { conversationId, dialogId, isNew } = useGetChatSearchParams();
   const prologue = useFindPrologueFromDialogList();
 
