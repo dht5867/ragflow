@@ -217,7 +217,7 @@ const MessageItem = ({
             </div>
             {isAssistant &&
               referenceDocumentList.length > 0 &&
-              item.selectedSkill === (i18n.language === 'zh' ? 'KNOWLEDGE' : '知识库') && (
+             (
                 <List
                   bordered
                   dataSource={referenceDocumentList}
@@ -234,7 +234,8 @@ const MessageItem = ({
                             documentId={item.doc_id}
                             documentName={item.doc_name}
                             prefix="document"
-                          >
+                            link={item.url}
+                        >
                             {item.doc_name}
                           </NewDocumentLink>
                         </Flex>

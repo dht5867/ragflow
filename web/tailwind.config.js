@@ -40,6 +40,7 @@ module.exports = {
         'colors-text-inverse-strong': 'var(--colors-text-inverse-strong)',
         'colors-text-persist-light': 'var(--colors-text-persist-light)',
         'colors-text-inverse-weak': 'var(--colors-text-inverse-weak)',
+        'text-delete-red': 'var(--text-delete-red)',
 
         primary: {
           DEFAULT: 'hsl(var(--primary))',
@@ -162,6 +163,16 @@ module.exports = {
         'colors-background-sentiment-solid-primary': {
           DEFAULT: 'var(--colors-background-sentiment-solid-primary)',
           foreground: 'var(--background-inverse-standard-foreground)',
+        },
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar-background))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
         },
       },
       borderRadius: {

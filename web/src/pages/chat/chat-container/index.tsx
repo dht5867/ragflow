@@ -52,6 +52,7 @@ const ChatContainer = ({ controller }: IProps) => {
     handlePressEnter,
     regenerateMessage,
     removeMessageById,
+    stopOutputMessage,
   } = useSendNextMessage(controller, selectedValue);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
@@ -123,6 +124,7 @@ const ChatContainer = ({ controller }: IProps) => {
             createConversationBeforeUploadDocument
           }
           onSelect={handleSelect} // 将 handleSelect 回调函数传递给 MessageInput
+          stopOutputMessage={stopOutputMessage}
         ></MessageInput>
       </Flex>
       <PdfDrawer

@@ -25,7 +25,7 @@ from api.db import FileType, LLMType, ParserType, FileSource
 from api.db.db_models import APIToken, Task, File
 from api.db.services import duplicate_name
 from api.db.services.api_service import APITokenService, API4ConversationService
-from api.db.services.dialog_service import DialogService, chat, keyword_extraction, label_question
+from api.db.services.dialog_service import DialogService, chat
 from api.db.services.document_service import DocumentService, doc_upload_and_parse
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
@@ -38,6 +38,8 @@ from api.utils.api_utils import server_error_response, get_data_error_result, ge
     generate_confirmation_token
 
 from api.utils.file_utils import filename_type, thumbnail
+from rag.app.tag import label_question
+from rag.prompts import keyword_extraction
 from rag.utils.storage_factory import STORAGE_IMPL
 
 from api.db.services.canvas_service import UserCanvasService
@@ -477,7 +479,7 @@ def upload():
                 doc = doc.to_dict()
                 doc["tenant_id"] = tenant_id
                 bucket, name = File2DocumentService.get_storage_address(doc_id=doc["id"])
-                queue_tasks(doc, bucket, name)
+                queue_tasks(doc, bucket, name, 0)
             except Exception as e:
                 return server_error_response(e)
 
@@ -820,6 +822,7 @@ def retrieval():
     similarity_threshold = float(req.get("similarity_threshold", 0.2))
     vector_similarity_weight = float(req.get("vector_similarity_weight", 0.3))
     top = int(req.get("top_k", 1024))
+    highlight = bool(req.get("highlight", False)) 
 
     try:
         kbs = KnowledgebaseService.get_by_ids(kb_ids)
@@ -840,7 +843,7 @@ def retrieval():
             question += keyword_extraction(chat_mdl, question)
         ranks = settings.retrievaler.retrieval(question, embd_mdl, kbs[0].tenant_id, kb_ids, page, size,
                                                similarity_threshold, vector_similarity_weight, top,
-                                               doc_ids, rerank_mdl=rerank_mdl,
+                                               doc_ids, rerank_mdl=rerank_mdl, highlight= highlight,
                                                rank_feature=label_question(question, kbs))
         for c in ranks["chunks"]:
             c.pop("vector", None)

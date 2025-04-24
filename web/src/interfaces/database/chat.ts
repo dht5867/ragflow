@@ -109,6 +109,7 @@ export interface Docagg {
   count: number;
   doc_id: string;
   doc_name: string;
+  url?: string;
 }
 
 // interface Chunk {

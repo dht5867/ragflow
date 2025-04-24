@@ -3,10 +3,9 @@ import {
   useDeleteDocument,
   useFetchDocumentInfosByIds,
   useRemoveNextDocument,
-  useRunNextDocument,
   useUploadAndParseDocument,
 } from '@/hooks/document-hooks';
-import kbService from '@/services/knowledge-service';
+import { cn } from '@/lib/utils';
 import { getExtension } from '@/utils/document-util';
 import { formatBytes } from '@/utils/file-util';
 import {
@@ -18,6 +17,7 @@ import type { GetProp, UploadFile } from 'antd';
 import {
   Button,
   Card,
+  Divider,
   Flex,
   Input,
   List,
@@ -29,9 +29,8 @@ import {
   UploadProps,
   notification,
 } from 'antd';
-import classNames from 'classnames';
 import get from 'lodash/get';
-import { Paperclip } from 'lucide-react';
+import { CircleStop, Paperclip, SendHorizontal } from 'lucide-react';
 import {
   ChangeEvent,
   ChangeEventHandler,
@@ -47,6 +46,8 @@ import styles from './index.less';
 type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
 const { Text } = Typography;
 
+const { TextArea } = Input;
+
 const getFileId = (file: UploadFile) => get(file, 'response.data.0');
 
 const getFileIds = (fileList: UploadFile[]) => {
@@ -57,17 +58,10 @@ const getFileIds = (fileList: UploadFile[]) => {
   return ids;
 };
 
-const isUploadError = (file: UploadFile) => {
-  const retcode = get(file, 'response.retcode');
-  return typeof retcode === 'number' && retcode !== 0;
-};
-
 const isUploadSuccess = (file: UploadFile) => {
   const code = get(file, 'response.code');
   return typeof code === 'number' && code === 0;
 };
-
-
 
 interface IProps {
   disabled: boolean;
@@ -75,13 +69,15 @@ interface IProps {
   sendDisabled: boolean;
   sendLoading: boolean;
   onPressEnter(documentIds: string[]): void;
-  onInputChange: ChangeEventHandler<HTMLInputElement>;
+  onInputChange: ChangeEventHandler<HTMLTextAreaElement>;
   conversationId: string;
   uploadMethod?: string;
   isShared?: boolean;
   showUploadIcon?: boolean;
   createConversationBeforeUploadDocument?(message: string): Promise<any>;
+  stopOutputMessage?(): void;
   onSelect: ChangeEventHandler<HTMLInputElement>;
+
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -104,15 +100,15 @@ const MessageInput = ({
   showUploadIcon = true,
   createConversationBeforeUploadDocument,
   uploadMethod = 'upload_and_parse',
+  stopOutputMessage,
   onSelect, // 添加 onSelect 回调属性
 }: IProps) => {
-  const { t,i18n } = useTranslate('chat');
+  const { t ,i18n} = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
   const { deleteDocument } = useDeleteDocument();
   const { data: documentInfos, setDocumentIds } = useFetchDocumentInfosByIds();
   const { uploadAndParseDocument } = useUploadAndParseDocument(uploadMethod);
   const conversationIdRef = useRef(conversationId);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const optionsZh = [
@@ -162,70 +158,65 @@ const MessageInput = ({
       file.preview = await getBase64(file.originFileObj as FileType);
     }
   };
+// 处理输入框内容改变
+const handleChangeInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
+  const newValue = e.target.value;
+  setInputValue(newValue);
 
-  // 处理输入框内容改变
-  const handleChangeInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-
-    // 如果输入框的值以 "@" 开头，显示 Popover
-    if (newValue.startsWith('@')) {
-      setPopoverVisible(true);
-    } else {
-      setPopoverVisible(false);
-    }
-    if (onInputChange) {
-      if (newValue.startsWith('@')){
-        e.target.value=''
-        onInputChange(e); // 调用传递的输入改变处理函数
-      }else{
-        onInputChange(e); // 调用传递的输入改变处理函数
-      }
-      
-    }
-  };
-
-  // 当选择一个选项时
-  const handleSelect = (option: ChangeEvent<HTMLInputElement>) => {
-    const newValue = inputValue.replace(/@\S*$/, `@${option} `); // 替换 "@xxxx" 为 "@选中的选项"
-    // setInputValue(newValue);
-    // setPopoverVisible(false);
-    if (onSelect) {
-      onSelect(option); // 调用 onSelect 回调，将选定的值传递给父组件
-    }
-
-    // 使用 Modal 进行提示
-    // 显示成功通知
-    notification.success({
-      message:  t('msg')+` : ${option} `,
-      placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
-    });
+  // 如果输入框的值以 "@" 开头，显示 Popover
+  if (newValue.startsWith('@')) {
+    setPopoverVisible(true);
+  } else {
     setPopoverVisible(false);
+  }
+  if (onInputChange) {
+    if (newValue.startsWith('@')){
+      e.target.value=''
+      onInputChange(e); // 调用传递的输入改变处理函数
+    }else{
+      onInputChange(e); // 调用传递的输入改变处理函数
+    }
+    
+  }
+};
 
-    // 清空输入框的值
-    setInputValue('');
-    setPlaceholderValue(`@${option}`);
-  };
+// 当选择一个选项时
+const handleSelect = (option: ChangeEvent<HTMLTextAreaElement>) => {
+  const newValue = inputValue.replace(/@\S*$/, `@${option} `); // 替换 "@xxxx" 为 "@选中的选项"
+  // setInputValue(newValue);
+  // setPopoverVisible(false);
+  if (onSelect) {
+    onSelect(option); // 调用 onSelect 回调，将选定的值传递给父组件
+  }
 
-  // const { runDocumentByIds } = useRunNextDocument();
-  // const runDocument = useCallback(
-  //   (run: number,doc_ids: any) => {
-  //     runDocumentByIds({
-  //       documentIds: doc_ids,
-  //       run,
-  //     });
-  //   },
-  //   [runDocumentByIds],
-  // );
+  // 使用 Modal 进行提示
+  // 显示成功通知
+  notification.success({
+    message:  t('msg')+` : ${option} `,
+    placement: 'topRight', // 可以设置通知的位置，比如 'topRight', 'bottomLeft' 等
+  });
+  setPopoverVisible(false);
 
+  // 清空输入框的值
+  setInputValue('');
+  setPlaceholderValue(`@${option}`);
+};
+
+// const { runDocumentByIds } = useRunNextDocument();
+// const runDocument = useCallback(
+//   (run: number,doc_ids: any) => {
+//     runDocumentByIds({
+//       documentIds: doc_ids,
+//       run,
+//     });
+//   },
+//   [runDocumentByIds],
+// );
   const handleChange: UploadProps['onChange'] = async ({
-    //fileList: newFileList,
+    // fileList: newFileList,
     file,
   }) => {
     let nextConversationId: string = conversationId;
-    console.log('conversationId');
-    console.log(conversationId);
-
     if (createConversationBeforeUploadDocument) {
       const creatingRet = await createConversationBeforeUploadDocument(
         file.name,
@@ -234,7 +225,6 @@ const MessageInput = ({
         nextConversationId = creatingRet.data.id;
       }
     }
-
     setFileList((list) => {
       list.push({
         ...file,
@@ -243,15 +233,12 @@ const MessageInput = ({
       });
       return [...list];
     });
-
-    console.log('start upload');
     const skill=placeholderValue.replace("@","")
     const ret = await uploadAndParseDocument({
       skill: skill,
       conversationId: nextConversationId,
       fileList: [file],
     });
-    console.log('complete upload');
     setFileList((list) => {
       const nextList = list.filter((x) => x.uid !== file.uid);
       nextList.push({
@@ -259,106 +246,21 @@ const MessageInput = ({
         originFileObj: file as any,
         response: ret,
         percent: 100,
-        status: ret?.retcode === 0 ? 'done' : 'error',
+        status: ret?.code === 0 ? 'done' : 'error',
       });
-      console.log(nextList)
       return nextList;
     });
-    // if (ret?.retcode === 0) {
-    //   //console.log('start parse');
-    //   const ids = ret.data;
-    //   console.log(ids);
-    //   //runDocument(1, ids);
-    //   setFileList((list) => {
-    //     const nextList = list.filter((x) => x.uid !== file.uid);
-    //     nextList.push({
-    //       ...file,
-    //       originFileObj: file as any,
-    //       response: ret,
-    //       percent: 100,
-    //       status: ret?.retcode === 0 ? 'done' : 'error',
-    //     });
-    //     return nextList;
-    //   });
-    //   // Start polling document info
-    //   startPolling(ids);
-    // }
   };
-
-  // const getDocumentInfoById = useCallback(
-  //   (id: string) => {
-  //     return documentInfos.find((x) => x.id === id);
-  //   },
-  //   [documentInfos],
-  // );
-
-  // const POLLING_INTERVAL = 5000; // Polling every 5 seconds (adjust as necessary)
-
-  // const fetchDocumentInfo = async (ids: string[]) => {
-  //   try {
-  //     const { data } = await kbService.document_infos({ doc_ids: ids });
-  //     if (data.retcode === 0) {
-  //       return data.data;
-  //     }
-  //     return [];
-  //   } catch (error) {
-  //     console.error('Failed to fetch document info:', error);
-  //     return [];
-  //   }
-  // };
-
-  // Start polling function
-  // const startPolling = (ids: string[]) => {
-  //   if (intervalRef.current) {
-  //     clearInterval(intervalRef.current);
-  //   }
-  //   intervalRef.current = setInterval(async () => {
-  //     console.log('startPolling');
-  //     const data = await fetchDocumentInfo(ids);
-  //     console.log(data);
-
-  //     if (data.length > 0 && data[0].progress === 1) {
-  //       // Stop polling when progress is 1 (complete)
-  //       clearInterval(intervalRef.current as NodeJS.Timeout);
-  //       intervalRef.current = null;
-
-  //       // Update the file status to 'done'
-  //       setFileList((fileList) => {
-  //         return fileList.map((file) => {
-  //           if (getFileId(file) === ids[0]) {
-  //             return {
-  //               ...file,
-  //               percent: 100,
-  //               status: 'done',
-  //             };
-  //           }
-  //           return file;
-  //         });
-  //       });
-  //     }
-  //   }, POLLING_INTERVAL);
-  // };
-
-  // Cleanup polling on component unmount
-  // useEffect(() => {
-  //   return () => {
-  //     if (intervalRef.current) {
-  //       clearInterval(intervalRef.current);
-  //     }
-  //   };
-  // }, []);
-
   // 同步外部的 value 到内部的 inputValue
   useEffect(() => {
-      setInputValue(value);
-  }, [value]);
-  
+    setInputValue(value);
+}, [value]);
+
   const isUploadingFile = fileList.some((x) => x.status === 'uploading');
 
   const handlePressEnter = useCallback(async () => {
     if (isUploadingFile) return;
-    const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));
-    console.log(placeholderValue)
+    const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));    console.log(placeholderValue)
     if(placeholderValue=="@LOG"||placeholderValue=="@日志分析"||placeholderValue=="@日誌分析"){
       if(ids.length<=0){
         notification.error({
@@ -368,10 +270,22 @@ const MessageInput = ({
         return
       }
     }
-
     onPressEnter(ids);
     setFileList([]);
   }, [fileList, onPressEnter, isUploadingFile]);
+
+  const handleKeyDown = useCallback(
+    async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // check if it was shift + enter
+      if (event.key === 'Enter' && event.shiftKey) return;
+      if (event.key !== 'Enter') return;
+      if (sendDisabled || isUploadingFile || sendLoading) return;
+
+      event.preventDefault();
+      handlePressEnter();
+    },
+    [sendDisabled, isUploadingFile, sendLoading, handlePressEnter],
+  );
 
   const handleRemove = useCallback(
     async (file: UploadFile) => {
@@ -396,12 +310,16 @@ const MessageInput = ({
     [removeDocument, deleteDocument, isShared],
   );
 
-  // const getDocumentInfoById = useCallback(
-  //   (id: string) => {
-  //     return documentInfos.find((x) => x.id === id);
-  //   },
-  //   [documentInfos],
-  // );
+  const handleStopOutputMessage = useCallback(() => {
+    stopOutputMessage?.();
+  }, [stopOutputMessage]);
+
+  const getDocumentInfoById = useCallback(
+    (id: string) => {
+      return documentInfos.find((x) => x.id === id);
+    },
+    [documentInfos],
+  );
 
   useEffect(() => {
     const ids = getFileIds(fileList);
@@ -415,11 +333,15 @@ const MessageInput = ({
     ) {
       setFileList([]);
     }
-conversationIdRef.current = conversationId;
+    conversationIdRef.current = conversationId;
   }, [conversationId, setFileList]);
 
   return (
-    <Flex vertical className={styles.messageInputWrapper}>
+    <Flex
+      gap={1}
+      vertical
+      className={cn(styles.messageInputWrapper, 'dark:bg-black')}
+    >
       <Popover
         content={
           <List
@@ -440,131 +362,144 @@ conversationIdRef.current = conversationId;
         onOpenChange={setPopoverVisible}
         placement="topLeft"
       ></Popover>
-      <Input
+      <TextArea
         size="large"
         placeholder={ placeholderValue =='chat.' ? (optionTipsMap[i18n.language]):placeholderValue }
         value={value}
+        allowClear
         disabled={disabled}
-        className={classNames({ [styles.inputWrapper]: fileList.length === 0 })}
-        suffix={
-          <Space>
-            {showUploadIcon && (
-              <Upload
-                // action={uploadUrl}
-                // fileList={fileList}
-                onPreview={handlePreview}
-                onChange={handleChange}
-                multiple={false}
-                // headers={{ [Authorization]: getAuthorization() }}
-                // data={{ conversation_id: conversationId }}
-                // method="post"
-                onRemove={handleRemove}
-                showUploadList={false}
-                beforeUpload={(file, fileList) => {
-                  console.log('🚀 ~ beforeUpload:', fileList);
-                  return false;
-                }}
-              >
-                <Button
-                  type={'text'}
-                  disabled={disabled}
-                  icon={<Paperclip></Paperclip>}
-                ></Button>
-              </Upload>
-            )}
+        style={{
+          border: 'none',
+          boxShadow: 'none',
+          padding: '0px 10px',
+          marginTop: 10,
+        }}
+        autoSize={{ minRows: 2, maxRows: 10 }}
+        onKeyDown={handleKeyDown}
+        onChange={handleChangeInput}
+        onFocus={() => setPopoverVisible(false)} 
+      />
+      <Divider style={{ margin: '5px 30px 10px 0px' }} />
+      <Flex justify="space-between" align="center">
+        {fileList.length > 0 && (
+          <List
+            grid={{
+              gutter: 16,
+              xs: 1,
+              sm: 1,
+              md: 1,
+              lg: 1,
+              xl: 2,
+              xxl: 4,
+            }}
+            dataSource={fileList}
+            className={styles.listWrapper}
+            renderItem={(item) => {
+              const id = getFileId(item);
+              const documentInfo = getDocumentInfoById(id);
+              const fileExtension = getExtension(documentInfo?.name ?? '');
+              const fileName = item.originFileObj?.name ?? '';
+
+              return (
+                <List.Item>
+                  <Card className={styles.documentCard}>
+                    <Flex gap={10} align="center">
+                      {item.status === 'uploading' ? (
+                        <Spin
+                          indicator={
+                            <LoadingOutlined style={{ fontSize: 24 }} spin />
+                          }
+                        />
+                      ) : item.status === 'error' ? (
+                        <InfoCircleOutlined size={30}></InfoCircleOutlined>
+                      ) : (
+                        <FileIcon id={id} name={fileName}></FileIcon>
+                      )}
+                      <Flex vertical style={{ width: '90%' }}>
+                        <Text
+                          ellipsis={{ tooltip: fileName }}
+                          className={styles.nameText}
+                        >
+                          <b> {fileName}</b>
+                        </Text>
+                        {item.status === 'error' ? (
+                          t('uploadFailed')
+                        ) : (
+                          <>
+                            {item.percent !== 100 ? (
+                              t('uploading')
+                            ) : !item.response ? (
+                              t('parsing')
+                            ) : (
+                              <Space>
+                                <span>{fileExtension?.toUpperCase()},</span>
+                                <span>
+                                  {formatBytes(
+                                    getDocumentInfoById(id)?.size ?? 0,
+                                  )}
+                                </span>
+                              </Space>
+                            )}
+                          </>
+                        )}
+                      </Flex>
+                    </Flex>
+
+                    {item.status !== 'uploading' && (
+                      <span className={styles.deleteIcon}>
+                        <CloseCircleOutlined
+                          onClick={() => handleRemove(item)}
+                        />
+                      </span>
+                    )}
+                  </Card>
+                </List.Item>
+              );
+            }}
+          />
+        )}
+        <Flex
+          gap={5}
+          align="center"
+          justify="flex-end"
+          style={{
+            paddingRight: 10,
+            paddingBottom: 10,
+            width: fileList.length > 0 ? '50%' : '100%',
+          }}
+        >
+          {showUploadIcon && (
+            <Upload
+              onPreview={handlePreview}
+              onChange={handleChange}
+              multiple={false}
+              onRemove={handleRemove}
+              showUploadList={false}
+              beforeUpload={() => {
+                return false;
+              }}
+            >
+              <Button type={'primary'} disabled={disabled}>
+                <Paperclip className="size-4" />
+              </Button>
+            </Upload>
+          )}
+          {sendLoading ? (
+            <Button onClick={handleStopOutputMessage}>
+              <CircleStop className="size-5" />
+            </Button>
+          ) : (
             <Button
               type="primary"
               onClick={handlePressEnter}
               loading={sendLoading}
-              disabled={sendDisabled || isUploadingFile}
+              disabled={sendDisabled || isUploadingFile || sendLoading}
             >
-              {t('send')}
+              <SendHorizontal className="size-5" />
             </Button>
-          </Space>
-        }
-        onPressEnter={handlePressEnter}
-        onChange={handleChangeInput}
-        onFocus={() => setPopoverVisible(false)} // 当输入框聚焦时隐藏 Popover
-      />
-
-      {fileList.length > 0 && (
-        <List
-          grid={{
-            gutter: 16,
-            xs: 1,
-            sm: 1,
-            md: 1,
-            lg: 1,
-            xl: 2,
-            xxl: 4,
-          }}
-          dataSource={fileList}
-          className={styles.listWrapper}
-          renderItem={(item) => {
-            const id = getFileId(item);
-            //const documentInfo = getDocumentInfoById(id);
-            const fileExtension = getExtension(item.originFileObj?.name ?? '');
-            const fileName = item.originFileObj?.name ?? '';
-
-            return (
-              <List.Item>
-                <Card className={styles.documentCard}>
-                  <Flex gap={10} align="center">
-                    {item.status === 'uploading' || !item.response ? (
-                      <Spin
-                        indicator={
-                          <LoadingOutlined style={{ fontSize: 24 }} spin />
-                        }
-                      />
-                    ) : !getFileId(item) ? (
-                      <InfoCircleOutlined
-                        size={30}
-                        // width={30}
-                      ></InfoCircleOutlined>
-                    ) : (
-                      <FileIcon id={id} name={fileName}></FileIcon>
-                    )}
-                    <Flex vertical style={{ width: '90%' }}>
-                      <Text
-                        ellipsis={{ tooltip: fileName }}
-                        className={styles.nameText}
-                      >
-                        <b> {fileName}</b>
-                      </Text>
-                      {isUploadError(item) ? (
-                        t('uploadFailed')
-                      ) : (
-                        <>
-                          {item.percent !== 100 ? (
-                            t('uploading')
-                          ) : !item.response ? (
-                            t('parsing')
-                          ) : (
-                            <Space>
-                              <span>{fileExtension?.toUpperCase()},</span>
-                              <span>
-                                {formatBytes(
-                                  item.originFileObj?.size ?? 0,
-                                )}
-                              </span>
-                            </Space>
-                          )}
-                        </>
-                      )}
-                    </Flex>
-                  </Flex>
-
-                  {item.status !== 'uploading' && (
-                    <span className={styles.deleteIcon}>
-                      <CloseCircleOutlined onClick={() => handleRemove(item)} />
-                    </span>
-                  )}
-                </Card>
-              </List.Item>
-            );
-          }}
-        />
-      )}
+          )}
+        </Flex>
+      </Flex>
     </Flex>
   );
 };
