@@ -20,7 +20,7 @@ import time
 import traceback
 from copy import deepcopy
 from typing import Union
-from api.db.services.cmdb_service import cmdb_chat_stream
+from api.db.services.cmdb_service import cmdb_chat_stream, swtich_chat_stream
 from api.db.db_models import APIToken
 
 from api.db.services.conversation_service import ConversationService, structure_answer
@@ -280,6 +280,46 @@ def completion():
                         conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                         yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
+                elif selectedSkill=='交换机' or selectedSkill=='LOG' or selectedSkill=='SWITCH' :
+                    logging.info('-------交换机分析----')
+                    logging.info('--------prompt----------')
+                    logging.info(prompt)
+                    answer = ""
+                    response = swtich_chat_stream(prompt)
+                    logging.info('---------交换机分析 start----------')
+                    for line in response:
+                            # 仅处理以 "data: " 开头的行
+                        if line.startswith("data: "):
+                            try:
+                                # 提取完整 JSON 数据（不再依赖正则截取 content）
+                                match = re.search(r"content='(.*?)'", line)
+                                if match:
+                                    content = match.group(1)
+                                    # 处理转义字符（如将 \\n 转为 \n）
+                                    content = content.replace('\\n', '\n')
+                                    answer += content
+                                    ans = decorate_answer(answer)
+                                    ans = structure_answer(conv, ans, message_id, conv.id)
+                                    # 更新会话记录
+                                    conv.message[-1] = {
+                                        "role": "assistant", 
+                                        "content": ans["answer"],
+                                        "id": message_id,
+                                        "prompt": ans.get("prompt", ""),
+                                        "selectedSkill": selectedSkill
+                                    }
+                                    # 生成 SSE 响应（保留原始结构）
+                                    yield f"data: {json.dumps({'code': 0, 'message': '', 'data': ans}, ensure_ascii=False)}\n\n"
+                            except (json.JSONDecodeError, KeyError) as e:
+                                # 异常处理：记录错误或返回错误信息
+                                answer=" 后台服务错误，请重试查询"
+                                ans = decorate_answer(answer)
+                                ans = structure_answer(conv, ans, message_id, conv.id)
+                                conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
+                                yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                                break
+                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                    logging.info('---------交换机分析 end----------')
                 elif selectedSkill=='CMDB':
                     logging.info('--------prompt----------')
                     logging.info(prompt)

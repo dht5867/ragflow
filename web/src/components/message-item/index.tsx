@@ -217,7 +217,7 @@ const MessageItem = ({
             </div>
             {isAssistant &&
               referenceDocumentList.length > 0 &&
-              item.selectedSkill === (i18n.language === 'zh' ? 'KNOWLEDGE' : '知识库') && (
+               (
                 <List
                   bordered
                   dataSource={referenceDocumentList}

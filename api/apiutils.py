@@ -5,7 +5,7 @@ import logging
 from typing import *
 from pathlib import Path
  
-from api.settings import HTTPX_DEFAULT_TIMEOUT, api_address,cmdb_api_address,cmdb_chat_address,log_verbose
+from api.settings import HTTPX_DEFAULT_TIMEOUT, api_address,cmdb_api_address,cmdb_chat_address,log_verbose, switch_chat_address
 
 from api.settings import (
     CHUNK_SIZE,
@@ -211,6 +211,7 @@ class ApiRequest:
                                              exc_info=e if log_verbose else None)
                         else:
                             # print(chunk, end="", flush=True)
+                            logging.info(chunk)
                             yield chunk
             except httpx.ConnectError as e:
                 msg = f"无法连接API服务器，请确认 ‘api.py’ 已正常启动。({e})"
@@ -329,6 +330,14 @@ class ApiRequest:
         response = self.post(cmdb_address + "/stream", json=data, stream=True)
         return self._httpx_stream2generator(response, as_json=False)
 
+    def switch_chat_stream(self, input_txt: str):
+        """
+        对应webui_pages/dialogue/dialogue_cmdb.py接口
+        """
+        data = {"query": input_txt}
+        swtich_address = switch_chat_address()
+        response = self.post(swtich_address + "/stream-sse", json=data, stream=True)
+        return self._httpx_stream2generator(response, as_json=False)
     def cmdb_chat_chinese(self, input_txt: str):
         """
         对应webui_pages/dialogue/dialogue_cmdb.py接口
