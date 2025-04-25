@@ -280,7 +280,7 @@ def completion():
                         conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
                         yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
-                elif selectedSkill=='交换机' or selectedSkill=='LOG' or selectedSkill=='SWITCH' :
+                elif selectedSkill=='交换机' or selectedSkill=='交换机' or selectedSkill=='SWITCH' :
                     logging.info('-------交换机分析----')
                     logging.info('--------prompt----------')
                     logging.info(prompt)
