@@ -218,6 +218,11 @@ CMDB_CHAT_SERVER = {
     "port": 8000,
 }
 
+SWITCH_CHAT_SERVER = {
+    "host": "10.171.248.164",
+    "port": 8000,
+}
+
 def api_address() -> str:
 
     host = API_SERVER["host"]
@@ -239,4 +244,12 @@ def cmdb_chat_address() -> str:
     if host == "0.0.0.0":
         host = "127.0.0.1"
     port = CMDB_CHAT_SERVER["port"]
+    return f"http://{host}:{port}"
+
+
+def switch_chat_address() -> str:
+    host = SWITCH_CHAT_SERVER["host"]
+    if host == "0.0.0.0":
+        host = "127.0.0.1"
+    port = SWITCH_CHAT_SERVER["port"]
     return f"http://{host}:{port}"
