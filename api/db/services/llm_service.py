@@ -379,3 +379,14 @@ class LLMBundle:
         if total_tokens > 0:
             if not TenantLLMService.increase_usage(self.tenant_id, self.llm_type, txt, self.llm_name):
                 logging.error("LLMBundle.chat_streamly can't update token usage for {}/CHAT llm_name: {}, content: {}".format(self.tenant_id, self.llm_name, txt))
+    def chat_streamly_image(self, system, history, gen_conf,image):
+        
+            for txt in self.mdl.chat_streamly(system, history, gen_conf,image):
+                if isinstance(txt, int):
+                    if not TenantLLMService.increase_usage(
+                            self.tenant_id, self.llm_type, txt, self.llm_name):
+                        logging.error(
+                            "LLMBundle.chat_streamly can't update token usage for {}/CHAT llm_name: {}, content: {}".format(self.tenant_id, self.llm_name,
+                                                                                                                            txt))
+                    return
+                yield txt

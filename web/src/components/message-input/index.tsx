@@ -117,9 +117,9 @@ const MessageInput = ({
     '知识库',
     '日志分析',
     'CMDB',
-    '交换机'
-    // '图片理解',
-    // '图片生成'
+    '交换机',
+    '图片理解',
+    '图片生成'
   ]; // 选择框的选项
   const optionsZh_Tr = [
     '自由對話',
@@ -127,9 +127,9 @@ const MessageInput = ({
     '知識庫',
     '日誌分析',
     'CMDB',
-    '交换机'
-    // '圖片理解',
-    // '圖片生成'
+    '交换机',
+    '圖片理解',
+    '圖片生成'
   ]; // 选择框的选项
   const optionsEn = [
     'CHAT',
@@ -137,10 +137,9 @@ const MessageInput = ({
     'KNOWLEDGE',
     'LOG',
     'CMDB',
-    'SWITCH'
-
-    // 'Image2Txt',
-    // 'Txt2Image'
+    'SWITCH',
+    'Image2Txt',
+    'Txt2Image'
   ]; // 选择框的选项
  
   const optionsMap = {

@@ -495,6 +495,9 @@ def label_question(question, kbs):
                                               kb.parser_config.get("topn_tags", 3)
                                               )
     return tags
+def get_storage_binary(bucket, name):
+    return STORAGE_IMPL.get(bucket, name)
+
 def image2base64(image):
         if isinstance(image, bytes):
             return base64.b64encode(image).decode("utf-8")
@@ -668,7 +671,7 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     if stream:
             last_ans = ""
             answer = ""
-            for ans in chat_mdl.chat_streamly_image(prompt, msg[1:], gen_conf,image):
+            for ans in chat_mdl.chat_streamly_image(None, msg[1:], gen_conf,image):
                 answer = ans
                 delta_ans = ans[len(last_ans):]
                 if num_tokens_from_string(delta_ans) < 16:
@@ -680,7 +683,7 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
                 yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
             yield decorate_answer(answer)
     else:
-            answer = chat_mdl.chat_image(prompt, msg[1:], gen_conf,image)
+            answer = chat_mdl.chat_image(None, msg[1:], gen_conf,image)
             logging.info("User: {}|Assistant: {}".format(
                 msg[-1]["content"], answer))
             res = decorate_answer(answer)
