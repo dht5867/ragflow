@@ -324,7 +324,7 @@ def completion():
                                 break
                             lines = line.split("\n")
                             if len(lines)>1:
-                                time.sleep(0.5)
+                                time.sleep(1)
                                 chunk=lines[1]
                                 if len(chunk)>2:
                                     logging.info(chunk)
