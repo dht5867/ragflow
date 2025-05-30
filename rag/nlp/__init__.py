@@ -509,6 +509,8 @@ def hierarchical_merge(bull, sections, depth):
 
 
 def naive_merge(sections, chunk_token_num=128, delimiter="\n。；！？"):
+    logging.info("naive_merge start--------")
+    logging.info(len(sections))
     if not sections:
         return []
     if isinstance(sections[0], type("")):
@@ -538,7 +540,8 @@ def naive_merge(sections, chunk_token_num=128, delimiter="\n。；！？"):
 
     for sec, pos in sections:
         add_chunk(sec, pos)
-
+    
+    logging.info("naive_merge end")
     return cks
     
 

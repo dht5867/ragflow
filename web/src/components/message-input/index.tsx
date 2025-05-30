@@ -116,6 +116,7 @@ const MessageInput = ({
     '程序开发',
     '知识库',
     '日志分析',
+    '文件对话',
     'CMDB',
     '交换机',
     '图片理解',
@@ -126,6 +127,7 @@ const MessageInput = ({
     '程序開發',
     '知識庫',
     '日誌分析',
+    '文件对话',
     'CMDB',
     '交换机',
     '圖片理解',
@@ -136,6 +138,7 @@ const MessageInput = ({
     'CODE',
     'KNOWLEDGE',
     'LOG',
+    'FILE',
     'CMDB',
     'SWITCH',
     'Image2Txt',
@@ -185,7 +188,7 @@ const handleChangeInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
 
 // 当选择一个选项时
 const handleSelect = (option: ChangeEvent<HTMLTextAreaElement>) => {
-  const newValue = inputValue.replace(/@\S*$/, `@${option} `); // 替换 "@xxxx" 为 "@选中的选项"
+  //const newValue = inputValue.replace(/@\S*$/, `@${option} `); // 替换 "@xxxx" 为 "@选中的选项"
   // setInputValue(newValue);
   // setPopoverVisible(false);
   if (onSelect) {

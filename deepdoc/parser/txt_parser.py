@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 
+import logging
 import re
 
 from deepdoc.parser.utils import get_text
@@ -27,12 +28,12 @@ class RAGFlowTxtParser:
 
     @classmethod
     def parser_txt(cls, txt, chunk_token_num=128, delimiter="\n!?;。；！？"):
+        logging.info(f"parser_txt: {len(txt)}")
         if not isinstance(txt, str):
             raise TypeError("txt type should be str!")
         cks = [""]
         tk_nums = [0]
         delimiter = delimiter.encode('utf-8').decode('unicode_escape').encode('latin1').decode('utf-8')
-
         def add_chunk(t):
             nonlocal cks, tk_nums, delimiter
             tnum = num_tokens_from_string(t)

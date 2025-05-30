@@ -77,7 +77,7 @@ export default {
       user:'User',
       name:'IntelliOps',
       password:'update password',
-      loginout:'logout'
+      loginout:'logout',
       welcome: 'Welcome to',
     },
     knowledgeList: {

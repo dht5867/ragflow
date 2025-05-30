@@ -359,6 +359,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         Successive text will be sliced into pieces using 'delimiter'.
         Next, these successive pieces are merge into chunks whose token number is no more than 'Max token number'.
     """
+    logging.info("Start to naive chunk file: {}".format(filename))
 
     is_english = lang.lower() == "english"  # is_english(cks)
     parser_config = kwargs.get(
@@ -373,7 +374,8 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
     pdf_parser = None
     section_images = None
     if re.search(r"\.docx$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
+        callback(0.1, "Start to parse docx.")
+        logging.info("Start to parse docx.")
 
         try:
             vision_model = LLMBundle(kwargs["tenant_id"], LLMType.IMAGE2TEXT)
@@ -407,14 +409,15 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
         res.extend(tokenize_chunks_with_images(chunks, doc, is_english, images))
         logging.info("naive_merge({}): {}".format(filename, timer() - st))
+        logging.info("end to parse docx.")
         return res
 
     elif re.search(r"\.pdf$", filename, re.IGNORECASE):
         layout_recognizer = parser_config.get("layout_recognize", "DeepDOC")
         if isinstance(layout_recognizer, bool):
             layout_recognizer = "DeepDOC" if layout_recognizer else "Plain Text"
-        callback(0.1, "Start to parse.")
-
+        callback(0.1, "Start to parse pdf.")
+        logging.info("Start to parse pdf.")
         if layout_recognizer == "DeepDOC":
             pdf_parser = Pdf()
 
@@ -439,7 +442,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
             res = tokenize_table(tables, doc, is_english)
             callback(0.8, "Finish parsing.")
-
+            logging.info("end to parse pdf.")
         else:
             if layout_recognizer == "Plain Text":
                 pdf_parser = PlainParser()
@@ -450,25 +453,33 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
             sections, tables = pdf_parser(filename if not binary else binary, from_page=from_page, to_page=to_page,
                                           callback=callback)
             res = tokenize_table(tables, doc, is_english)
+            logging.info("end to parse pdf.")
             callback(0.8, "Finish parsing.")
 
     elif re.search(r"\.(csv|xlsx?)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
+        callback(0.1, "Start to parse csv.")
+        logging.info("Start to parse csv.")
+
         excel_parser = ExcelParser()
         if parser_config.get("html4excel"):
             sections = [(_, "") for _ in excel_parser.html(binary, 12) if _]
         else:
             sections = [(_, "") for _ in excel_parser(binary) if _]
+        logging.info("end to parse csv.")
 
-    elif re.search(r"\.(txt|py|js|java|c|cpp|h|php|go|ts|sh|cs|kt|sql)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
+    elif re.search(r"\.(txt|py|js|java|c|cpp|h|php|go|ts|sh|cs|kt|sql|log)$", filename, re.IGNORECASE):
+        callback(0.1, "Start to parse txt.")
+       
         sections = TxtParser()(filename, binary,
                                parser_config.get("chunk_token_num", 128),
                                parser_config.get("delimiter", "\n!?;。；！？"))
+        logging.info(f"Start to parse txt len: {len(sections)}")
         callback(0.8, "Finish parsing.")
+
 
     elif re.search(r"\.(md|markdown)$", filename, re.IGNORECASE):
         callback(0.1, "Start to parse.")
+        logging.info("start to parse md.")
         markdown_parser = Markdown(int(parser_config.get("chunk_token_num", 128)))
         sections, tables = markdown_parser(filename, binary)
         
@@ -484,16 +495,18 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
                 section_images.append(None)
                 
         res = tokenize_table(tables, doc, is_english)
+        logging.info("end to parse md.")
+
         callback(0.8, "Finish parsing.")
 
     elif re.search(r"\.(htm|html)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
+        callback(0.1, "Start to parse html.")
         sections = HtmlParser()(filename, binary)
         sections = [(_, "") for _ in sections if _]
         callback(0.8, "Finish parsing.")
 
     elif re.search(r"\.json$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
+        callback(0.1, "Start to parse json.")
         chunk_token_num = int(parser_config.get("chunk_token_num", 128))
         sections = JsonParser(chunk_token_num)(binary)
         sections = [(_, "") for _ in sections if _]
@@ -532,6 +545,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         
         res.extend(tokenize_chunks_with_images(chunks, doc, is_english, images))
     else:
+        logging.info("naive_merge({}): {}".format(filename, timer() - st))
         chunks = naive_merge(
             sections, int(parser_config.get(
                 "chunk_token_num", 128)), parser_config.get(
@@ -541,7 +555,6 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
         res.extend(tokenize_chunks(chunks, doc, is_english, pdf_parser))
     
-    logging.info("naive_merge({}): {}".format(filename, timer() - st))
     return res
 
 

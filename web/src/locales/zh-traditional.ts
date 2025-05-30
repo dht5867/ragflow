@@ -75,7 +75,7 @@ export default {
       model:'模型提供商',
       team:'團隊成員配置',
       user:'個人信息概要',
-      name:'小吉助手'
+      name:'小吉助手',
       welcome: '歡迎來到',
     },
     knowledgeList: {

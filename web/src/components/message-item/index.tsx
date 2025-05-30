@@ -41,7 +41,7 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   visibleAvatar?: boolean;
   nickname?: string;
   avatar?: string;
-  avatardialog?: string | null;
+  avatarDialog?: string | null;
   clickDocumentButton?: (documentId: string, chunk: IReferenceChunk) => void;
   index: number;
   showLikeButton?: boolean;
@@ -54,7 +54,7 @@ const MessageItem = ({
   reference,
   loading = false,
   avatar,
-  avatardialog,
+  avatarDialog,
   sendLoading = false,
   clickDocumentButton,
   index,
@@ -150,13 +150,14 @@ const MessageItem = ({
             [styles.messageItemContentReverse]: item.role === MessageType.User,
           })}
         >
-          {item.role === MessageType.User ? (
+           {visibleAvatar &&
+          (item.role === MessageType.User ? (
             <Avatar size={40} src={askImage} />
-          ) : avatardialog ? (
-            <Avatar size={40} src={avatardialog} />
+          ) : avatarDialog ? (
+            <Avatar size={40} src={avatarDialog} />
           ) : (
             <AssistantIcon />
-          )}
+          ))}
           <Flex vertical gap={8} flex={1}>
             <Space>
               {isAssistant ? (
@@ -183,9 +184,7 @@ const MessageItem = ({
               )}
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
-            
             <b>{isAssistant ? `【${skill || '自由对话'}】` : ''}</b>
-
             <div
               className={
                 isAssistant
@@ -201,19 +200,6 @@ const MessageItem = ({
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
-              <div style={{ marginRight: 50 }}>
-                {isAssistant && item.selectedSkill === '自动化运维' && (
-                  <Popconfirm
-                    placement="top"
-                    title="确认"
-                    description="是否执行任务"
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button>确认</Button>
-                  </Popconfirm>
-                )}
-              </div>
             </div>
             {isAssistant &&
               referenceDocumentList.length > 0 &&

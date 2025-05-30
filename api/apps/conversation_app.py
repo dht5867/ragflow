@@ -31,7 +31,7 @@ from api.db import LLMType
 from api.db.db_models import APIToken
 from api.db.services.conversation_service import ConversationService, structure_answer
 
-from api.db.services.dialog_service import DialogService, ConversationService, ask, image_chat, log_chat, log_chat, only_chat, chat, txt_image_chat
+from api.db.services.dialog_service import DialogService, ConversationService, ask, chat_solo, image_chat, log_chat, log_chat, only_chat, chat, txt_image_chat
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.llm_service import LLMBundle, TenantService
 from api.db.services.user_service import UserTenantService
@@ -204,7 +204,6 @@ def completion():
     req = request.json
     msg = []
     logging.info('-------completion----')
-   
     logging.info(req)
     prompt = req["prompt"]
     selectedSkill = req["selectedSkill"]
@@ -221,6 +220,8 @@ def completion():
             return get_data_error_result(message="Conversation not found!")
         conv.message = deepcopy(req["messages"])
         e, dia = DialogService.get_by_id(conv.dialog_id)
+        logging.info('-------dia----')
+        logging.info(dia)
         if not e:
             return get_data_error_result(message="Dialog not found!")
         del req["conversation_id"]
@@ -229,7 +230,6 @@ def completion():
         if not conv.reference:
             conv.reference = []
         else:
-
             def get_value(d, k1, k2):
                 return d.get(k1, d.get(k2))
 
@@ -253,7 +253,6 @@ def completion():
         if not conv.reference:
             conv.reference = []
         conv.reference.append({"chunks": [], "doc_aggs": []})
-       
         def stream():
             nonlocal dia, msg, req, conv,message_id
             try:
@@ -261,9 +260,14 @@ def completion():
                     for ans in chat(dia, msg, True, **req):
                         ans = structure_answer(conv, ans, message_id, conv.id)
                         conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
-                        yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
-                        #fillin_conv(ans)
-                        #yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                        yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"                        #yield "data:" + json.dumps({"retcode": 0, "retmsg": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                elif selectedSkill=='文件对话' or selectedSkill=='FILE' or selectedSkill=='文件对话' :
+                    logging.info('-------文件对话----')
+                    for ans in chat(dia, msg, True, **req):
+                        ans = structure_answer(conv, ans, message_id, conv.id)
+                        conv.message[-1] = {"role": "assistant", "content": ans["answer"],"id": message_id, "prompt": ans.get("prompt", ""),"selectedSkill":selectedSkill}
+                        yield "data:"+json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
                     ConversationService.update_by_id(conv.id, conv.to_dict())
                 elif selectedSkill=='日志分析' or selectedSkill=='LOG' or selectedSkill=='日誌分析' :
                     logging.info('-------日志分析----')

@@ -15,6 +15,7 @@
 #
 
 import copy
+import logging
 import re
 from io import BytesIO
 
@@ -101,6 +102,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
     Every page will be treated as a chunk. And the thumbnail of every page will be stored.
     PPT file will be parsed by using this method automatically, setting-up for every PPT file is not necessary.
     """
+    logging.info("Start to presentation chunk file: {}".format(filename))
     eng = lang.lower() == "english"
     doc = {
         "docnm_kwd": filename,

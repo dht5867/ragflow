@@ -584,6 +584,8 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
     threads = []
     doc_nm = {}
     for d, blob in files:
+        logging.info("parsing 11111")
+        logging.info(d)
         doc_nm[d["id"]] = d["name"]
     for d, blob in files:
         kwargs = {
@@ -594,8 +596,8 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             "tenant_id": kb.tenant_id,
             "lang": kb.language
         }
+        logging.info("submit chunk ")
         threads.append(exe.submit(FACTORY.get(d["parser_id"], naive).chunk, d["name"], blob, **kwargs))
-
     for (docinfo, _), th in zip(files, threads):
         docs = []
         doc = {
@@ -628,6 +630,7 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
     chunk_counts = {id: 0 for id in docids}
     token_counts = {id: 0 for id in docids}
     es_bulk_size = 64
+    logging.info("end chunk------------")
 
     def embedding(doc_id, cnts, batch_size=16):
         nonlocal embd_mdl, chunk_counts, token_counts
@@ -667,8 +670,10 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
                 })
             except Exception as e:
                 logging.exception("Mind map generation error")
-
+        logging.info(f"start  embedding------------len: {len(cks)}")
         vects = embedding(doc_id, [c["content_with_weight"] for c in cks])
+        logging.info("end  embedding------------")
+
         assert len(cks) == len(vects)
         for i, d in enumerate(cks):
             v = vects[i]

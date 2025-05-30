@@ -77,7 +77,7 @@ export default {
       user:'个人信息概要',
       name:'小吉助手',
       password:'修改密码',
-      loginout:'退出'
+      loginout:'退出',
       welcome: '欢迎来到',
     },
     knowledgeList: {

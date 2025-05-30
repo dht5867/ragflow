@@ -83,14 +83,14 @@ PROMPT_TEMPLATES = {
         "default":
             '<指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，'
             '不允许在答案中添加编造成分，答案请使用中文。 当用户询问你是谁，或者在自我介绍时，请回答“我是小吉，你的IT运维助手。”</指令>\n'
-            '<已知信息>{{ knowledge }}</已知信息>\n'
+            '<已知信息>{knowledge}</已知信息>\n'
             '<问题> 作为IT系统日志分析专家，你的任务是分析以下日志并撰写一份详细的报告，报告格式应包括以下内容：'
             '1. 概述：简要介绍分析的目的和方法。'
             '2. 日志分析：根据给定的日志内容，分析出潜在的问题、异常或趋势。'
-            '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。特别是对于ORACLE日志，当出现ORA开头的错误码时，尽量找出相关的sql语句和session信息。'
+            '3. 根本原因分析：对于发现的问题或异常，提出可能的根本原因，并给出相关的证据支持。'
             '4. 解决方案建议：针对每个问题或异常，提出相应的解决方案，并说明实施步骤和预期效果。'
             '5. 预防措施建议：为了避免类似问题再次发生，提出一些预防措施或最佳实践建议。'
-            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{{ prompt }}</问题>\n',
+            '并请根据以上提示，撰写一份完整的报告，确保包含上述提到的所有要素。{prompt}</问题>\n',
 
 
         "log":
@@ -544,36 +544,6 @@ def txt_image_chat(dialog, messages, stream=True, **kwargs):
         answer = f'data:image/jpeg;base64,{base64image}'
         yield {"answer": answer, "reference": {}}
         yield decorate_answer(answer)
-
-def chat_solo(dialog, messages, stream=True):
-    if llm_id2llm_type(dialog.llm_id) == "image2text":
-        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
-    else:
-        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
-
-    prompt_config = dialog.prompt_config
-    tts_mdl = None
-    if prompt_config.get("tts"):
-        tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
-    msg = [{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"]
-    if stream:
-        last_ans = ""
-        delta_ans = ""
-        for ans in chat_mdl.chat_streamly(prompt_config.get("system", ""), msg, dialog.llm_setting):
-            answer = ans
-            delta_ans = ans[len(last_ans) :]
-            if num_tokens_from_string(delta_ans) < 16:
-                continue
-            last_ans = answer
-            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans), "prompt": "", "created_at": time.time()}
-            delta_ans = ""
-        if delta_ans:
-            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans), "prompt": "", "created_at": time.time()}
-    else:
-        answer = chat_mdl.chat(prompt_config.get("system", ""), msg, dialog.llm_setting)
-        user_content = msg[-1].get("content", "[content not available]")
-        logging.info("User: {}|Assistant: {}".format(user_content, answer))
-        yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, answer), "prompt": "", "created_at": time.time()}
 def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
     refs = []
@@ -695,141 +665,40 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
 #文字对话实现        
 def only_chat(select_skill,dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
-    refs = []
-    # 查询LLM模型服务
-
-    #qwen2.5:14b@Ollama
-    tmp = dialog.llm_id.split("@")
     logging.info('dialog-------')
     logging.info(dialog)
     lang=kwargs["language"]
-    fid = None
-    llm_id = tmp[0]
-    if len(tmp)>1: fid = tmp[1]
-    #如果fid为False，则只根据llm_name查询LLMService；
-    #如果fid不为False，则在查询时还会根据fid进行过滤。
-    llm = LLMService.query(llm_name=llm_id) if not fid else LLMService.query(llm_name=llm_id, fid=fid)
-    logging.info('llm-------')
-    logging.info(llm)
-    if not llm:
-        llm = TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id) if not fid else \
-            TenantLLMService.query(tenant_id=dialog.tenant_id, llm_name=llm_id, llm_factory=fid)
-        if not llm:
-            #
-            raise LookupError("LLM(%s) not found" % dialog.llm_id)
-        max_tokens = 8192
-    else:
-        max_tokens = llm[0].max_tokens
-    
-    questions = [m["content"] for m in messages if m["role"] == "user"][-3:]
-    attachments = kwargs["doc_ids"].split(",") if "doc_ids" in kwargs else None
-    if "doc_ids" in messages[-1]:
-        attachments = messages[-1]["doc_ids"]
-        for m in messages[:-1]:
-            if "doc_ids" in m:
-                attachments.extend(m["doc_ids"])
-   
-    # 确定使用的模型类型
+
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
-        raise LookupError("please change LLM(%s)  model to Chat Model" % dialog.llm_id)
     else:
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
     prompt_config = dialog.prompt_config
-
-    logging.info('------------only_chat2---------')
-
-    logging.info(prompt_config)
-
-    logging.info(chat_mdl.llm_name)
-
-    # 配置提示词的参数
-    if select_skill=='知识库':
-         prompt_config["system"]  = get_prompt_template("file_base_chat", 'default')
-    elif select_skill=='日志分析':
-         prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')
-    else:
-        prompt_config["system"]  = get_prompt_template("llm_chat", 'default')
-   
     if lang=="en":
         prompt_config["system"]='When a user asks who you are, or during self-introduction, please respond with I am Xiao Ji, your IT operations and maintenance assistant. \n Please respond the question 【 {prompt} 】 in English .  '
   
-    # 准备消息内容
-    gen_conf = dialog.llm_setting
-    msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
-    msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])}
-                for m in messages if m["role"] != "system"])
-    logging.info(gen_conf)
-    # 计算token使用量
-    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.97))
-    assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
-    prompt = msg[0]["content"]
-    prompt += "\n\n### Query:\n%s" % " ".join(questions)
-
-    prompt_config = dialog.prompt_config
-    field_map = KnowledgebaseService.get_field_map(dialog.kb_ids)
+    
     tts_mdl = None
     if prompt_config.get("tts"):
         tts_mdl = LLMBundle(dialog.tenant_id, LLMType.TTS)
-    # try to use sql if field mapping is good to go
-    if field_map:
-        logging.info("Use SQL to retrieval:{}".format(questions[-1]))
-        ans = use_sql(questions[-1], field_map, dialog.tenant_id, chat_mdl, prompt_config.get("quote", True))
-        if ans:
-            yield ans
-            return
-
-    for p in prompt_config["parameters"]:
-        if p["key"] == "knowledge":
-            continue
-        if p["key"] not in kwargs and not p["optional"]:
-            raise KeyError("Miss parameter: " + p["key"])
-        if p["key"] not in kwargs:
-            prompt_config["system"] = prompt_config["system"].replace(
-                "{%s}" % p["key"], " ")
-
-    if len(questions) > 1 and prompt_config.get("refine_multiturn"):
-        questions = [full_question(dialog.tenant_id, dialog.llm_id, messages)]
-    else:
-        questions = questions[-1:]
-
-    # 调整生成的最大tokens数
-    if "max_tokens" in gen_conf:
-        gen_conf["max_tokens"] = min(
-            gen_conf["max_tokens"],
-            max_tokens - used_token_count)
-
-    # 生成答案的装饰器
-    def decorate_answer(answer):
-        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
-            answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
-        return {"answer": answer, "reference": refs}
-    logging.info(msg)
-    logging.info('--prompt---')
-    logging.info(prompt)    
-    # 根据stream选项处理模型的对话响应
+    msg = [{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"]
     if stream:
-            last_ans = ""
-            answer = ""
-            for ans in chat_mdl.chat_streamly(prompt, msg[1:], gen_conf):
-                answer = ans
-                delta_ans = ans[len(last_ans):]
-                if num_tokens_from_string(delta_ans) < 16:
-                    continue
-                last_ans = answer
-                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
-            delta_ans = answer[len(last_ans):]
-            if delta_ans:
-                yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
-            yield decorate_answer(answer)
+        last_ans = ""
+        for ans in chat_mdl.chat_streamly(prompt_config.get("system", ""), msg, dialog.llm_setting):
+            answer = ans
+            delta_ans = ans[len(last_ans) :]
+            if num_tokens_from_string(delta_ans) < 16:
+                continue
+            last_ans = answer
+            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans), "prompt": "", "created_at": time.time()}
+        if delta_ans:
+            yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans), "prompt": "", "created_at": time.time()}
     else:
-            answer = chat_mdl.chat(prompt, msg[1:], gen_conf)
-            logging.info("User: {}|Assistant: {}".format(
-                msg[-1]["content"], answer))
-            res = decorate_answer(answer)
-            res["audio_binary"] = tts(tts_mdl, answer)
-            yield res
+        answer = chat_mdl.chat(prompt_config.get("system", ""), msg, dialog.llm_setting)
+        user_content = msg[-1].get("content", "[content not available]")
+        logging.info("User: {}|Assistant: {}".format(user_content, answer))
+        yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, answer), "prompt": "", "created_at": time.time()}
 
 def chat_solo(dialog, messages, stream=True):
     if llm_id2llm_type(dialog.llm_id) == "image2text":
@@ -865,6 +734,7 @@ def chat(dialog, messages, stream=True, **kwargs):
             yield ans
         return
     lang=kwargs["language"]
+    select_skill=kwargs["selectedSkill"]
 
     chat_start_ts = timer()
 
@@ -1019,6 +889,12 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     kwargs["knowledge"] = "\n------\n" + "\n\n------\n\n".join(knowledges)
     gen_conf = dialog.llm_setting
+    # 配置提示词的参数
+    if select_skill=='日志分析':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'log')
+    elif select_skill=='文件对话':
+         prompt_config["system"]  = get_prompt_template("file_base_chat", 'default')
+   
     if lang=="en":
         prompt_config["system"]='As an intelligent assistant, I will summarize the contents of the knowledge base to answer your questions. I will list the details from the knowledge base in my response. If none of the contents in the knowledge base are relevant to your question, my response must include the sentence "No answer found in the knowledge base!" The response should take into account the chat history.Here is the knowledge base:{knowledge} This is the knowledge base. Please respond in English.'
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
@@ -1146,7 +1022,8 @@ def chat(dialog, messages, stream=True, **kwargs):
             f"  - Generated tokens(approximately): {tk_num}\n"
             f"  - Token speed: {int(tk_num / (generate_result_time_cost / 1000.0))}/s"
         )
-
+        logging.info('---------prompt----------')
+        logging.info(prompt)
         langfuse_output = "\n" + re.sub(r"^.*?(### Query:.*)", r"\1", prompt, flags=re.DOTALL)
         langfuse_output = {"time_elapsed:": re.sub(r"\n", "  \n", langfuse_output), "created_at": time.time()}
 
