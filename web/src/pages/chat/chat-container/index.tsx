@@ -16,6 +16,7 @@ import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import {
   useFetchNextConversation,
+  useFetchNextDialog,
   useGetChatSearchParams,
 } from '@/hooks/chat-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
@@ -41,6 +42,7 @@ const ChatContainer = ({ controller }: IProps) => {
     setSelectedValue(value); // 更新 selectedValue 状态
     // 在这里你可以处理选中的值，例如更新状态或进行其他操作
   };
+  const { data: currentDialog } = useFetchNextDialog();
 
   const {
     value,
@@ -88,7 +90,7 @@ const ChatContainer = ({ controller }: IProps) => {
                       item={message}
                       nickname={userInfo.nickname}
                       avatar={userInfo.avatar}
-                      avatardialog={conversation.avatar}
+                      avatardialog={currentDialog.icon}
                       reference={buildMessageItemReference(
                         {
                           message: derivedMessages,
