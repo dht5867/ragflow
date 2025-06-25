@@ -85,6 +85,7 @@ export enum Operator {
   WaitingDialogue = 'WaitingDialogue',
   Agent = 'Agent',
   Tool = 'Tool',
+  TavilySearch = 'TavilySearch',
 }
 
 export const SwitchLogicOperatorOptions = ['and', 'or'];
@@ -249,6 +250,7 @@ export const operatorMap: Record<
   [Operator.Code]: { backgroundColor: '#4c5458' },
   [Operator.WaitingDialogue]: { backgroundColor: '#a5d65c' },
   [Operator.Agent]: { backgroundColor: '#a5d65c' },
+  [Operator.TavilySearch]: { backgroundColor: '#a5d65c' },
 };
 
 export const componentMenuList = [
@@ -385,7 +387,7 @@ const initialQueryBaseValues = {
 };
 
 export const initialRetrievalValues = {
-  query: '',
+  query: AgentGlobals.SysQuery,
   top_n: 8,
   top_k: 1024,
   kb_ids: [],
@@ -642,7 +644,7 @@ export const initialEmailValues = {
 };
 
 export const initialIterationValues = {
-  delimiter: ',',
+  items_ref: '',
 };
 export const initialIterationStartValues = {};
 
@@ -663,6 +665,7 @@ export const initialWaitingDialogueValues = {};
 
 export const initialAgentValues = {
   ...initialLlmBaseValues,
+  description: '',
   sys_prompt: ``,
   prompts: [{ role: PromptRole.User, content: `{${AgentGlobals.SysQuery}}` }],
   message_history_window_size: 12,
@@ -680,6 +683,41 @@ export const initialAgentValues = {
     content: {
       type: 'string',
       value: '',
+    },
+  },
+};
+
+export enum TavilySearchDepth {
+  Basic = 'basic',
+  Advanced = 'advanced',
+}
+
+export enum TavilyTopic {
+  News = 'news',
+  General = 'general',
+}
+
+export const initialTavilyValues = {
+  api_key: '',
+  query: AgentGlobals.SysQuery,
+  search_depth: TavilySearchDepth.Basic,
+  topic: TavilyTopic.General,
+  max_results: 5,
+  days: 7,
+  include_answer: false,
+  include_raw_content: true,
+  include_images: false,
+  include_image_descriptions: false,
+  include_domains: [],
+  exclude_domains: [],
+  outputs: {
+    formalized_content: {
+      value: '',
+      type: 'string',
+    },
+    json: {
+      value: {},
+      type: 'Object',
     },
   },
 };
@@ -768,6 +806,7 @@ export const RestrictedUpstreamMap = {
   [Operator.Code]: [Operator.Begin],
   [Operator.WaitingDialogue]: [Operator.Begin],
   [Operator.Agent]: [Operator.Begin],
+  [Operator.TavilySearch]: [Operator.Begin],
 };
 
 export const NodeMap = {
@@ -811,6 +850,7 @@ export const NodeMap = {
   [Operator.WaitingDialogue]: 'ragNode',
   [Operator.Agent]: 'agentNode',
   [Operator.Tool]: 'toolNode',
+  [Operator.TavilySearch]: 'ragNode',
 };
 
 export const LanguageOptions = [
@@ -3015,4 +3055,6 @@ export enum NodeHandleId {
   Start = 'start',
   End = 'end',
   Tool = 'tool',
+  AgentTop = 'agentTop',
+  AgentBottom = 'agentBottom',
 }
