@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import useGraphStore from '../../store';
+import { convertToStringArray } from '../../utils';
 
-export function useWatchFormChange(id?: string, form?: UseFormReturn) {
+export function useWatchFormChange(id?: string, form?: UseFormReturn<any>) {
   let values = useWatch({ control: form?.control });
   const updateNodeForm = useGraphStore((state) => state.updateNodeForm);
 
@@ -10,10 +11,10 @@ export function useWatchFormChange(id?: string, form?: UseFormReturn) {
     // Manually triggered form updates are synchronized to the canvas
     if (id && form?.formState.isDirty) {
       values = form?.getValues();
-      let nextValues: any = values;
-
-      nextValues = {
+      let nextValues: any = {
         ...values,
+        include_domains: convertToStringArray(values.include_domains),
+        exclude_domains: convertToStringArray(values.exclude_domains),
       };
 
       updateNodeForm(id, nextValues);

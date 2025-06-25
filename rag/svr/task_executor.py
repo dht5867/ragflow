@@ -293,6 +293,9 @@ async def build_chunks(task, progress_callback):
             if isinstance(d["image"], bytes):
                 output_buffer = BytesIO(d["image"])
             else:
+                # If the image is in RGBA mode, convert it to RGB mode before saving it in JPEG format.
+                if d["image"].mode in ("RGBA", "P"):
+                    d["image"] = d["image"].convert("RGB")
                 d["image"].save(output_buffer, format='JPEG')
             async with minio_limiter:
                 await trio.to_thread.run_sync(lambda: STORAGE_IMPL.put(task["kb_id"], d["id"], output_buffer.getvalue()))
@@ -434,7 +437,6 @@ async def embedding(docs, mdl, parser_config=None, callback=None):
         tk_count += c
         callback(prog=0.7 + 0.2 * (i + 1) / len(cnts), msg="")
     cnts = cnts_
-
     title_w = float(parser_config.get("filename_embd_weight", 0.1))
     vects = (title_w * tts + (1 - title_w) *
              cnts) if len(tts) == len(cnts) else cnts
