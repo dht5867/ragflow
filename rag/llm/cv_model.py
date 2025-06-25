@@ -20,6 +20,7 @@ import json
 import os
 from abc import ABC
 from io import BytesIO
+from urllib.parse import urljoin
 
 import requests
 from ollama import Client
@@ -316,8 +317,19 @@ class QWenCV(Base):
                                                temperature=gen_conf.get("temperature", 0.3),
                                                top_p=gen_conf.get("top_p", 0.7))
 
-        return response.choices[0].message.content.strip(), response.usage.output_tokens
+        ans = ""
+        tk_count = 0
+        if response.status_code == HTTPStatus.OK:
+            ans = response.output.choices[0]['message']['content']
+            if isinstance(ans, list):
+                ans = ans[0]["text"] if ans else ""
+            tk_count += response.usage.total_tokens
+            if response.output.choices[0].get("finish_reason", "") == "length":
+                ans += "...\nFor the content length reason, it stopped, continue?" if is_english(
+                    [ans]) else "······\n由于长度的原因，回答被截断了，要继续吗？"
+            return ans, tk_count
 
+        return "**ERROR**: " + response.message, tk_count
 
     def chat_streamly(self, system, history, gen_conf, image=""):
         if system:
@@ -337,8 +349,11 @@ class QWenCV(Base):
                                                    stream=True,
                                                    stream_options={"include_usage": True})
             for resp in response:
-                logging.info(resp)
-                if resp.usage and resp.usage.total_tokens:
+                if resp.status_code == HTTPStatus.OK:
+                    cnt = resp.output.choices[0]['message']['content']
+                    if isinstance(cnt, list):
+                        cnt = cnt[0]["text"] if ans else ""
+                    ans += cnt
                     tk_count = resp.usage.total_tokens
                 if not resp.choices:
                      continue
@@ -493,7 +508,8 @@ class OllamaCV(Base):
             response = self.client.chat(
                 model=self.model_name,
                 messages=history,
-                options=options
+                options=options,
+                keep_alive=-1
             )
 
             ans = response["message"]["content"].strip()
@@ -523,7 +539,8 @@ class OllamaCV(Base):
                 model=self.model_name,
                 messages=history,
                 stream=True,
-                options=options
+                options=options,
+                keep_alive=-1
             )
             for resp in response:
                 if resp["done"]:
@@ -539,8 +556,7 @@ class LocalAICV(GptV4):
     def __init__(self, key, model_name, base_url, lang="Chinese"):
         if not base_url:
             raise ValueError("Local cv model url cannot be None")
-        if base_url.split("/")[-1] != "v1":
-            base_url = os.path.join(base_url, "v1")
+        base_url = urljoin(base_url, "v1")
         self.client = OpenAI(api_key="empty", base_url=base_url)
         self.model_name = model_name.split("___")[0]
         self.lang = lang
@@ -548,9 +564,8 @@ class LocalAICV(GptV4):
 
 class XinferenceCV(Base):
     def __init__(self, key, model_name="", lang="Chinese", base_url=""):
-        if base_url.split("/")[-1] != "v1":
-            base_url = os.path.join(base_url, "v1")
-        self.client = OpenAI(api_key=key, base_url=base_url,timeout=60)
+        base_url = urljoin(base_url, "v1")
+        self.client = OpenAI(api_key=key, base_url=base_url)
         self.model_name = model_name
         self.lang = lang
 
@@ -740,11 +755,9 @@ class NvidiaCV(Base):
         self.lang = lang
         factory, llm_name = model_name.split("/")
         if factory != "liuhaotian":
-            self.base_url = os.path.join(base_url, factory, llm_name)
+            self.base_url = urljoin(base_url, f"{factory}/{llm_name}")
         else:
-            self.base_url = os.path.join(
-                base_url, "community", llm_name.replace("-v1.6", "16")
-            )
+            self.base_url = urljoin(f"{base_url}/community", llm_name.replace("-v1.6", "16"))
         self.key = key
 
     def describe(self, image):
@@ -833,8 +846,7 @@ class LmStudioCV(GptV4):
     def __init__(self, key, model_name, lang="Chinese", base_url=""):
         if not base_url:
             raise ValueError("Local llm url cannot be None")
-        if base_url.split("/")[-1] != "v1":
-            base_url = os.path.join(base_url, "v1")
+        base_url = urljoin(base_url, "v1")
         self.client = OpenAI(api_key="lm-studio", base_url=base_url)
         self.model_name = model_name
         self.lang = lang
@@ -844,8 +856,7 @@ class OpenAI_APICV(GptV4):
     def __init__(self, key, model_name, lang="Chinese", base_url=""):
         if not base_url:
             raise ValueError("url cannot be None")
-        if base_url.split("/")[-1] != "v1":
-            base_url = os.path.join(base_url, "v1")
+        base_url = urljoin(base_url, "v1")
         self.client = OpenAI(api_key=key, base_url=base_url)
         self.model_name = model_name.split("___")[0]
         self.lang = lang
@@ -1066,8 +1077,7 @@ class GPUStackCV(GptV4):
     def __init__(self, key, model_name, lang="Chinese", base_url=""):
         if not base_url:
             raise ValueError("Local llm url cannot be None")
-        if base_url.split("/")[-1] != "v1":
-            base_url = os.path.join(base_url, "v1")
+        base_url = urljoin(base_url, "v1")
         self.client = OpenAI(api_key=key, base_url=base_url)
         self.model_name = model_name
         self.lang = lang

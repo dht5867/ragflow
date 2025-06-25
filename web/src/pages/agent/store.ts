@@ -35,6 +35,7 @@ export type RFState = {
   selectedNodeIds: string[];
   selectedEdgeIds: string[];
   clickedNodeId: string; // currently selected node
+  clickedToolId: string; // currently selected tool id
   onNodesChange: OnNodesChange<RAGFlowNodeType>;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
@@ -56,6 +57,7 @@ export type RFState = {
     source: string,
     sourceHandle?: string | null,
     target?: string | null,
+    isConnecting?: boolean,
   ) => void;
   deletePreviousEdgeOfClassificationNode: (connection: Connection) => void;
   duplicateNode: (id: string, name: string) => void;
@@ -72,6 +74,7 @@ export type RFState = {
   updateNodeName: (id: string, name: string) => void;
   generateNodeName: (name: string) => string;
   setClickedNodeId: (id?: string) => void;
+  setClickedToolId: (id?: string) => void;
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -83,6 +86,7 @@ const useGraphStore = create<RFState>()(
       selectedNodeIds: [] as string[],
       selectedEdgeIds: [] as string[],
       clickedNodeId: '',
+      clickedToolId: '',
       onNodesChange: (changes) => {
         set({
           nodes: applyNodeChanges(changes, get().nodes),
@@ -204,7 +208,7 @@ const useGraphStore = create<RFState>()(
                 ]);
               break;
             case Operator.Switch: {
-              updateSwitchFormData(source, sourceHandle, target);
+              updateSwitchFormData(source, sourceHandle, target, true);
               break;
             }
             default:
@@ -219,7 +223,7 @@ const useGraphStore = create<RFState>()(
         const anchoredNodes = [
           Operator.Categorize,
           Operator.Relevant,
-          Operator.Switch,
+          // Operator.Switch,
         ];
         if (
           anchoredNodes.some(
@@ -303,7 +307,7 @@ const useGraphStore = create<RFState>()(
         const currentEdge = edges.find((x) => x.id === id);
 
         if (currentEdge) {
-          const { source, sourceHandle } = currentEdge;
+          const { source, sourceHandle, target } = currentEdge;
           const operatorType = getOperatorTypeFromId(source);
           // After deleting the edge, set the corresponding field in the node's form field to undefined
           switch (operatorType) {
@@ -321,7 +325,7 @@ const useGraphStore = create<RFState>()(
                 ]);
               break;
             case Operator.Switch: {
-              updateSwitchFormData(source, sourceHandle, undefined);
+              updateSwitchFormData(source, sourceHandle, target, false);
               break;
             }
             default:
@@ -402,15 +406,32 @@ const useGraphStore = create<RFState>()(
 
         return nextNodes;
       },
-      updateSwitchFormData: (source, sourceHandle, target) => {
-        const { updateNodeForm } = get();
+      updateSwitchFormData: (source, sourceHandle, target, isConnecting) => {
+        const { updateNodeForm, edges } = get();
         if (sourceHandle) {
+          // A handle will connect to multiple downstream nodes
+          let currentHandleTargets = edges
+            .filter(
+              (x) =>
+                x.source === source &&
+                x.sourceHandle === sourceHandle &&
+                typeof x.target === 'string',
+            )
+            .map((x) => x.target);
+
+          let targets: string[] = currentHandleTargets;
+          if (target) {
+            if (!isConnecting) {
+              targets = currentHandleTargets.filter((x) => x !== target);
+            }
+          }
+
           if (sourceHandle === SwitchElseTo) {
-            updateNodeForm(source, target, [SwitchElseTo]);
+            updateNodeForm(source, targets, [SwitchElseTo]);
           } else {
             const operatorIndex = getOperatorIndex(sourceHandle);
             if (operatorIndex) {
-              updateNodeForm(source, target, [
+              updateNodeForm(source, targets, [
                 'conditions',
                 Number(operatorIndex) - 1, // The index is the conditions form index
                 'to',
@@ -447,8 +468,11 @@ const useGraphStore = create<RFState>()(
 
         return generateNodeNamesWithIncreasingIndex(name, nodes);
       },
+      setClickedToolId: (id?: string) => {
+        set({ clickedToolId: id });
+      },
     })),
-    { name: 'graph' },
+    { name: 'graph', trace: true },
   ),
 );
 

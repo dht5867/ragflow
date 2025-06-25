@@ -49,6 +49,7 @@ const routes = [
       {
         path: '/knowledge',
         component: '@/pages/knowledge',
+        // component: '@/pages/knowledge/datasets',
       },
       {
         path: '/knowledge',
@@ -95,6 +96,7 @@ const routes = [
           { path: '/user-setting', redirect: '/user-setting/profile' },
           {
             path: '/user-setting/profile',
+            // component: '@/pages/user-setting/setting-profile',
             component: '@/pages/user-setting/setting-profile',
           },
           {
