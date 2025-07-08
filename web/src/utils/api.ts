@@ -143,6 +143,8 @@ export default {
   testDbConnect: `${api_host}/canvas/test_db_connect`,
   getInputElements: `${api_host}/canvas/input_elements`,
   debug: `${api_host}/canvas/debug`,
+  uploadCanvasFile: `${api_host}/canvas/upload`,
+  trace: `${api_host}/canvas/trace`,
 
   // mcp server
   getMcpServerList: `${api_host}/mcp_server/list`,

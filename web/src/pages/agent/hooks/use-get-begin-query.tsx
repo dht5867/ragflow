@@ -1,3 +1,4 @@
+import { AgentGlobals } from '@/constants/agent';
 import { useFetchAgent } from '@/hooks/use-agent-request';
 import { RAGFlowNodeType } from '@/interfaces/database/flow';
 import { Edge } from '@xyflow/react';
@@ -5,7 +6,7 @@ import { DefaultOptionType } from 'antd/es/select';
 import { isEmpty } from 'lodash';
 import get from 'lodash/get';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { BeginId, Operator } from '../constant';
+import { BeginId, BeginQueryType, Operator, VariableType } from '../constant';
 import { AgentFormContext } from '../context';
 import { buildBeginInputListFromObject } from '../form/begin-form/utils';
 import { BeginQuery } from '../interface';
@@ -21,6 +22,18 @@ export const useGetBeginNodeDataQuery = () => {
   }, [getNode]);
 
   return getBeginNodeDataQuery;
+};
+
+export const useGetBeginNodeDataInputs = () => {
+  const getNode = useGraphStore((state) => state.getNode);
+
+  const inputs = get(getNode(BeginId), 'data.form.inputs', {});
+
+  const beginNodeDataInputs = useMemo(() => {
+    return buildBeginInputListFromObject(inputs);
+  }, [inputs]);
+
+  return beginNodeDataInputs;
 };
 
 export const useGetBeginNodeDataQueryIsSafe = () => {
@@ -58,13 +71,14 @@ function filterAllUpstreamNodeIds(edges: Edge[], nodeIds: string[]) {
   }, []);
 }
 
-function buildOutputOptions(
+export function buildOutputOptions(
   outputs: Record<string, any> = {},
   nodeId?: string,
 ) {
   return Object.keys(outputs).map((x) => ({
     label: x,
     value: `${nodeId}@${x}`,
+    type: outputs[x]?.type,
   }));
 }
 
@@ -104,6 +118,19 @@ const ExcludedNodes = [
   Operator.Note,
 ];
 
+const StringList = [
+  BeginQueryType.Line,
+  BeginQueryType.Paragraph,
+  BeginQueryType.Options,
+];
+
+function transferToVariableType(type: string) {
+  if (StringList.some((x) => x === type)) {
+    return VariableType.String;
+  }
+  return type;
+}
+
 export function useBuildBeginVariableOptions() {
   const getBeginNodeDataQuery = useGetBeginNodeDataQuery();
 
@@ -116,6 +143,7 @@ export function useBuildBeginVariableOptions() {
         options: query.map((x) => ({
           label: x.name,
           value: `begin@${x.key}`,
+          type: transferToVariableType(x.type),
         })),
       },
     ];
@@ -124,32 +152,37 @@ export function useBuildBeginVariableOptions() {
   return options;
 }
 
-export const useBuildVariableOptions = (nodeId?: string) => {
+export const useBuildVariableOptions = (nodeId?: string, parentId?: string) => {
   const nodeOutputOptions = useBuildNodeOutputOptions(nodeId);
+  const parentNodeOutputOptions = useBuildNodeOutputOptions(parentId);
   const beginOptions = useBuildBeginVariableOptions();
 
   const options = useMemo(() => {
-    return [...beginOptions, ...nodeOutputOptions];
-  }, [beginOptions, nodeOutputOptions]);
+    return [...beginOptions, ...nodeOutputOptions, ...parentNodeOutputOptions];
+  }, [beginOptions, nodeOutputOptions, parentNodeOutputOptions]);
 
   return options;
 };
 
-export function useBuildQueryVariableOptions() {
+export function useBuildQueryVariableOptions(n?: RAGFlowNodeType) {
   const { data } = useFetchAgent();
-  const node = useContext(AgentFormContext);
-  const options = useBuildVariableOptions(node?.id);
+  const node = useContext(AgentFormContext) || n;
+  const options = useBuildVariableOptions(node?.id, node?.parentId);
 
   const nextOptions = useMemo(() => {
-    const globalOptions = Object.keys(data?.dsl?.globals ?? {}).map((x) => ({
-      label: x,
-      value: x,
+    const globals = data?.dsl?.globals ?? {};
+    const globalOptions = Object.entries(globals).map(([key, value]) => ({
+      label: key,
+      value: key,
+      type: Array.isArray(value)
+        ? `${VariableType.Array}${key === AgentGlobals.SysFiles ? '<file>' : ''}`
+        : typeof value,
     }));
     return [
       { ...options[0], options: [...options[0]?.options, ...globalOptions] },
       ...options.slice(1),
     ];
-  }, [data.dsl.globals, options]);
+  }, [data.dsl?.globals, options]);
 
   return nextOptions;
 }
@@ -220,3 +253,22 @@ export const useGetComponentLabelByValue = (nodeId: string) => {
   );
   return getLabel;
 };
+
+export function useGetVariableLabelByValue(nodeId: string) {
+  const { getNode } = useGraphStore((state) => state);
+  const nextOptions = useBuildQueryVariableOptions(getNode(nodeId));
+
+  const flattenOptions = useMemo(() => {
+    return nextOptions.reduce<DefaultOptionType[]>((pre, cur) => {
+      return [...pre, ...cur.options];
+    }, []);
+  }, [nextOptions]);
+
+  const getLabel = useCallback(
+    (val?: string) => {
+      return flattenOptions.find((x) => x.value === val)?.label;
+    },
+    [flattenOptions],
+  );
+  return getLabel;
+}

@@ -632,7 +632,7 @@ class Document(DataBaseModel):
     progress = FloatField(default=0, index=True)
     progress_msg = TextField(null=True, help_text="process message", default="")
     process_begin_at = DateTimeField(null=True, index=True)
-    process_duation = FloatField(default=0)
+    process_duration = FloatField(default=0)
     meta_fields = JSONField(null=True, default={})
 
     run = CharField(max_length=1, null=True, help_text="start to run processing or cancel.(1: run it; 2: cancel)", default="0", index=True)
@@ -675,7 +675,7 @@ class Task(DataBaseModel):
     priority = IntegerField(default=0)
 
     begin_at = DateTimeField(null=True, index=True)
-    process_duation = FloatField(default=0)
+    process_duration = FloatField(default=0)
 
     progress = FloatField(default=0, index=True)
     progress_msg = TextField(null=True, help_text="process message", default="")
@@ -806,13 +806,13 @@ class MCPServer(DataBaseModel):
     url = CharField(max_length=2048, null=False, help_text="MCP Server URL")
     server_type = CharField(max_length=32, null=False, help_text="MCP Server type")
     description = TextField(null=True, help_text="MCP Server description")
-    variables = JSONField(null=True, default=[], help_text="MCP Server variables")
-    headers = JSONField(null=True, default={}, help_text="MCP Server additional request headers")
+    variables = JSONField(null=True, default=dict, help_text="MCP Server variables")
+    headers = JSONField(null=True, default=dict, help_text="MCP Server additional request headers")
 
     class Meta:
         db_table = "mcp_server"
 
- 
+
 class Search(DataBaseModel):
     id = CharField(max_length=32, primary_key=True)
     avatar = TextField(null=True, help_text="avatar base64 string")
@@ -949,6 +949,14 @@ def migrate_db():
     except Exception:
         pass
     try:
-        migrate(migrator.add_column("mcp_server", "variables", JSONField(null=True, help_text="MCP Server variables", default=[])))
+        migrate(migrator.add_column("mcp_server", "variables", JSONField(null=True, help_text="MCP Server variables", default=dict)))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.rename_column("task", "process_duation", "process_duration"))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.rename_column("document", "process_duation", "process_duration"))
     except Exception:
         pass
