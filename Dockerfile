@@ -1,5 +1,5 @@
 # base stage
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 USER root
 SHELL ["/bin/bash", "-c"]
 
@@ -209,7 +209,7 @@ COPY docker/entrypoint.sh ./
 RUN chmod +x ./entrypoint*.sh
 
 # Copy compiled web pages
-#COPY --from=builder /ragflow/web/dist /ragflow/web/dist
+COPY --from=builder /ragflow/web/dist /ragflow/web/dist
 
 COPY --from=builder /ragflow/VERSION /ragflow/VERSION
 ENTRYPOINT ["./entrypoint.sh"]

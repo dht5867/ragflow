@@ -124,7 +124,6 @@ rm -f "${CONF_FILE}"
 while IFS= read -r line || [[ -n "$line" ]]; do
     eval "echo \"$line\"" >> "${CONF_FILE}"
 done < "${TEMPLATE_FILE}"
-
 export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/"
 PY=python3
 
@@ -156,6 +155,7 @@ function start_mcp_server() {
 # -----------------------------------------------------------------------------
 # Start components based on flags
 # -----------------------------------------------------------------------------
+
 
 if [[ "${ENABLE_WEBSERVER}" -eq 1 ]]; then
     echo "Starting nginx..."
