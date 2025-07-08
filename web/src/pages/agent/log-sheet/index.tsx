@@ -18,18 +18,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { INodeEvent, MessageEventType } from '@/hooks/use-send-message';
+import { useFetchMessageTrace } from '@/hooks/use-agent-request';
+import { ILogEvent, MessageEventType } from '@/hooks/use-send-message';
 import { IModalProps } from '@/interfaces/common';
+import { ITraceData } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';
+import { isEmpty } from 'lodash';
 import { BellElectric, NotebookText } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import JsonView from 'react18-json-view';
 import 'react18-json-view/src/style.css';
 import { useCacheChatLog } from '../hooks/use-cache-chat-log';
 import useGraphStore from '../store';
 
 type LogSheetProps = IModalProps<any> &
-  Pick<ReturnType<typeof useCacheChatLog>, 'currentEventListWithoutMessage'>;
+  Pick<
+    ReturnType<typeof useCacheChatLog>,
+    'currentEventListWithoutMessage' | 'currentMessageId'
+  >;
 
 function JsonViewer({
   data,
@@ -51,11 +57,37 @@ function JsonViewer({
   );
 }
 
+function concatData(
+  firstRecord: Record<string, any> | Array<Record<string, any>>,
+  nextRecord: Record<string, any> | Array<Record<string, any>>,
+) {
+  let result: Array<Record<string, any>> = [];
+
+  if (!isEmpty(firstRecord)) {
+    result = result.concat(firstRecord);
+  }
+
+  if (!isEmpty(nextRecord)) {
+    result = result.concat(nextRecord);
+  }
+
+  return isEmpty(result) ? {} : result;
+}
+
+type EventWithIndex = { startNodeIdx: number } & ILogEvent;
+
 export function LogSheet({
   hideModal,
   currentEventListWithoutMessage,
+  currentMessageId,
 }: LogSheetProps) {
   const getNode = useGraphStore((state) => state.getNode);
+
+  const { data: traceData, setMessageId } = useFetchMessageTrace();
+
+  useEffect(() => {
+    setMessageId(currentMessageId);
+  }, [currentMessageId, setMessageId]);
 
   const getNodeName = useCallback(
     (nodeId: string) => {
@@ -64,12 +96,68 @@ export function LogSheet({
     [getNode],
   );
 
+  const hasTrace = useCallback(
+    (componentId: string) => {
+      if (Array.isArray(traceData)) {
+        return traceData?.some((x) => x.component_id === componentId);
+      }
+    },
+    [traceData],
+  );
+
+  const filterTrace = useCallback(
+    (componentId: string) => {
+      return traceData
+        ?.filter((x) => x.component_id === componentId)
+        .reduce<ITraceData['trace']>((pre, cur) => {
+          pre.push(...cur.trace);
+
+          return pre;
+        }, []);
+    },
+    [traceData],
+  );
+
+  // Look up to find the nearest start component id and concatenate the finish and log data into one
   const finishedNodeList = useMemo(() => {
     return currentEventListWithoutMessage.filter(
-      (x) => x.event === MessageEventType.NodeFinished,
-    ) as INodeEvent[];
+      (x) =>
+        x.event === MessageEventType.NodeFinished ||
+        x.event === MessageEventType.NodeLogs,
+    ) as ILogEvent[];
   }, [currentEventListWithoutMessage]);
-  console.log('🚀 ~ finishedNodeList ~ finishedNodeList:', finishedNodeList);
+
+  const nextList = useMemo(() => {
+    return finishedNodeList.reduce<Array<EventWithIndex>>((pre, cur) => {
+      const startNodeIdx = (
+        currentEventListWithoutMessage as Array<ILogEvent>
+      ).findLastIndex(
+        (x) =>
+          x.data.component_id === cur.data.component_id &&
+          x.event === MessageEventType.NodeStarted,
+      );
+
+      const item = pre.find((x) => x.startNodeIdx === startNodeIdx);
+
+      const { inputs = {}, outputs = {} } = cur.data;
+      if (item) {
+        const { inputs: inputList, outputs: outputList } = item.data;
+
+        item.data = {
+          ...item.data,
+          inputs: concatData(inputList, inputs),
+          outputs: concatData(outputList, outputs),
+        };
+      } else {
+        pre.push({
+          ...cur,
+          startNodeIdx,
+        });
+      }
+
+      return pre;
+    }, []);
+  }, [currentEventListWithoutMessage, finishedNodeList]);
 
   return (
     <Sheet open onOpenChange={hideModal} modal={false}>
@@ -82,7 +170,7 @@ export function LogSheet({
         </SheetHeader>
         <section className="max-h-[82vh] overflow-auto mt-6">
           <Timeline>
-            {finishedNodeList.map((x, idx) => (
+            {nextList.map((x, idx) => (
               <TimelineItem
                 key={idx}
                 step={idx}
@@ -132,9 +220,16 @@ export function LogSheet({
                               title="Input"
                             ></JsonViewer>
 
+                            {hasTrace(x.data.component_id) && (
+                              <JsonViewer
+                                data={filterTrace(x.data.component_id) ?? {}}
+                                title={'Trace'}
+                              ></JsonViewer>
+                            )}
+
                             <JsonViewer
                               data={x.data.outputs}
-                              title="Output"
+                              title={'Output'}
                             ></JsonViewer>
                           </div>
                         </AccordionContent>

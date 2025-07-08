@@ -3,6 +3,7 @@ export interface ICategorizeItem {
   description?: string;
   examples?: { value: string }[];
   index: number;
+  to: string[];
 }
 
 export type ICategorizeItemResult = Record<
@@ -134,9 +135,10 @@ export interface IRetrievalForm {
 }
 
 export interface ICodeForm {
-  inputs?: Array<{ name?: string; component_id?: string }>;
+  arguments: Record<string, string>;
   lang: string;
   script?: string;
+  outputs: Record<string, { value: string; type: string }>;
 }
 
 export interface IAgentForm {
@@ -214,4 +216,9 @@ export type RAGFlowNodeType =
 export interface IGraph {
   nodes: RAGFlowNodeType[];
   edges: Edge[];
+}
+
+export interface ITraceData {
+  component_id: string;
+  trace: Array<Record<string, any>>;
 }

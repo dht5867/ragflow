@@ -115,6 +115,7 @@ function AgentCanvas({ drawerVisible, hideDrawer }: IProps) {
     setCurrentMessageId,
     currentEventListWithoutMessage,
     clearEventList,
+    currentMessageId,
   } = useCacheChatLog();
 
   const { showLogSheet, logSheetVisible, hideLogSheet } = useShowLogSheet({
@@ -174,6 +175,7 @@ function AgentCanvas({ drawerVisible, hideDrawer }: IProps) {
           isValidConnection={isValidConnection}
           onEdgeMouseEnter={onEdgeMouseEnter}
           onEdgeMouseLeave={onEdgeMouseLeave}
+          className="h-full"
           defaultEdgeOptions={{
             type: 'buttonEdge',
             markerEnd: 'logo',
@@ -220,6 +222,7 @@ function AgentCanvas({ drawerVisible, hideDrawer }: IProps) {
         <LogSheet
           hideModal={hideLogSheet}
           currentEventListWithoutMessage={currentEventListWithoutMessage}
+          currentMessageId={currentMessageId}
         ></LogSheet>
       )}
     </div>
