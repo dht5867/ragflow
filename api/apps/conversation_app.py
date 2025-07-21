@@ -336,7 +336,7 @@ def completion():
                                 break
                             lines = line.split("\n")
                             if len(lines)>1:
-                                time.sleep(1)
+                                time.sleep(3)
                                 chunk=lines[1]
                                 if len(chunk)>2:
                                     logging.info(chunk)
@@ -371,7 +371,7 @@ def completion():
                                             # logging.info(rr)
                                             # ch_text=rr["choices"][0]["message"]["content"]
                                             
-                    ConversationService.update_by_id(conv.id, conv.to_dict())
+                            ConversationService.update_by_id(conv.id, conv.to_dict())
                     logging.info('---------CMDB end----------')
                 elif selectedSkill=='图片理解'or selectedSkill=='Image2Txt' or selectedSkill=='圖片理解' :
                     logging.info('-------image_chat----')
