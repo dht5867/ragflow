@@ -464,7 +464,7 @@ def log_chat(dialog, messages, stream=True, **kwargs):
     else:
         answer = ""
         logging.info('---rest log_chat--')
-        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default"):
+        for d in log_file_chat(questions[-1], doc_id ,[],stream,llm_id,max_tokens, "default",lang):
             if error_msg := check_error_msg(d):  # check whether error occured
                         logging.error(error_msg)
                         answer=" 后台服务错误，请重试对话"
