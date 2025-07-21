@@ -488,9 +488,14 @@
         {
             "name": "Ollama",
             "logo": "",
-            "tags": "LLM,TEXT EMBEDDING,SPEECH2TEXT,MODERATION",
+            "tags": "LLM,TEXT EMBEDDING,SPEECH2TEXT,IMAGE2TEXT,MODERATION",
             "status": "1",
-            "llm": []
+            "llm": [{
+                "llm_name": "qwen2.5vl:latest ",
+                "tags": "IMAGE2TEXT",
+                "max_tokens": 2000,
+                "model_type": "image2text"
+            }]
         },
         {
             "name": "ModelScope",

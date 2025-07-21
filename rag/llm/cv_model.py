@@ -521,12 +521,21 @@ class OllamaCV(Base):
             return "**ERROR**: " + str(e), 0
 
     def chat_streamly(self, system, history, gen_conf, image=""):
+        tmp_dir = get_project_base_directory("tmp")
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir, exist_ok=True)
+        if image.startswith('data:image'):  
+            image = image.split(',')[1]  
+        image_data = base64.b64decode(image)  
+        path = os.path.join(tmp_dir, "%s.jpg" % get_uuid())
+        Image.open(io.BytesIO(image_data)).save(path)
+    
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
 
         for his in history:
             if his["role"] == "user":
-                his["images"] = [image]
+                his["images"] = [path]
         options = {}
         if "temperature" in gen_conf:
             options["temperature"] = gen_conf["temperature"]
@@ -538,6 +547,9 @@ class OllamaCV(Base):
             options["frequency_penalty"] = gen_conf["frequency_penalty"]
         ans = ""
         try:
+            logging.info('image2txt--------------')
+            logging.info(self.model_name)
+            logging.info(image)
             response = self.client.chat(
                 model=self.model_name,
                 messages=history,
@@ -592,7 +604,7 @@ class XinferenceCV(Base):
         )
         return res.choices[0].message.content.strip(), res.usage.total_tokens
 
-def chat_streamly(self, system, history, gen_conf, image=""):
+    def chat_streamly(self, system, history, gen_conf, image=""):
         logging.info("------xin---")
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]

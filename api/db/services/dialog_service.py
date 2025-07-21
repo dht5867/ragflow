@@ -589,11 +589,14 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
     # 确定使用的模型类型
     if image ==""  or len(image)<10:
       raise LookupError("please upload image ")
+    logging.info('chat_mdl--------------')
+    logging.info(llm_id2llm_type(dialog.llm_id) )
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
     else:
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
-
+  
+    logging.info(chat_mdl)
     prompt_config = dialog.prompt_config
     logging.info(prompt_config)
 
