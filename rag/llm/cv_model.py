@@ -541,13 +541,12 @@ class OllamaCV(Base):
             url=self.base_url+"/api/generate"
             # logging.info(url)
             data = {
-                "model":  "qwen2.5vl:latest",
+                "model":  f'{self.model_name}'.strip(),
                 "prompt": history[-1]["content"],
                 "stream": True,  # 关键：明确要求服务端流式输出（如果API支持）
                 "images": [image]
             }
             response = requests.post(url, json=data, stream=True)
-            logging.info(response)
             ans = ""
             for line in response.iter_lines():
                 if line:
