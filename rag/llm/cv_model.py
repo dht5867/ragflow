@@ -464,6 +464,7 @@ class OllamaCV(Base):
         self.client = Client(host=kwargs["base_url"])
         self.model_name = model_name
         self.lang = lang
+        self.base_url=kwargs["base_url"]
 
     def describe(self, image):
         prompt = self.prompt("")
@@ -521,46 +522,40 @@ class OllamaCV(Base):
             return "**ERROR**: " + str(e), 0
 
     def chat_streamly(self, system, history, gen_conf, image=""):
-        tmp_dir = get_project_base_directory("tmp")
-        if not os.path.exists(tmp_dir):
-            os.makedirs(tmp_dir, exist_ok=True)
-        if image.startswith('data:image'):  
-            image = image.split(',')[1]  
-        image_data = base64.b64decode(image)  
-        path = os.path.join(tmp_dir, "%s.jpg" % get_uuid())
-        Image.open(io.BytesIO(image_data)).save(path)
-    
         if system:
             history[-1]["content"] = system + history[-1]["content"] + "user query: " + history[-1]["content"]
-
-        for his in history:
-            if his["role"] == "user":
-                his["images"] = [path]
-        options = {}
-        if "temperature" in gen_conf:
-            options["temperature"] = gen_conf["temperature"]
-        if "top_p" in gen_conf:
-            options["top_k"] = gen_conf["top_p"]
-        if "presence_penalty" in gen_conf:
-            options["presence_penalty"] = gen_conf["presence_penalty"]
-        if "frequency_penalty" in gen_conf:
-            options["frequency_penalty"] = gen_conf["frequency_penalty"]
-        ans = ""
         try:
-            logging.info('image2txt--------------')
+            # data={
+            #     "model": self.model_name,
+            #     "prompt": history[-1]["content"],
+            #     "images": [image],
+            #     "stream": True
+            # }
+            
+            # logging.info(self.base_url)
             logging.info(self.model_name)
-            logging.info(image)
-            response = self.client.chat(
-                model=self.model_name,
-                messages=history,
-                stream=True,
-                options=options,
-                keep_alive=-1,
-            )
-            for resp in response:
-                if resp["done"]:
-                    yield resp.get("prompt_eval_count", 0) + resp.get("eval_count", 0)
-                ans += resp["message"]["content"]
+            # logging.info(history[-1]["content"])
+            # logging.info(self.base_url)
+            if not self.base_url.startswith(("http://", "https://")):
+                 self.base_url = "http://" + self.base_url
+            url=self.base_url+"/api/generate"
+            # logging.info(url)
+            data = {
+                "model":  "qwen2.5vl:latest",
+                "prompt": history[-1]["content"],
+                "stream": True,  # 关键：明确要求服务端流式输出（如果API支持）
+                "images": [image]
+            }
+            response = requests.post(url, json=data, stream=True)
+            logging.info(response)
+            ans = ""
+            for line in response.iter_lines():
+                if line:
+                    # 解析 JSON 数据
+                    json_data = json.loads(line.decode('utf-8'))
+                    # 提取 response 字段内容
+                    delta = json_data.get("response", "")
+                    ans += delta
                 yield ans
         except Exception as e:
             yield ans + "\n**ERROR**: " + str(e)

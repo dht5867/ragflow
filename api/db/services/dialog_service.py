@@ -15,6 +15,7 @@
 #
 import base64
 from io import BytesIO
+import io
 import os
 import binascii
 import logging
@@ -40,7 +41,7 @@ from api.db.services.common_service import CommonService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.langfuse_service import TenantLangfuseService
 from api.db.services.llm_service import LLMBundle, TenantLLMService
-from api.utils import current_timestamp, datetime_format
+from api.utils import current_timestamp, datetime_format, get_uuid
 from api.db.services.llm_service import LLMService, TenantLLMService, LLMBundle
 from api import settings
 from api.db.services.txt2image_service import txt_image
@@ -509,6 +510,21 @@ def image2base64(image):
         except Exception:
             image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
+from PIL import Image
+def save_image_from_bytes(image_bytes, output_path):
+    try:
+        Image.open(io.BytesIO(image_bytes)).save(output_path)
+        print("图片保存成功！")
+    except Exception as e:
+        print("无效的图片数据:", e)
+
+def get_image_type(filename):
+    # 获取文件扩展名（带点，如 '.jpg'）
+    _, ext = os.path.splitext(filename)
+    # 去掉点并转为小写（如 'jpg'）
+    return ext.lower().lstrip('.') if ext else None
+
+
 
 def txt_image_chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
@@ -584,13 +600,18 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
 
     if len(attachments)>0:
         bucket, name = File2DocumentService.get_storage_address(doc_id=attachments[0])
+        #img_type=get_image_type(name)
         imageBytes = get_storage_binary(bucket, name)
         image=image2base64(imageBytes)
+        # tmp_dir = get_project_base_directory("tmp")
+        # if not os.path.exists(tmp_dir):
+        #     os.makedirs(tmp_dir, exist_ok=True)
+      
+        # image = os.path.join(tmp_dir,  get_uuid()+'.'+img_type)
+        # save_image_from_bytes(imageBytes, image)
     # 确定使用的模型类型
     if image ==""  or len(image)<10:
       raise LookupError("please upload image ")
-    logging.info('chat_mdl--------------')
-    logging.info(llm_id2llm_type(dialog.llm_id) )
     if llm_id2llm_type(dialog.llm_id) == "image2text":
         chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
     else:
@@ -641,12 +662,10 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
         return {"answer": answer, "reference": refs}
-
-   
     if stream:
             last_ans = ""
             answer = ""
-            for ans in chat_mdl.chat_streamly_image(None, msg[1:], gen_conf,image):
+            for ans in chat_mdl.chat_streamly_image(None, msg[-1:], gen_conf,image):
                 answer = ans
                 delta_ans = ans[len(last_ans):]
                 if num_tokens_from_string(delta_ans) < 16:
@@ -658,7 +677,7 @@ def image_chat(select_skill,dialog, messages, stream=True, **kwargs):
                 yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans)}
             yield decorate_answer(answer)
     else:
-            answer = chat_mdl.chat_image(None, msg[1:], gen_conf,image)
+            answer = chat_mdl.chat_image(None, msg[-1:], gen_conf,image)
             logging.info("User: {}|Assistant: {}".format(
                 msg[-1]["content"], answer))
             res = decorate_answer(answer)
