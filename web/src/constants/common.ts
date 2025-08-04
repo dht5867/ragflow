@@ -144,3 +144,9 @@ export enum Platform {
   FastGPT = 'FastGPT',
   Coze = 'Coze',
 }
+
+export enum ThemeEnum {
+  Dark = 'dark',
+  Light = 'light',
+  System = 'system',
+}

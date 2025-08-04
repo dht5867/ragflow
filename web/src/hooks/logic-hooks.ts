@@ -29,6 +29,14 @@ import { useTranslate } from './common-hooks';
 import { useSetPaginationParams } from './route-hook';
 import { useFetchTenantInfo, useSaveSetting } from './user-setting-hooks';
 
+function usePrevious<T>(value: T) {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+
 export const useSetSelectedRecord = <T = IKnowledgeFile>() => {
   const [currentRecord, setCurrentRecord] = useState<T>({} as T);
 
@@ -37,20 +45,6 @@ export const useSetSelectedRecord = <T = IKnowledgeFile>() => {
   };
 
   return { currentRecord, setRecord };
-};
-
-export const useHandleSearchChange = () => {
-  const [searchString, setSearchString] = useState('');
-
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setSearchString(value);
-    },
-    [],
-  );
-
-  return { handleInputChange, searchString };
 };
 
 export const useChangeLanguage = () => {
@@ -84,9 +78,12 @@ export const useGetPaginationWithRouter = () => {
 
   const setCurrentPagination = useCallback(
     (pagination: { page: number; pageSize?: number }) => {
+      if (pagination.pageSize !== pageSize) {
+        pagination.page = 1; // Reset to first page if pageSize changes
+      }
       setPaginationParams(pagination.page, pagination.pageSize);
     },
-    [setPaginationParams],
+    [setPaginationParams, pageSize],
   );
 
   const pagination: PaginationProps = useMemo(() => {
@@ -106,6 +103,21 @@ export const useGetPaginationWithRouter = () => {
     pagination,
     setPagination: setCurrentPagination,
   };
+};
+
+export const useHandleSearchChange = () => {
+  const [searchString, setSearchString] = useState('');
+  const { setPagination } = useGetPaginationWithRouter();
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setSearchString(value);
+      setPagination({ page: 1 });
+    },
+    [setPagination],
+  );
+
+  return { handleInputChange, searchString };
 };
 
 export const useGetPagination = () => {
@@ -208,7 +220,6 @@ export const useSendMessageWithSse = (
           if (x) {
             const { done, value } = x;
             if (done) {
-              console.info('done');
               resetAnswer();
               break;
             }
@@ -223,19 +234,17 @@ export const useSendMessageWithSse = (
                 });
               }
             } catch (e) {
-              console.warn(e);
+              // Swallow parse errors silently
             }
           }
         }
-        console.info('done?');
         setDone(true);
         resetAnswer();
         return { data: await res, response };
       } catch (e) {
         setDone(true);
         resetAnswer();
-
-        console.warn(e);
+        // Swallow fetch errors silently
       }
     },
     [initializeSseRef, url, resetAnswer],
@@ -265,7 +274,7 @@ export const useSpeechWithSse = (url: string = api.tts) => {
           message.error(res?.message);
         }
       } catch (error) {
-        console.warn('🚀 ~ error:', error);
+        // Swallow errors silently
       }
       return response;
     },
@@ -277,20 +286,55 @@ export const useSpeechWithSse = (url: string = api.tts) => {
 
 //#region chat hooks
 
-export const useScrollToBottom = (messages?: unknown) => {
+export const useScrollToBottom = (
+  messages?: unknown,
+  containerRef?: React.RefObject<HTMLDivElement>,
+) => {
   const ref = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = useCallback(() => {
-    if (messages) {
-      ref.current?.scrollIntoView({ behavior: 'instant' });
-    }
-  }, [messages]); // If the message changes, scroll to the bottom
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const isAtBottomRef = useRef(true);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
+    isAtBottomRef.current = isAtBottom;
+  }, [isAtBottom]);
 
-  return ref;
+  const checkIfUserAtBottom = useCallback(() => {
+    if (!containerRef?.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    return Math.abs(scrollTop + clientHeight - scrollHeight) < 25;
+  }, [containerRef]);
+
+  useEffect(() => {
+    if (!containerRef?.current) return;
+    const container = containerRef.current;
+
+    const handleScroll = () => {
+      setIsAtBottom(checkIfUserAtBottom());
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [containerRef, checkIfUserAtBottom]);
+
+  useEffect(() => {
+    if (!messages) return;
+    if (!containerRef?.current) return;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (isAtBottomRef.current) {
+          ref.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 30);
+    });
+  }, [messages, containerRef]);
+
+  // Imperative scroll function
+  const scrollToBottom = useCallback(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  return { scrollRef: ref, isAtBottom, scrollToBottom };
 };
 
 export const useHandleMessageInputChange = () => {
@@ -448,6 +492,10 @@ export const useSelectDerivedMessages = (selectedSkill: string) => {
     [setDerivedMessages],
   );
 
+  const removeAllMessages = useCallback(() => {
+    setDerivedMessages([]);
+  }, [setDerivedMessages]);
+
   return {
     ref,
     derivedMessages,
@@ -459,6 +507,7 @@ export const useSelectDerivedMessages = (selectedSkill: string) => {
     addNewestOneQuestion,
     addNewestOneAnswer,
     removeMessagesAfterCurrentMessage,
+    removeAllMessages,
   };
 };
 

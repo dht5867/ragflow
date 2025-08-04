@@ -31,32 +31,11 @@ const RagHeader = () => {
   // 将 tagsData 转换为 items 数组
   const items: MenuItem[] = useMemo(
     () => [
-      {
-        label: t('chat'),
-        key: '/chat',
-        icon: <MessageOutlined />,
-      },
-      {
-        label: t('knowledgeBase'),
-        key: '/knowledge',
-        icon: <KnowledgeBaseIcon />,
-      },
-      {
-        label: t('search'),
-        key: '/search',
-        icon: <SearchOutlined />,
-      },
-      {
-        label: t('fileManager'),
-        key: '/file',
-        icon: <FileIcon />,
-      },
-      // New menu item for "自动化运维"
-      {
-        label: '自动化运维',
-        key: '/automation', // The key used to identify this route
-        icon: <AppstoreOutlined />, // You can replace this icon with a different one if needed
-      },
+      { path: '/knowledge', name: t('knowledgeBase'), icon: KnowledgeBaseIcon },
+      { path: '/chat', name: t('chat'), icon: MessageOutlined },
+      { path: '/search', name: t('search'), icon: SearchOutlined },
+      { path: '/agent-list', name: t('flow'), icon: GraphIcon },
+      { path: '/file', name: t('fileManager'), icon: FileIcon },
     ],
     [t],
   );

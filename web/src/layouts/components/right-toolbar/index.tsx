@@ -5,7 +5,7 @@ import camelCase from 'lodash/camelCase';
 import React, { useCallback, useMemo } from 'react';
 import User from '../user';
 
-import { LanguageList } from '@/constants/common';
+import { LanguageList, ThemeEnum } from '@/constants/common';
 import { useChangeLanguage } from '@/hooks/logic-hooks';
 import { useFetchUserInfo, useListTenant } from '@/hooks/user-setting-hooks';
 import { TenantRole } from '@/pages/user-setting/constants';
@@ -53,6 +53,17 @@ const RightToolBar = () => {
   })).reduce<MenuProps['items']>((pre, cur) => {
     return [...pre!, { type: 'divider' }, cur];
   }, []);
+
+  const onMoonClick = React.useCallback(() => {
+    setTheme(ThemeEnum.Light);
+  }, [setTheme]);
+  const onSunClick = React.useCallback(() => {
+    setTheme(ThemeEnum.Dark);
+  }, [setTheme]);
+
+  const handleBellClick = useCallback(() => {
+    navigate('/user-setting/team');
+  }, [navigate]);
 
   return (
     <div className={styled.toolbarWrapper}>

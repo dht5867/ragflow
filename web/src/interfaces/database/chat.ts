@@ -75,6 +75,7 @@ export interface Message {
   audio_binary?: string;
   selectedSkill: string;
   data?: any;
+  files?: File[];
 }
 
 export interface IReferenceChunk {
@@ -95,6 +96,11 @@ export interface IReference {
   chunks: IReferenceChunk[];
   doc_aggs: Docagg[];
   total: number;
+}
+
+export interface IReferenceObject {
+  chunks: Record<string, IReferenceChunk>;
+  doc_aggs: Record<string, Docagg>;
 }
 
 export interface IAnswer {
