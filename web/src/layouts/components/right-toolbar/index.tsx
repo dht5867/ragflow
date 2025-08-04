@@ -4,7 +4,7 @@ import { Dropdown, MenuProps, Space } from 'antd';
 import camelCase from 'lodash/camelCase';
 import React, { useCallback, useMemo } from 'react';
 import User from '../user';
-
+import { useTheme } from '@/components/theme-provider';
 import { LanguageList, ThemeEnum } from '@/constants/common';
 import { useChangeLanguage } from '@/hooks/logic-hooks';
 import { useFetchUserInfo, useListTenant } from '@/hooks/user-setting-hooks';
@@ -32,7 +32,8 @@ const handleDocHelpCLick = () => {
 const RightToolBar = () => {
   const { t } = useTranslate('common');
   const changeLanguage = useChangeLanguage();
-
+  const { setTheme, theme } = useTheme();
+  const navigate = useNavigate();
   const {
     data: { language = 'English' },
   } = useFetchUserInfo();

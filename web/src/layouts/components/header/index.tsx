@@ -3,6 +3,7 @@ import { ReactComponent as KnowledgeBaseIcon } from '@/assets/svg/knowledge-base
 import { useTranslate } from '@/hooks/common-hooks';
 import { useNavigateWithFromState } from '@/hooks/route-hook';
 import { Layout, Menu, Space, theme } from 'antd';
+import { ReactComponent as GraphIcon } from '@/assets/svg/graph.svg';
 import { useCallback, useMemo } from 'react';
 import { useLocation } from 'umi';
 import Toolbar from '../right-toolbar';

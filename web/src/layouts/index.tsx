@@ -63,7 +63,7 @@ const App: React.FC = () => {
       },
       {
         label: t('flow'),
-        key: '/flow',
+        key: '/agent-list',
         icon: <DeploymentUnitOutlined />,
       },
       {
