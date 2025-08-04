@@ -38,6 +38,7 @@ export default {
       previousPage: 'Previous',
       nextPage: 'Next',
       add: 'Add',
+      promptPlaceholder: `Please input or use / to quickly insert variables.`,
     },
     login: {
       login: 'Sign in',
@@ -318,8 +319,8 @@ export default {
 <p>This approach chunks files using the 'naive'/'General' method. It splits a document into segments and then combines adjacent segments until the token count exceeds the threshold specified by 'Chunk token number for text', at which point a chunk is created.</p>
 <p>The chunks are then fed to the LLM to extract entities and relationships for a knowledge graph and a mind map.</p>
 <p>Ensure that you set the <b>Entity types</b>.</p>`,
-      tag: `<p>A knowledge base using the 'Tag' chunking method functions as a tag set. Other knowledge bases can use it to tag their own chunks, and queries to these knowledge bases will also be tagged using this tag set.</p>
-<p>Knowledge base using 'Tag' as a chunking method will <b>NOT</b> be involved in a Retrieval-Augmented Generation (RAG) process.</p>
+      tag: `<p>A knowledge base using the 'Tag' chunking method functions as a tag set. Other knowledge bases use it to tag their chunks, and queries to these knowledge bases are also tagged using this tag set.</p>
+<p>A tag set will <b>NOT</b> be directly involved in a Retrieval-Augmented Generation (RAG) process.</p>
 <p>Each chunk in this knowledge base is an independent description-tag pair.</p>
 <p>Supported file formats include <b>XLSX</b> and <b>CSV/TXT</b>:</p>
 <p>If a file is in <b>XLSX</b> format, it should contain two columns without headers: one for tag descriptions and the other for tag names, with the Description column preceding the Tag column. Multiple sheets are acceptable, provided the columns are properly structured.</p>
@@ -407,6 +408,11 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       mind: 'Mind map',
       question: 'Question',
       questionTip: `If there are given questions, the embedding of the chunk will be based on them.`,
+      chunkResult: 'Chunk Result',
+      chunkResultTip: `View the chunked segments used for embedding and retrieval.`,
+      enable: 'Enable',
+      disable: 'Disable',
+      delete: 'Delete',
     },
     chat: {
       newConversation: 'New conversation',
@@ -535,7 +541,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       useKnowledgeGraphTip:
         'Whether to use knowledge graph(s) in the specified knowledge base(s) during retrieval for multi-hop question answering. When enabled, this would involve iterative searches across entity, relationship, and community report chunks, greatly increasing retrieval time.',
       keyword: 'Keyword analysis',
-      keywordTip: `Apply LLM to analyze user's questions, extract keywords which will be emphasize during the relevance computation.`,
+      keywordTip: `Use LLM to analyze user's questions, extract keywords which will be emphasize during the relevance computation. Works well with lengthy queries but will increase response time.`,
       languageTip:
         'Allows sentence rewriting with the specified language or defaults to the latest question if not selected.',
       avatarHidden: 'Hide avatar',
@@ -597,13 +603,14 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       cancel: 'Cancel',
       addedModels: 'Added models',
       modelsToBeAdded: 'Models to be added',
-      addTheModel: 'Add the model',
+      addTheModel: 'Add Model',
       apiKey: 'API-Key',
       apiKeyMessage:
         'Please enter the API key (for locally deployed model,ignore this).',
       apiKeyTip:
         'The API key can be obtained by registering the corresponding LLM supplier.',
-      showMoreModels: 'Show more models',
+      showMoreModels: 'View Models',
+      hideModels: 'Hide Models',
       baseUrl: 'Base-Url',
       baseUrlTip:
         'If your API key is from OpenAI, just ignore it. Any other intermediate providers will give this base url with the API key.',
@@ -629,6 +636,8 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       workspace: 'Workspace',
       upgrade: 'Upgrade',
       addLlmTitle: 'Add LLM',
+      editLlmTitle: 'Edit {{name}} Model',
+      editModel: 'Edit Model',
       modelName: 'Model name',
       modelID: 'Model ID',
       modelUid: 'Model UID',
@@ -698,7 +707,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
         'Please input Google Cloud Service Account Key in base64 format',
       addGoogleRegion: 'Google Cloud Region',
       GoogleRegionMessage: 'Please input Google Cloud Region',
-      modelProvidersWarn: `Please add both embedding model and LLM in <b>Settings > Model providers</b>  firstly. Then, set them in 'System model settings'.`,
+      modelProvidersWarn: `Please add both embedding model and LLM in <b>Settings > Model providers</b> first. Then, set them in 'Set default models'.`,
       apiVersion: 'API-Version',
       apiVersionMessage: 'Please input API version',
       add: 'Add',
@@ -724,6 +733,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       view: 'View',
       modelsToBeAddedTooltip:
         'If your model provider is not listed but claims to be "OpenAI-compatible", select the OpenAI-API-compatible card to add the relevant model(s). ',
+      mcp: 'MCP',
     },
     message: {
       registered: 'Registered!',
@@ -1041,7 +1051,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       },
       operator: 'Operator',
       value: 'Value',
-      useTemplate: 'Use this template',
+      useTemplate: 'Use',
       wenCai: 'WenCai',
       queryType: 'Query type',
       wenCaiDescription:
@@ -1147,7 +1157,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       note: 'Note',
       noteDescription: 'Note',
       notePlaceholder: 'Please enter a note',
-      invoke: 'Invoke',
+      invoke: 'HTTP Request',
       invokeDescription: `A component capable of calling remote services, using other components' outputs or constants as inputs.`,
       url: 'Url',
       method: 'Method',
@@ -1198,10 +1208,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       jsonUploadTypeErrorMessage: 'Please upload json file',
       jsonUploadContentErrorMessage: 'json file error',
       iteration: 'Iteration',
-      iterationDescription: `This component firstly split the input into array by "delimiter".
-Perform the same operation steps on the elements in the array in sequence until all results are output, which can be understood as a task batch processor.
-
-For example, within the long text translation iteration node, if all content is input to the LLM node, the single conversation limit may be reached. The upstream node can first split the long text into multiple fragments, and cooperate with the iterative node to perform batch translation on each fragment to avoid reaching the LLM message limit for a single conversation.`,
+      iterationDescription: `A looping component that iterates over an input array and executes a defined logic for each item.`,
       delimiterTip: `
 This delimiter is used to split the input text into several text pieces echo of which will be performed as input item of each iteration.`,
       delimiterOptions: {
@@ -1286,6 +1293,56 @@ This delimiter is used to split the input text into several text pieces echo of 
       agent: 'Agent',
       agentDescription:
         'Builds agent components equipped with reasoning, tool usage, and multi-agent collaboration. ',
+      maxRecords: 'Max records',
+      createAgent: 'Create Agent',
+      stringTransform: 'Text Processing',
+      userFillUp: 'Await Response',
+      userFillUpDescription: `Pauses the workflow and waits for the user's message before continuing.`,
+      codeExec: 'Code',
+      tavilySearch: 'Tavily Search',
+      tavilySearchDescription: 'Search results via Tavily service.',
+      tavilyExtract: 'Tavily Extract',
+      tavilyExtractDescription: 'Tavily Extract',
+      log: 'Log',
+      management: 'Management',
+      import: 'Import',
+      export: 'Export',
+      seconds: 'Seconds',
+      subject: 'Subject',
+      tag: 'Tag',
+      tagPlaceholder: 'Please enter tag',
+      descriptionPlaceholder: 'Please enter description',
+      line: 'Single-line text',
+      paragraph: 'Paragraph text',
+      options: 'Dropdown options',
+      file: 'File upload',
+      integer: 'Number',
+      boolean: 'Boolean',
+
+      logTimeline: {
+        begin: 'Ready to begin',
+        agent: 'Agent is thinking',
+        retrieval: 'Looking up knowledge',
+        message: 'Agent says',
+        awaitResponse: 'Waiting for you',
+        switch: 'Choosing the best path',
+        iteration: 'Batch processing',
+        categorize: 'Categorising info',
+        code: 'Running a quick script',
+        textProcessing: 'Tidying up text',
+        tavilySearch: 'Searching the web',
+        tavilyExtract: 'Reading the page',
+        exeSQL: 'Querying database',
+        google: 'Searching the web',
+        wikipedia: 'Searching Wikipedia',
+        googleScholar: 'Academic search',
+        gitHub: 'Searching GitHub',
+        email: 'Sending email',
+        httpRequest: 'Calling an API',
+        wenCai: 'Querying financial data',
+      },
+      goto: 'Fail Branch',
+      comment: 'Default Value',
     },
     llmTools: {
       bad_calculator: {
@@ -1297,6 +1354,18 @@ This delimiter is used to split the input text into several text pieces echo of 
           b: 'The second number',
         },
       },
+    },
+    modal: {
+      okText: 'Confirm',
+      cancelText: 'Cancel',
+    },
+    mcp: {
+      export: 'Export',
+      import: 'Import',
+      url: 'URL',
+      serverType: 'Server Type',
+      addMCP: 'Add MCP',
+      editMCP: 'Edit MCP',
     },
   },
 };

@@ -1,6 +1,7 @@
 import MessageItem from '@/components/message-item';
 import { MessageType } from '@/constants/chat';
 import { Flex, Spin } from 'antd';
+import { useRef } from 'react';
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
@@ -18,6 +19,7 @@ import {
   useFetchNextDialog,
   useGetChatSearchParams,
 } from '@/hooks/chat-hooks';
+import { useScrollToBottom } from '@/hooks/logic-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import { memo } from 'react';
@@ -32,6 +34,7 @@ const ChatContainer = ({ controller }: IProps) => {
   const { data: conversation } = useFetchNextConversation();
   const { data: currentDialog } = useFetchNextDialog();
 
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   const {
     value,
     ref,
@@ -44,6 +47,10 @@ const ChatContainer = ({ controller }: IProps) => {
     removeMessageById,
     stopOutputMessage,
   } = useSendNextMessage(controller);
+  const { scrollRef, isAtBottom, scrollToBottom } = useScrollToBottom(
+    derivedMessages,
+    messageContainerRef,
+  );
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
@@ -54,10 +61,20 @@ const ChatContainer = ({ controller }: IProps) => {
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
 
+  const handleSend = (msg) => {
+    // your send logic
+    setTimeout(scrollToBottom, 0);
+  };
+
   return (
     <>
       <Flex flex={1} className={styles.chatContainer} vertical>
-        <Flex flex={1} vertical className={styles.messageContainer}>
+        <Flex
+          flex={1}
+          vertical
+          className={styles.messageContainer}
+          ref={messageContainerRef}
+        >
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
@@ -90,7 +107,7 @@ const ChatContainer = ({ controller }: IProps) => {
               })}
             </Spin>
           </div>
-          <div ref={ref} />
+          <div ref={scrollRef} />
         </Flex>
         <MessageInput
           disabled={disabled}
