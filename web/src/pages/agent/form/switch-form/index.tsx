@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { t } from 'i18next';
 import { toLower } from 'lodash';
 import { X } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -28,6 +29,7 @@ import {
 } from '../../constant';
 import { useBuildQueryVariableOptions } from '../../hooks/use-get-begin-query';
 import { IOperatorForm } from '../../interface';
+import { FormWrapper } from '../components/form-wrapper';
 import { useValues } from './use-values';
 import { useWatchFormChange } from './use-watch-change';
 
@@ -58,7 +60,7 @@ export const LogicalOperatorIcon = function OperatorIcon({
   return icon;
 };
 
-function useBuildSwitchOperatorOptions() {
+export function useBuildSwitchOperatorOptions() {
   const { t } = useTranslation();
 
   const switchOperatorOptions = useMemo(() => {
@@ -132,7 +134,7 @@ function ConditionCards({
                 },
               )}
             >
-              <section className="p-2 bg-background-card flex justify-between items-center">
+              <section className="p-2 bg-bg-card flex justify-between items-center">
                 <FormField
                   control={form.control}
                   name={`${name}.${index}.cpn_id`}
@@ -142,7 +144,7 @@ function ConditionCards({
                         <SelectWithSearch
                           {...field}
                           options={finalOptions}
-                          triggerClassName="text-background-checked bg-transparent border-none truncate"
+                          triggerClassName="text-accent-primary bg-transparent border-none truncate"
                         ></SelectWithSearch>
                       </FormControl>
                       <FormMessage />
@@ -196,7 +198,7 @@ function ConditionCards({
           className="mt-6"
           onClick={() => append({ operator: switchOperatorOptions[0].value })}
         >
-          Add
+          {t('common.add')}
         </BlockButton>
       </div>
     </section>
@@ -249,12 +251,7 @@ function SwitchForm({ node }: IOperatorForm) {
 
   return (
     <Form {...form}>
-      <form
-        className="space-y-6 p-5 "
-        onSubmit={(e) => {
-          e.preventDefault();
-        }}
-      >
+      <FormWrapper>
         {fields.map((field, index) => {
           const name = `${ConditionKey}.${index}`;
           const conditions: Array<any> = form.getValues(`${name}.${ItemKey}`);
@@ -264,7 +261,7 @@ function SwitchForm({ node }: IOperatorForm) {
               <div className="flex justify-between items-center">
                 <section>
                   <span>{index === 0 ? 'IF' : 'ELSEIF'}</span>
-                  <div className="text-text-sub-title">Case {index + 1}</div>
+                  <div className="text-text-secondary">Case {index + 1}</div>
                 </section>
                 {index !== 0 && (
                   <Button
@@ -272,7 +269,7 @@ function SwitchForm({ node }: IOperatorForm) {
                     className="-translate-y-1"
                     onClick={() => remove(index)}
                   >
-                    Remove <X />
+                    {t('common.remove')} <X />
                   </Button>
                 )}
               </div>
@@ -321,9 +318,9 @@ function SwitchForm({ node }: IOperatorForm) {
             })
           }
         >
-          Add
+          {t('common.add')}
         </BlockButton>
-      </form>
+      </FormWrapper>
     </Form>
   );
 }

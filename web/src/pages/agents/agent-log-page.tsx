@@ -44,7 +44,7 @@ const getEndOfToday = (): Date => {
   return today;
 };
 const AgentLogPage: React.FC = () => {
-  const { navigateToAgentList, navigateToAgent } = useNavigatePage();
+  const { navigateToAgents, navigateToAgent } = useNavigatePage();
   const { flowDetail: agentDetail } = useFetchDataOnMount();
   const { id: canvasId } = useParams();
   const queryClient = useQueryClient();
@@ -210,9 +210,7 @@ const AgentLogPage: React.FC = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink onClick={navigateToAgentList}>
-                Agent
-              </BreadcrumbLink>
+              <BreadcrumbLink onClick={navigateToAgents}>Agent</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -231,7 +229,7 @@ const AgentLogPage: React.FC = () => {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold mb-4">Log</h1>
 
-          <div className="flex justify-end space-x-2 mb-4">
+          <div className="flex justify-end space-x-2 mb-4 text-foreground">
             <div className="flex items-center space-x-2">
               <span>ID/Title</span>
               <SearchInput

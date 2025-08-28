@@ -11,6 +11,7 @@ import { useSetModalState } from '@/hooks/common-hooks';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { useFetchAgentTemplates, useSetAgent } from '@/hooks/use-agent-request';
 import { IFlowTemplate } from '@/interfaces/database/flow';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CreateAgentDialog } from './create-agent-dialog';
@@ -18,7 +19,7 @@ import { TemplateCard } from './template-card';
 import { MenuItemKey, SideBar } from './template-sidebar';
 
 export default function AgentTemplates() {
-  const { navigateToAgentList } = useNavigatePage();
+  const { navigateToAgents } = useNavigatePage();
   const { t } = useTranslation();
   const list = useFetchAgentTemplates();
   const { loading, setAgent } = useSetAgent();
@@ -83,14 +84,15 @@ export default function AgentTemplates() {
           selectMenuItem?.toLocaleLowerCase() || index === 0,
     );
   }, [selectMenuItem, templateList]);
+
   return (
     <section>
       <PageHeader>
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink onClick={navigateToAgentList}>
-                Agent
+              <BreadcrumbLink onClick={navigateToAgents}>
+                {t('flow.agent')}
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />

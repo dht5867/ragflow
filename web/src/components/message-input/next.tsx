@@ -14,6 +14,7 @@ import {
 } from '@/components/file-upload';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { CircleStop, Paperclip, Send, Upload, X } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ interface IProps {
   createConversationBeforeUploadDocument?(message: string): Promise<any>;
   stopOutputMessage?(): void;
   onUpload?: NonNullable<FileUploadProps['onUpload']>;
+  removeFile?(file: File): void;
 }
 
 export function NextMessageInput({
@@ -46,6 +48,7 @@ export function NextMessageInput({
   onInputChange,
   stopOutputMessage,
   onPressEnter,
+  removeFile,
 }: IProps) {
   const [files, setFiles] = React.useState<File[]>([]);
 
@@ -74,6 +77,13 @@ export function NextMessageInput({
       submit();
     },
     [submit],
+  );
+
+  const handleRemoveFile = React.useCallback(
+    (file: File) => () => {
+      removeFile?.(file);
+    },
+    [removeFile],
   );
 
   return (
@@ -120,6 +130,7 @@ export function NextMessageInput({
                   variant="secondary"
                   size="icon"
                   className="-top-1 -right-1 absolute size-4 shrink-0 cursor-pointer rounded-full"
+                  onClick={handleRemoveFile(file)}
                 >
                   <X className="size-2.5" />
                 </Button>
@@ -135,7 +146,11 @@ export function NextMessageInput({
           disabled={isUploading || disabled || sendLoading}
           onKeyDown={handleKeyDown}
         />
-        <div className="flex items-center justify-between gap-1.5">
+        <div
+          className={cn('flex items-center justify-between gap-1.5', {
+            'justify-end': !showUploadIcon,
+          })}
+        >
           {showUploadIcon && (
             <FileUploadTrigger asChild>
               <Button

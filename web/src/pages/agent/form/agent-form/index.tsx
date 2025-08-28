@@ -15,6 +15,7 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { Input, NumberInput } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { LlmModelType } from '@/constants/knowledge';
 import { useFindLlmByUuid } from '@/hooks/use-llm-request';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -71,6 +72,7 @@ const FormSchema = z.object({
   exception_goto: z.array(z.string()).optional(),
   exception_default_value: z.string().optional(),
   ...LargeModelFilterFormSchema,
+  cite: z.boolean().optional(),
 });
 
 const outputList = buildOutputList(initialAgentValues.outputs);
@@ -126,7 +128,7 @@ function AgentForm({ node }: INextOperatorForm) {
       <FormWrapper>
         <FormContainer>
           {isSubAgent && <DescriptionField></DescriptionField>}
-          <LargeModelFormField></LargeModelFormField>
+          <LargeModelFormField showSpeech2TextModel></LargeModelFormField>
           {findLlmByUuid(llmId)?.model_type === LlmModelType.Image2text && (
             <QueryVariable
               name="visual_files_var"
@@ -142,7 +144,7 @@ function AgentForm({ node }: INextOperatorForm) {
             name={`sys_prompt`}
             render={({ field }) => (
               <FormItem className="flex-1">
-                <FormLabel>System Prompt</FormLabel>
+                <FormLabel>{t('flow.systemPrompt')}</FormLabel>
                 <FormControl>
                   <PromptEditor
                     {...field}
@@ -162,7 +164,7 @@ function AgentForm({ node }: INextOperatorForm) {
               name={`prompts`}
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>User Prompt</FormLabel>
+                  <FormLabel>{t('flow.userPrompt')}</FormLabel>
                   <FormControl>
                     <section>
                       <PromptEditor
@@ -181,15 +183,32 @@ function AgentForm({ node }: INextOperatorForm) {
           <AgentTools></AgentTools>
           <Agents node={node}></Agents>
         </FormContainer>
-        <Collapse title={<div>Advanced Settings</div>}>
+        <Collapse title={<div>{t('flow.advancedSettings')}</div>}>
           <FormContainer>
             <MessageHistoryWindowSizeFormField></MessageHistoryWindowSizeFormField>
+            <FormField
+              control={form.control}
+              name={`cite`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel tooltip={t('flow.citeTip')}>
+                    {t('flow.cite')}
+                  </FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    ></Switch>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name={`max_retries`}
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Max retries</FormLabel>
+                  <FormLabel>{t('flow.maxRetries')}</FormLabel>
                   <FormControl>
                     <NumberInput {...field} max={8}></NumberInput>
                   </FormControl>
@@ -201,7 +220,7 @@ function AgentForm({ node }: INextOperatorForm) {
               name={`delay_after_error`}
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Delay after error</FormLabel>
+                  <FormLabel>{t('flow.delayEfterError')}</FormLabel>
                   <FormControl>
                     <NumberInput {...field} max={5} step={0.1}></NumberInput>
                   </FormControl>
@@ -213,7 +232,7 @@ function AgentForm({ node }: INextOperatorForm) {
               name={`max_rounds`}
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Max rounds</FormLabel>
+                  <FormLabel>{t('flow.maxRounds')}</FormLabel>
                   <FormControl>
                     <NumberInput {...field}></NumberInput>
                   </FormControl>
@@ -225,7 +244,7 @@ function AgentForm({ node }: INextOperatorForm) {
               name={`exception_method`}
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Exception method</FormLabel>
+                  <FormLabel>{t('flow.exceptionMethod')}</FormLabel>
                   <FormControl>
                     <SelectWithSearch
                       {...field}
@@ -242,7 +261,7 @@ function AgentForm({ node }: INextOperatorForm) {
                 name={`exception_default_value`}
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Exception default value</FormLabel>
+                    <FormLabel>{t('flow.ExceptionDefaultValue')}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>

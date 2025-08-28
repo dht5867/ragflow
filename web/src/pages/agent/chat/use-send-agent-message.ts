@@ -188,22 +188,20 @@ export const useSendAgentMessage = (
     return answerList[0]?.message_id;
   }, [answerList]);
 
-  useEffect(() => {
-    if (answerList[0]?.session_id) {
-      setSessionId(answerList[0]?.session_id);
-    }
-  }, [answerList]);
+  // const { refetch } = useFetchAgent();
 
   const { findReferenceByMessageId } = useFindMessageReference(answerList);
   const prologue = useGetBeginNodePrologue();
   const {
     derivedMessages,
-    ref,
+    scrollRef,
+    messageContainerRef,
     removeLatestMessage,
     removeMessageById,
     addNewestOneQuestion,
     addNewestOneAnswer,
     removeAllMessages,
+    scrollToBottom,
   } = useSelectDerivedMessages();
   const { addEventList: addEventListFun } = useContext(AgentChatLogContext);
   const {
@@ -256,28 +254,29 @@ export const useSendAgentMessage = (
     },
     [
       agentId,
-      sessionId,
-      send,
-      clearUploadResponseList,
       inputs,
       beginParams,
       uploadResponseList,
+      sessionId,
+      send,
+      clearUploadResponseList,
       setValue,
       removeLatestMessage,
     ],
   );
 
   const sendFormMessage = useCallback(
-    (body: { id?: string; inputs: Record<string, BeginQuery> }) => {
-      send(body);
+    async (body: { id?: string; inputs: Record<string, BeginQuery> }) => {
       addNewestOneQuestion({
         content: Object.entries(body.inputs)
           .map(([key, val]) => `${key}: ${val.value}`)
           .join('<br/>'),
         role: MessageType.User,
       });
+      await send({ ...body, session_id: sessionId });
+      // refetch();
     },
-    [addNewestOneQuestion, send],
+    [addNewestOneQuestion, send, sessionId],
   );
 
   // reset session
@@ -303,7 +302,18 @@ export const useSendAgentMessage = (
       });
     }
     addNewestOneQuestion({ ...msgBody, files: fileList });
-  }, [value, done, addNewestOneQuestion, fileList, setValue, sendMessage]);
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, [
+    value,
+    done,
+    addNewestOneQuestion,
+    fileList,
+    setValue,
+    sendMessage,
+    scrollToBottom,
+  ]);
 
   useEffect(() => {
     const { content, id } = findMessageFromList(answerList);
@@ -333,11 +343,18 @@ export const useSendAgentMessage = (
     }
   }, [addEventList, answerList, addEventListFun, messageId]);
 
+  useEffect(() => {
+    if (answerList[0]?.session_id) {
+      setSessionId(answerList[0]?.session_id);
+    }
+  }, [answerList]);
+
   return {
     value,
     sendLoading: !done,
     derivedMessages,
-    ref,
+    scrollRef,
+    messageContainerRef,
     handlePressEnter,
     handleInputChange,
     removeMessageById,
@@ -347,5 +364,6 @@ export const useSendAgentMessage = (
     resetSession,
     findReferenceByMessageId,
     appendUploadResponseList,
+    addNewestOneAnswer,
   };
 };

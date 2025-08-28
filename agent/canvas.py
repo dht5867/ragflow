@@ -131,7 +131,16 @@ class Canvas:
 
         self.path = self.dsl["path"]
         self.history = self.dsl["history"]
-        self.globals = self.dsl["globals"]
+        if "globals" in self.dsl:
+            self.globals = self.dsl["globals"]
+        else:
+            self.globals = {
+            "sys.query": "",
+            "sys.user_id": "",
+            "sys.conversation_turns": 0,
+            "sys.files": []
+        }
+            
         self.retrieval = self.dsl["retrieval"]
         self.memory = self.dsl.get("memory", [])
 
@@ -199,6 +208,8 @@ class Canvas:
         self.message_id = get_uuid()
         created_at = int(time.time())
         self.add_user_input(kwargs.get("query"))
+        for k, cpn in self.components.items():
+            self.components[k]["obj"].reset(True)
 
         for k in kwargs.keys():
             if k in ["query", "user_id", "files"] and kwargs[k]:
@@ -417,7 +428,7 @@ class Canvas:
         convs = []
         if window_size <= 0:
             return convs
-        for role, obj in self.history[window_size * -1:]:
+        for role, obj in self.history[window_size * -2:]:
             if isinstance(obj, dict):
                 convs.append({"role": role, "content": obj.get("content", "")})
             else:
@@ -460,6 +471,9 @@ class Canvas:
     def get_prologue(self):
         return self.components["begin"]["obj"]._param.prologue
 
+    def get_mode(self):
+        return self.components["begin"]["obj"]._param.mode
+
     def set_global_param(self, **kwargs):
         self.globals.update(kwargs)
 
@@ -484,7 +498,7 @@ class Canvas:
             threads.append(exe.submit(FileService.parse, file["name"], FileService.get_blob(file["created_by"], file["id"]), True, file["created_by"]))
         return [th.result() for th in threads]
 
-    def tool_use_callback(self, agent_id: str, func_name: str, params: dict, result: Any):
+    def tool_use_callback(self, agent_id: str, func_name: str, params: dict, result: Any, elapsed_time=None):
         agent_ids = agent_id.split("-->")
         agent_name = self.get_component_name(agent_ids[0])
         path = agent_name if len(agent_ids) < 2 else agent_name+"-->"+"-->".join(agent_ids[1:])
@@ -493,16 +507,16 @@ class Canvas:
             if bin:
                 obj = json.loads(bin.encode("utf-8"))
                 if obj[-1]["component_id"] == agent_ids[0]:
-                    obj[-1]["trace"].append({"path": path, "tool_name": func_name, "arguments": params, "result": result})
+                    obj[-1]["trace"].append({"path": path, "tool_name": func_name, "arguments": params, "result": result, "elapsed_time": elapsed_time})
                 else:
                     obj.append({
                     "component_id": agent_ids[0],
-                    "trace": [{"path": path, "tool_name": func_name, "arguments": params, "result": result}]
+                    "trace": [{"path": path, "tool_name": func_name, "arguments": params, "result": result, "elapsed_time": elapsed_time}]
                 })
             else:
                 obj = [{
                     "component_id": agent_ids[0],
-                    "trace": [{"path": path, "tool_name": func_name, "arguments": params, "result": result}]
+                    "trace": [{"path": path, "tool_name": func_name, "arguments": params, "result": result, "elapsed_time": elapsed_time}]
                 }]
             REDIS_CONN.set_obj(f"{self.task_id}-{self.message_id}-logs", obj, 60*10)
         except Exception as e:
