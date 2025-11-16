@@ -78,7 +78,7 @@ class ExeSQL(Generate, ABC):
         ans = self.get_input()
         ans = "".join([str(a) for a in ans["content"]]) if "content" in ans else ""
         ans = self._refactor(ans)
-        logging.info("db_type: ",self._param.db_type)
+        logging.info(f"db_type: {self._param.db_type}")
         if self._param.db_type in ["mysql", "mariadb"]:
             db = pymysql.connect(db=self._param.database, user=self._param.username, host=self._param.host,
                                  port=self._param.port, password=self._param.password)
@@ -102,6 +102,7 @@ class ExeSQL(Generate, ABC):
             setattr(self, "_loop", 0)
             self._loop += 1
         input_list=re.split(r';', ans.replace(r"\n", " "))
+        logging.info(f"input_list: {input_list}")
         sql_res = []
         for i in range(len(input_list)):
             single_sql=input_list[i]
@@ -110,7 +111,7 @@ class ExeSQL(Generate, ABC):
                 if not single_sql:
                     break
                 try:
-                    logging.info("single_sql: ", single_sql)
+                    logging.info(f"single_sql: {single_sql}")
                     cursor.execute(single_sql)
                     if cursor.rowcount == 0:
                         sql_res.append({"content": "No record in the database!"})
