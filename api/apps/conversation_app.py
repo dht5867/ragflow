@@ -257,7 +257,7 @@ def completion():
             conv.reference = []
         conv.reference.append({"chunks": [], "doc_aggs": []})
         def stream():
-            nonlocal dia, msg, req, conv
+            nonlocal dia, msg, req, conv,message_id
             try:
                 if selectedSkill=='知识库' or selectedSkill=='KNOWLEDGE' or selectedSkill=='知識庫':
                     for ans in chat(dia, msg, True, **req):

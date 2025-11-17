@@ -98,6 +98,7 @@ const ChatContainer = ({ controller }: IProps) => {
                         },
                         message,
                       )}
+                      
                       clickDocumentButton={clickDocumentButton}
                       index={i}
                       removeMessageById={removeMessageById}
