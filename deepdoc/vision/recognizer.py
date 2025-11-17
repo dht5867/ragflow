@@ -19,18 +19,16 @@ import os
 import math
 import numpy as np
 import cv2
-from copy import deepcopy
+from functools import cmp_to_key
 
-import onnxruntime as ort
-from huggingface_hub import snapshot_download
 
 from api.utils.file_utils import get_project_base_directory
 from .operators import *  # noqa: F403
 from .operators import preprocess
 from . import operators
+from .ocr import load_model
 
-
-class Recognizer(object):
+class Recognizer:
     def __init__(self, label_list, task_name, model_dir=None):
         """
         If you have trouble downloading HuggingFace models, -_^ this might help!!
@@ -47,82 +45,30 @@ class Recognizer(object):
             model_dir = os.path.join(
                         get_project_base_directory(),
                         "rag/res/deepdoc")
-            model_file_path = os.path.join(model_dir, task_name + ".onnx")
-            if not os.path.exists(model_file_path):
-                model_dir = snapshot_download(repo_id="InfiniFlow/deepdoc",
-                                              local_dir=os.path.join(get_project_base_directory(), "rag/res/deepdoc"),
-                                              local_dir_use_symlinks=False)
-                model_file_path = os.path.join(model_dir, task_name + ".onnx")
-        else:
-            model_file_path = os.path.join(model_dir, task_name + ".onnx")
-
-        if not os.path.exists(model_file_path):
-            raise ValueError("not find model file path {}".format(
-                model_file_path))
-
-        def cuda_is_available():
-            try:
-                import torch
-                if torch.cuda.is_available():
-                    return True
-            except Exception:
-                return False
-            return False
-
-        # https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
-        # Shrink GPU memory after execution
-        self.run_options = ort.RunOptions()
-
-        if cuda_is_available():
-            options = ort.SessionOptions()
-            options.enable_cpu_mem_arena = False
-            cuda_provider_options = {
-                "device_id": 0, # Use specific GPU
-                "gpu_mem_limit": 512 * 1024 * 1024, # Limit gpu memory
-                "arena_extend_strategy": "kNextPowerOfTwo",  # gpu memory allocation strategy
-            }
-            self.ort_sess = ort.InferenceSession(
-                model_file_path, options=options,
-                providers=['CUDAExecutionProvider'],
-                provider_options=[cuda_provider_options]
-            )
-            self.run_options.add_run_config_entry("memory.enable_memory_arena_shrinkage", "gpu:0")
-            logging.info(f"Recognizer {task_name} uses GPU")
-        else:
-            self.ort_sess = ort.InferenceSession(model_file_path, providers=['CPUExecutionProvider'])
-            self.run_options.add_run_config_entry("memory.enable_memory_arena_shrinkage", "cpu")
-            logging.info(f"Recognizer {task_name} uses CPU")
+        self.ort_sess, self.run_options = load_model(model_dir, task_name)
         self.input_names = [node.name for node in self.ort_sess.get_inputs()]
         self.output_names = [node.name for node in self.ort_sess.get_outputs()]
         self.input_shape = self.ort_sess.get_inputs()[0].shape[2:4]
         self.label_list = label_list
 
     @staticmethod
-    def sort_Y_firstly(arr, threashold):
-        # sort using y1 first and then x1
-        arr = sorted(arr, key=lambda r: (r["top"], r["x0"]))
-        for i in range(len(arr) - 1):
-            for j in range(i, -1, -1):
-                # restore the order using th
-                if abs(arr[j + 1]["top"] - arr[j]["top"]) < threashold \
-                        and arr[j + 1]["x0"] < arr[j]["x0"]:
-                    tmp = deepcopy(arr[j])
-                    arr[j] = deepcopy(arr[j + 1])
-                    arr[j + 1] = deepcopy(tmp)
+    def sort_Y_firstly(arr, threshold):
+        def cmp(c1, c2):
+            diff = c1["top"] - c2["top"]
+            if abs(diff) < threshold:
+                diff = c1["x0"] - c2["x0"]
+            return diff
+        arr = sorted(arr, key=cmp_to_key(cmp))
         return arr
 
     @staticmethod
-    def sort_X_firstly(arr, threashold, copy=True):
-        # sort using y1 first and then x1
-        arr = sorted(arr, key=lambda r: (r["x0"], r["top"]))
-        for i in range(len(arr) - 1):
-            for j in range(i, -1, -1):
-                # restore the order using th
-                if abs(arr[j + 1]["x0"] - arr[j]["x0"]) < threashold \
-                        and arr[j + 1]["top"] < arr[j]["top"]:
-                    tmp = deepcopy(arr[j]) if copy else arr[j]
-                    arr[j] = deepcopy(arr[j + 1]) if copy else arr[j + 1]
-                    arr[j + 1] = deepcopy(tmp) if copy else tmp
+    def sort_X_firstly(arr, threshold):
+        def cmp(c1, c2):
+            diff = c1["x0"] - c2["x0"]
+            if abs(diff) < threshold:
+                diff = c1["top"] - c2["top"]
+            return diff
+        arr = sorted(arr, key=cmp_to_key(cmp))
         return arr
 
     @staticmethod
@@ -144,8 +90,6 @@ class Recognizer(object):
                     arr[j] = arr[j + 1]
                     arr[j + 1] = tmp
         return arr
-
-        return sorted(arr, key=lambda r: (r.get("C", r["x0"]), r["top"]))
 
     @staticmethod
     def sort_R_firstly(arr, thr=0):
@@ -189,7 +133,7 @@ class Recognizer(object):
 
     @staticmethod
     def layouts_cleanup(boxes, layouts, far=2, thr=0.7):
-        def notOverlapped(a, b):
+        def not_overlapped(a, b):
             return any([a["x1"] < b["x0"],
                         a["x0"] > b["x1"],
                         a["bottom"] < b["top"],
@@ -200,7 +144,7 @@ class Recognizer(object):
             j = i + 1
             while j < min(i + far, len(layouts)) \
                     and (layouts[i].get("type", "") != layouts[j].get("type", "")
-                         or notOverlapped(layouts[i], layouts[j])):
+                         or not_overlapped(layouts[i], layouts[j])):
                 j += 1
             if j >= min(i + far, len(layouts)):
                 i += 1
@@ -219,9 +163,9 @@ class Recognizer(object):
 
             area_i, area_i_1 = 0, 0
             for b in boxes:
-                if not notOverlapped(b, layouts[i]):
+                if not not_overlapped(b, layouts[i]):
                     area_i += Recognizer.overlapped_area(b, layouts[i], False)
-                if not notOverlapped(b, layouts[j]):
+                if not not_overlapped(b, layouts[j]):
                     area_i_1 += Recognizer.overlapped_area(b, layouts[j], False)
 
             if area_i > area_i_1:
@@ -250,10 +194,9 @@ class Recognizer(object):
             inputs['scale_factor'] = np.array(
                 (im_info[0]['scale_factor'],)).astype('float32')
             return inputs
-
-        for e in im_info:
-            im_shape.append(np.array((e['im_shape'],)).astype('float32'))
-            scale_factor.append(np.array((e['scale_factor'],)).astype('float32'))
+        
+        im_shape = np.array([info['im_shape'] for info in im_info], dtype='float32')
+        scale_factor = np.array([info['scale_factor'] for info in im_info], dtype='float32')
 
         inputs['im_shape'] = np.concatenate(im_shape, axis=0)
         inputs['scale_factor'] = np.concatenate(scale_factor, axis=0)
@@ -296,15 +239,15 @@ class Recognizer(object):
                 e -= 1
             break
 
-        max_overlaped_i, max_overlaped = None, 0
+        max_overlapped_i, max_overlapped = None, 0
         for i in range(s, e):
             ov = Recognizer.overlapped_area(bxs[i], box)
-            if ov <= max_overlaped:
+            if ov <= max_overlapped:
                 continue
-            max_overlaped_i = i
-            max_overlaped = ov
+            max_overlapped_i = i
+            max_overlapped = ov
 
-        return max_overlaped_i
+        return max_overlapped_i
 
     @staticmethod
     def find_horizontally_tightest_fit(box, boxes):
@@ -321,7 +264,7 @@ class Recognizer(object):
         return min_i
 
     @staticmethod
-    def find_overlapped_with_threashold(box, boxes, thr=0.3):
+    def find_overlapped_with_threshold(box, boxes, thr=0.3):
         if not boxes:
             return
         max_overlapped_i, max_overlapped, _max_overlapped = None, thr, 0
@@ -465,18 +408,18 @@ class Recognizer(object):
 
     def __call__(self, image_list, thr=0.7, batch_size=16):
         res = []
-        imgs = []
+        images = []
         for i in range(len(image_list)):
             if not isinstance(image_list[i], np.ndarray):
-                imgs.append(np.array(image_list[i]))
+                images.append(np.array(image_list[i]))
             else:
-                imgs.append(image_list[i])
+                images.append(image_list[i])
 
-        batch_loop_cnt = math.ceil(float(len(imgs)) / batch_size)
+        batch_loop_cnt = math.ceil(float(len(images)) / batch_size)
         for i in range(batch_loop_cnt):
             start_index = i * batch_size
-            end_index = min((i + 1) * batch_size, len(imgs))
-            batch_image_list = imgs[start_index:end_index]
+            end_index = min((i + 1) * batch_size, len(images))
+            batch_image_list = images[start_index:end_index]
             inputs = self.preprocess(batch_image_list)
             logging.debug("preprocess")
             for ins in inputs:

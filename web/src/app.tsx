@@ -1,8 +1,11 @@
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { Toaster } from '@/components/ui/toaster';
 import i18n from '@/locales/config';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { App, ConfigProvider, ConfigProviderProps, theme } from 'antd';
 import pt_BR from 'antd/lib/locale/pt_BR';
+import deDE from 'antd/locale/de_DE';
 import enUS from 'antd/locale/en_US';
 import vi_VN from 'antd/locale/vi_VN';
 import zhCN from 'antd/locale/zh_CN';
@@ -16,6 +19,7 @@ import weekYear from 'dayjs/plugin/weekYear';
 import weekday from 'dayjs/plugin/weekday';
 import React, { ReactNode, useEffect, useState } from 'react';
 import { ThemeProvider, useTheme } from './components/theme-provider';
+import { SidebarProvider } from './components/ui/sidebar';
 import { TooltipProvider } from './components/ui/tooltip';
 import storage from './utils/authorization-util';
 
@@ -32,7 +36,17 @@ const AntLanguageMap = {
   'zh-TRADITIONAL': zh_HK,
   vi: vi_VN,
   'pt-BR': pt_BR,
+  de: deDE,
 };
+
+if (process.env.NODE_ENV === 'development') {
+  const whyDidYouRender = require('@welldone-software/why-did-you-render');
+  whyDidYouRender(React, {
+    trackAllPureComponents: true,
+    trackExtraHooks: [],
+    logOnDifferentValues: true,
+  });
+}
 
 const queryClient = new QueryClient();
 
@@ -64,7 +78,11 @@ function Root({ children }: React.PropsWithChildren) {
         }}
         locale={locale}
       >
-        <App> {children}</App>
+        <SidebarProvider>
+          <App>{children}</App>
+        </SidebarProvider>
+        <Sonner position={'top-right'} expand richColors closeButton></Sonner>
+        <Toaster />
       </ConfigProvider>
       <ReactQueryDevtools buttonPosition={'bottom-left'} />
     </>

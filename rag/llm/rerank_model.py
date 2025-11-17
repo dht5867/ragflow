@@ -15,6 +15,7 @@
 #
 import re
 import threading
+from collections.abc import Iterable
 from urllib.parse import urljoin
 
 import requests
@@ -27,6 +28,7 @@ from yarl import URL
 
 from api import settings
 from api.utils.file_utils import get_home_cache_dir
+from api.utils.log_utils import log_exception
 from rag.utils import num_tokens_from_string, truncate
 import json
 
@@ -86,6 +88,58 @@ class DefaultRerank(Base):
                                                       local_dir_use_symlinks=False)
                         DefaultRerank._model = FlagReranker(model_dir, use_fp16=torch.cuda.is_available())
         self._model = DefaultRerank._model
+        self._dynamic_batch_size = 8
+        self._min_batch_size = 1
+
+    def torch_empty_cache(self):
+        try:
+            import torch
+            torch.cuda.empty_cache()
+        except Exception as e:
+            print(f"Error emptying cache: {e}")
+
+    def _process_batch(self, pairs, max_batch_size=None):
+        """template method for subclass call"""
+        old_dynamic_batch_size = self._dynamic_batch_size
+        if max_batch_size is not None:
+            self._dynamic_batch_size = max_batch_size
+        res = []
+        i = 0
+        while i < len(pairs):
+            current_batch = self._dynamic_batch_size
+            max_retries = 5
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    # call subclass implemented batch processing calculation
+                    batch_scores = self._compute_batch_scores(pairs[i:i + current_batch])
+                    res.extend(batch_scores)
+                    i += current_batch
+                    self._dynamic_batch_size = min(self._dynamic_batch_size * 2, 8)
+                    break
+                except RuntimeError as e:
+                    if "CUDA out of memory" in str(e) and current_batch > self._min_batch_size:
+                        current_batch = max(current_batch // 2, self._min_batch_size)
+                        self.torch_empty_cache()
+                        retry_count += 1
+                    else:
+                        raise
+            if retry_count >= max_retries:
+                raise RuntimeError("max retry times, still cannot process batch, please check your GPU memory")
+            self.torch_empty_cache()
+
+        self._dynamic_batch_size = old_dynamic_batch_size
+        return np.array(res)
+
+    def _compute_batch_scores(self, batch_pairs, max_length=None):
+        if max_length is None:
+            scores = self._model.compute_score(batch_pairs)
+        else:
+            scores = self._model.compute_score(batch_pairs, max_length=max_length)
+        scores = sigmoid(np.array(scores)).tolist()
+        if not isinstance(scores, Iterable):
+            scores = [scores]
+        return scores
 
     def similarity(self, query: str, texts: list):
         pairs = [(query, truncate(t, 2048)) for t in texts]
@@ -93,14 +147,7 @@ class DefaultRerank(Base):
         for _, t in pairs:
             token_count += num_tokens_from_string(t)
         batch_size = 4096
-        res = []
-        for i in range(0, len(pairs), batch_size):
-            scores = self._model.compute_score(pairs[i:i + batch_size], max_length=2048)
-            scores = sigmoid(np.array(scores)).tolist()
-            if isinstance(scores, float):
-                res.append(scores)
-            else:
-                res.extend(scores)
+        res = self._process_batch(pairs, max_batch_size=batch_size)
         return np.array(res), token_count
 
 
@@ -124,8 +171,11 @@ class JinaRerank(Base):
         }
         res = requests.post(self.base_url, headers=self.headers, json=data).json()
         rank = np.zeros(len(texts), dtype=float)
-        for d in res["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in res["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, self.total_token_count(res)
 
 
@@ -148,6 +198,8 @@ class YoudaoRerank(DefaultRerank):
                                 "maidalun1020", "InfiniFlow"))
 
         self._model = YoudaoRerank._model
+        self._dynamic_batch_size = 8
+        self._min_batch_size = 1
 
     def similarity(self, query: str, texts: list):
         pairs = [(query, truncate(t, self._model.max_length)) for t in texts]
@@ -155,19 +207,12 @@ class YoudaoRerank(DefaultRerank):
         for _, t in pairs:
             token_count += num_tokens_from_string(t)
         batch_size = 8
-        res = []
-        for i in range(0, len(pairs), batch_size):
-            scores = self._model.compute_score(pairs[i:i + batch_size], max_length=self._model.max_length)
-            scores = sigmoid(np.array(scores)).tolist()
-            if isinstance(scores, float):
-                res.append(scores)
-            else:
-                res.extend(scores)
+        res = self._process_batch(pairs, max_batch_size=batch_size)
         return np.array(res), token_count
 
 
 class XInferenceRerank(Base):
-    def __init__(self, key="xxxxxxx", model_name="", base_url=""):
+    def __init__(self, key="x", model_name="", base_url=""):
         if base_url.find("/v1") == -1:
             base_url = urljoin(base_url, "/v1/rerank")
         if base_url.find("/rerank") == -1:
@@ -176,9 +221,10 @@ class XInferenceRerank(Base):
         self.base_url = base_url
         self.headers = {
             "Content-Type": "application/json",
-            "accept": "application/json",
-            "Authorization": f"Bearer {key}"
+            "accept": "application/json"
         }
+        if key and key != "x":
+            self.headers["Authorization"] = f"Bearer {key}"
 
     def similarity(self, query: str, texts: list):
         if len(texts) == 0:
@@ -196,8 +242,11 @@ class XInferenceRerank(Base):
         }
         res = requests.post(self.base_url, headers=self.headers, json=data).json()
         rank = np.zeros(len(texts), dtype=float)
-        for d in res["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in res["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, token_count
 
 
@@ -227,10 +276,11 @@ class LocalAIRerank(Base):
             token_count += num_tokens_from_string(t)
         res = requests.post(self.base_url, headers=self.headers, json=data).json()
         rank = np.zeros(len(texts), dtype=float)
-        if 'results' not in res:
-            raise ValueError("response not contains results\n" + str(res))
-        for d in res["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in res["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, res)
 
         # Normalize the rank values to the range 0 to 1
         min_rank = np.min(rank)
@@ -244,6 +294,7 @@ class LocalAIRerank(Base):
 
         return rank, token_count
 
+
 class NvidiaRerank(Base):
     def __init__(
             self, key, model_name, base_url="https://ai.api.nvidia.com/v1/retrieval/nvidia/"
@@ -253,12 +304,11 @@ class NvidiaRerank(Base):
         self.model_name = model_name
 
         if self.model_name == "nvidia/nv-rerankqa-mistral-4b-v3":
-            self.base_url = os.path.join(
-                base_url, "nv-rerankqa-mistral-4b-v3", "reranking"
+            self.base_url = urljoin(base_url, "nv-rerankqa-mistral-4b-v3/reranking"
             )
 
         if self.model_name == "nvidia/rerank-qa-mistral-4b":
-            self.base_url = os.path.join(base_url, "reranking")
+            self.base_url = urljoin(base_url, "reranking")
             self.model_name = "nv-rerank-qa-mistral-4b:1"
 
         self.headers = {
@@ -280,8 +330,11 @@ class NvidiaRerank(Base):
         }
         res = requests.post(self.base_url, headers=self.headers, json=data).json()
         rank = np.zeros(len(texts), dtype=float)
-        for d in res["rankings"]:
-            rank[d["index"]] = d["logit"]
+        try:
+            for d in res["rankings"]:
+                rank[d["index"]] = d["logit"]
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, token_count
 
 
@@ -319,10 +372,11 @@ class OpenAI_APIRerank(Base):
             token_count += num_tokens_from_string(t)
         res = requests.post(self.base_url, headers=self.headers, json=data).json()
         rank = np.zeros(len(texts), dtype=float)
-        if 'results' not in res:
-            raise ValueError("response not contains results\n" + str(res))
-        for d in res["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in res["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, res)
 
         # Normalize the rank values to the range 0 to 1
         min_rank = np.min(rank)
@@ -341,8 +395,8 @@ class CoHereRerank(Base):
     def __init__(self, key, model_name, base_url=None):
         from cohere import Client
 
-        self.client = Client(api_key=key)
-        self.model_name = model_name
+        self.client = Client(api_key=key, base_url=base_url)
+        self.model_name = model_name.split("___")[0]
 
     def similarity(self, query: str, texts: list):
         token_count = num_tokens_from_string(query) + sum(
@@ -356,8 +410,11 @@ class CoHereRerank(Base):
             return_documents=False,
         )
         rank = np.zeros(len(texts), dtype=float)
-        for d in res.results:
-            rank[d.index] = d.relevance_score
+        try:
+            for d in res.results:
+                rank[d.index] = d.relevance_score
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, token_count
 
 
@@ -397,11 +454,11 @@ class SILICONFLOWRerank(Base):
             self.base_url, json=payload, headers=self.headers
         ).json()
         rank = np.zeros(len(texts), dtype=float)
-        if "results" not in response:
-            return rank, 0
-
-        for d in response["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in response["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, response)
         return (
             rank,
             response["meta"]["tokens"]["input_tokens"] + response["meta"]["tokens"]["output_tokens"],
@@ -426,8 +483,11 @@ class BaiduYiyanRerank(Base):
             top_n=len(texts),
         ).body
         rank = np.zeros(len(texts), dtype=float)
-        for d in res["results"]:
-            rank[d["index"]] = d["relevance_score"]
+        try:
+            for d in res["results"]:
+                rank[d["index"]] = d["relevance_score"]
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, self.total_token_count(res)
 
 
@@ -445,8 +505,11 @@ class VoyageRerank(Base):
         res = self.client.rerank(
             query=query, documents=texts, model=self.model_name, top_k=len(texts)
         )
-        for r in res.results:
-            rank[r.index] = r.relevance_score
+        try:
+            for r in res.results:
+                rank[r.index] = r.relevance_score
+        except Exception as _e:
+            log_exception(_e, res)
         return rank, res.total_tokens
 
 
@@ -469,11 +532,49 @@ class QWenRerank(Base):
         )
         rank = np.zeros(len(texts), dtype=float)
         if resp.status_code == HTTPStatus.OK:
-            for r in resp.output.results:
-                rank[r.index] = r.relevance_score
+            try:
+                for r in resp.output.results:
+                    rank[r.index] = r.relevance_score
+            except Exception as _e:
+                log_exception(_e, resp)
             return rank, resp.usage.total_tokens
         else:
             raise ValueError(f"Error calling QWenRerank model {self.model_name}: {resp.status_code} - {resp.text}")
+
+
+class HuggingfaceRerank(DefaultRerank):
+    @staticmethod
+    def post(query: str, texts: list, url="127.0.0.1"):
+        exc = None
+        scores = [0 for _ in range(len(texts))]
+        batch_size = 8
+        for i in range(0, len(texts), batch_size):
+            try:
+                res = requests.post(f"http://{url}/rerank", headers={"Content-Type": "application/json"},
+                                    json={"query": query, "texts": texts[i: i + batch_size],
+                                          "raw_scores": False, "truncate": True})
+
+                for o in res.json():
+                    scores[o["index"] + i] = o["score"]
+            except Exception as e:
+                exc = e
+
+        if exc:
+            raise exc
+        return np.array(scores)
+
+    def __init__(self, key, model_name="BAAI/bge-reranker-v2-m3", base_url="http://127.0.0.1"):
+        self.model_name = model_name.split("___")[0]
+        self.base_url = base_url
+
+    def similarity(self, query: str, texts: list) -> tuple[np.ndarray, int]:
+        if not texts:
+            return np.array([]), 0
+        token_count = 0
+        for t in texts:
+            token_count += num_tokens_from_string(t)
+        return HuggingfaceRerank.post(query, texts, self.base_url), token_count
+
 
 class GPUStackRerank(Base):
     def __init__(
@@ -483,7 +584,7 @@ class GPUStackRerank(Base):
             raise ValueError("url cannot be None")
 
         self.model_name = model_name
-        self.base_url = str(URL(base_url)/ "v1" / "rerank")
+        self.base_url = str(URL(base_url) / "v1" / "rerank")
         self.headers = {
             "accept": "application/json",
             "content-type": "application/json",
@@ -506,15 +607,15 @@ class GPUStackRerank(Base):
             response_json = response.json()
 
             rank = np.zeros(len(texts), dtype=float)
-            if "results" not in response_json:
-                return rank, 0
 
             token_count = 0
             for t in texts:
                 token_count += num_tokens_from_string(t)
-
-            for result in response_json["results"]:
-                rank[result["index"]] = result["relevance_score"]
+            try:
+                for result in response_json["results"]:
+                    rank[result["index"]] = result["relevance_score"]
+            except Exception as _e:
+                log_exception(_e, response)
 
             return (
                 rank,
@@ -522,5 +623,10 @@ class GPUStackRerank(Base):
             )
 
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"Error calling GPUStackRerank model {self.model_name}: {e.response.status_code} - {e.response.text}")
+            raise ValueError(
+                f"Error calling GPUStackRerank model {self.model_name}: {e.response.status_code} - {e.response.text}")
 
+
+class NovitaRerank(JinaRerank):
+    def __init__(self, key, model_name, base_url="https://api.novita.ai/v3/openai/rerank"):
+        super().__init__(key, model_name, base_url)

@@ -30,10 +30,10 @@ GOODS = pd.read_csv(
 GOODS["cid"] = GOODS["cid"].astype(str)
 GOODS = GOODS.set_index(["cid"])
 CORP_TKS = json.load(
-    open(os.path.join(current_file_path, "res/corp.tks.freq.json"), "r")
+    open(os.path.join(current_file_path, "res/corp.tks.freq.json"), "r",encoding="utf-8")
 )
-GOOD_CORP = json.load(open(os.path.join(current_file_path, "res/good_corp.json"), "r"))
-CORP_TAG = json.load(open(os.path.join(current_file_path, "res/corp_tag.json"), "r"))
+GOOD_CORP = json.load(open(os.path.join(current_file_path, "res/good_corp.json"), "r",encoding="utf-8"))
+CORP_TAG = json.load(open(os.path.join(current_file_path, "res/corp_tag.json"), "r",encoding="utf-8"))
 
 
 def baike(cid, default_v=0):
@@ -53,14 +53,14 @@ def corpNorm(nm, add_region=True):
     nm = re.sub(r"&amp;", "&", nm)
     nm = re.sub(r"[\(\)（）\+'\"\t \*\\【】-]+", " ", nm)
     nm = re.sub(
-        r"([—-]+.*| +co\..*|corp\..*| +inc\..*| +ltd.*)", "", nm, 10000, re.IGNORECASE
+        r"([—-]+.*| +co\..*|corp\..*| +inc\..*| +ltd.*)", "", nm, count=10000, flags=re.IGNORECASE
     )
     nm = re.sub(
         r"(计算机|技术|(技术|科技|网络)*有限公司|公司|有限|研发中心|中国|总部)$",
         "",
         nm,
-        10000,
-        re.IGNORECASE,
+        count=10000,
+        flags=re.IGNORECASE,
     )
     if not nm or (len(nm) < 5 and not regions.isName(nm[0:2])):
         return nm

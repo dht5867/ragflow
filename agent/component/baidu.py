@@ -18,6 +18,7 @@ from abc import ABC
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
+from bs4 import BeautifulSoup
 import re
 from agent.component.base import ComponentBase, ComponentParamBase
 
@@ -48,42 +49,28 @@ class Baidu(ComponentBase, ABC):
         try:
             logging.info(f"ask  : {ans}")
             logging.info(f"top_n: {str(self._param.top_n)}")
-            url = 'http://www.baidu.com/s?wd=' + ans + '&rn=' + str(self._param.top_n)
+            url = 'https://www.baidu.com/s?wd=' + ans + '&rn=' + str(self._param.top_n)
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'}
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Connection': 'keep-alive',
+            }
             response = requests.get(url=url, headers=headers)
-            soup = BeautifulSoup(response.text, "html.parser")
-           
-            # 百度结果标题一般在 <h3 class="t">
-            for item in soup.select("div.result, div.result-op"):
-                 # --- 标题 ---
-                title_tag = item.select_one("h3.t")
-                if not title_tag:
-                    continue
-                title = title_tag.get_text(strip=True)
-                # 链接在 <a> 标签
-                a_tag = item.find("a")
-                href = a_tag["href"] if a_tag else None
-                # --- 内容简介 contentText ---
-                # 常见情况：<div class="c-abstract">
-                content_tag = item.select_one("div.c-abstract")
-                # 新版可能：<div class="c-line-clamp3">
-                if content_tag is None:
-                    content_tag = item.select_one("div.c-line-clamp3")
-                # 取文本
-                content = content_tag.get_text(" ", strip=True) if content_tag else ""
-                results.append({
-                    "title": title,
-                    "url": href,
-                    "contentText": content
-                })
-            # url_res = re.findall(r"'url': \\\"(.*?)\\\"}", response.text)
-            # title_res = re.findall(r"'title': \\\"(.*?)\\\",\\n", response.text)
-            # body_res = re.findall(r"\"contentText\":\"(.*?)\"", response.text)
-            # baidu_res = [{"content": re.sub('<em>|</em>', '', '<a href="' + url + '">' + title + '</a>    ' + body)} for
-            #              url, title, body in zip(url_res, title_res, body_res)]
-            # logging.info(f"baidu --- : {str(baidu_res)}")
-            #del body_res, url_res, title_res
+            # check if request success
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                url_res = []
+                title_res = []
+                body_res = []
+                for item in soup.select('.result.c-container'):
+                    # extract title
+                    title_res.append(item.select_one('h3 a').get_text(strip=True))
+                    url_res.append(item.select_one('h3 a')['href'])
+                    body_res.append(item.select_one('.c-abstract').get_text(strip=True) if item.select_one('.c-abstract') else '')
+                baidu_res = [{"content": re.sub('<em>|</em>', '', '<a href="' + url + '">' + title + '</a>    ' + body)} for
+                             url, title, body in zip(url_res, title_res, body_res)]
+                del body_res, url_res, title_res
         except Exception as e:
             return Baidu.be_output("**ERROR**: " + str(e))
 

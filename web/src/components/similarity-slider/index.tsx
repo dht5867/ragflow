@@ -1,14 +1,7 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { Form, Slider } from 'antd';
-import { useFormContext } from 'react-hook-form';
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '../ui/form';
-import { FormSlider } from '../ui/slider';
+import { z } from 'zod';
+import { SliderInputFormField } from '../slider-input-form-field';
 
 type FieldType = {
   similarity_threshold?: number;
@@ -51,28 +44,45 @@ const SimilaritySlider = ({
 export default SimilaritySlider;
 
 interface SimilaritySliderFormFieldProps {
-  name?: string;
+  vectorSimilarityWeightName?: string;
+  isTooltipShown?: boolean;
 }
 
+export const initialSimilarityThresholdValue = {
+  similarity_threshold: 0.2,
+};
+export const initialKeywordsSimilarityWeightValue = {
+  keywords_similarity_weight: 0.7,
+};
+
+export const similarityThresholdSchema = { similarity_threshold: z.number() };
+
+export const keywordsSimilarityWeightSchema = {
+  keywords_similarity_weight: z.number(),
+};
+
 export function SimilaritySliderFormField({
-  name = 'vector_similarity_weight',
+  vectorSimilarityWeightName = 'vector_similarity_weight',
+  isTooltipShown,
 }: SimilaritySliderFormFieldProps) {
-  const form = useFormContext();
   const { t } = useTranslate('knowledgeDetails');
 
   return (
-    <FormField
-      control={form.control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{t('vectorSimilarityWeight')}</FormLabel>
-          <FormControl>
-            <FormSlider {...field}></FormSlider>
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <>
+      <SliderInputFormField
+        name={'similarity_threshold'}
+        label={t('similarityThreshold')}
+        max={1}
+        step={0.01}
+        tooltip={isTooltipShown && t('similarityThresholdTip')}
+      ></SliderInputFormField>
+      <SliderInputFormField
+        name={vectorSimilarityWeightName}
+        label={t('vectorSimilarityWeight')}
+        max={1}
+        step={0.01}
+        tooltip={isTooltipShown && t('vectorSimilarityWeightTip')}
+      ></SliderInputFormField>
+    </>
   );
 }

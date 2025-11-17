@@ -1,4 +1,7 @@
-import { EmptyConversationId } from '@/constants/chat';
+import {
+  ChatVariableEnabledField,
+  EmptyConversationId,
+} from '@/constants/chat';
 import { Message } from '@/interfaces/database/chat';
 import { IMessage } from '@/pages/chat/interface';
 import { omit } from 'lodash';
@@ -50,10 +53,34 @@ export const preprocessLaTeX = (content: string) => {
   return inlineProcessedContent;
 };
 
-export function replaceThinkToSection(text: string) {
+export function replaceThinkToSection(text: string = '') {
   const pattern = /<think>([\s\S]*?)<\/think>/g;
 
   const result = text.replace(pattern, '<section class="think">$1</section>');
 
   return result;
+}
+
+export function setInitialChatVariableEnabledFieldValue(
+  field: ChatVariableEnabledField,
+) {
+  return false;
+  return field !== ChatVariableEnabledField.MaxTokensEnabled;
+}
+
+const ShowImageFields = ['image', 'table'];
+
+export function showImage(filed?: string) {
+  return ShowImageFields.some((x) => x === filed);
+}
+
+export function setChatVariableEnabledFieldValuePage() {
+  const variableCheckBoxFieldMap = Object.values(
+    ChatVariableEnabledField,
+  ).reduce<Record<string, boolean>>((pre, cur) => {
+    pre[cur] = cur !== ChatVariableEnabledField.MaxTokensEnabled;
+    return pre;
+  }, {});
+
+  return variableCheckBoxFieldMap;
 }

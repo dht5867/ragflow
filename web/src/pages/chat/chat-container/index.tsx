@@ -16,6 +16,7 @@ import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import {
   useFetchNextConversation,
+  useFetchNextDialog,
   useGetChatSearchParams,
 } from '@/hooks/chat-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
@@ -33,6 +34,7 @@ interface IProps {
 const ChatContainer = ({ controller }: IProps) => {
   const { conversationId } = useGetChatSearchParams();
   const { data: conversation } = useFetchNextConversation();
+  const { data: currentDialog } = useFetchNextDialog();
   const [selectedValue, setSelectedValue] = useState('');
 
   // 添加处理选择值的回调函数
@@ -52,6 +54,7 @@ const ChatContainer = ({ controller }: IProps) => {
     handlePressEnter,
     regenerateMessage,
     removeMessageById,
+    stopOutputMessage,
   } = useSendNextMessage(controller, selectedValue);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
@@ -87,7 +90,7 @@ const ChatContainer = ({ controller }: IProps) => {
                       item={message}
                       nickname={userInfo.nickname}
                       avatar={userInfo.avatar}
-                      avatardialog={conversation.avatar}
+                      avatardialog={currentDialog.icon}
                       reference={buildMessageItemReference(
                         {
                           message: derivedMessages,
@@ -122,6 +125,7 @@ const ChatContainer = ({ controller }: IProps) => {
           createConversationBeforeUploadDocument={
             createConversationBeforeUploadDocument
           }
+          stopOutputMessage={stopOutputMessage}
           onSelect={handleSelect} // 将 handleSelect 回调函数传递给 MessageInput
         ></MessageInput>
       </Flex>

@@ -19,7 +19,6 @@ import {
   Button,
   Flex,
   List,
-  Popconfirm,
   Space,
   Typography,
 } from 'antd';
@@ -150,13 +149,14 @@ const MessageItem = ({
             [styles.messageItemContentReverse]: item.role === MessageType.User,
           })}
         >
-          {item.role === MessageType.User ? (
+           {visibleAvatar && 
+           (item.role === MessageType.User ? (
             <Avatar size={40} src={askImage} />
           ) : avatardialog ? (
             <Avatar size={40} src={avatardialog} />
           ) : (
             <AssistantIcon />
-          )}
+          ))}
           <Flex vertical gap={8} flex={1}>
             <Space>
               {isAssistant ? (
@@ -201,23 +201,8 @@ const MessageItem = ({
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
-              <div style={{ marginRight: 50 }}>
-                {isAssistant && item.selectedSkill === '自动化运维' && (
-                  <Popconfirm
-                    placement="top"
-                    title="确认"
-                    description="是否执行任务"
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button>确认</Button>
-                  </Popconfirm>
-                )}
-              </div>
             </div>
-            {isAssistant &&
-              referenceDocumentList.length > 0 &&
-               (
+            {isAssistant &&referenceDocumentList.length > 0 &&(
                 <List
                   bordered
                   dataSource={referenceDocumentList}
@@ -234,6 +219,7 @@ const MessageItem = ({
                             documentId={item.doc_id}
                             documentName={item.doc_name}
                             prefix="document"
+                          link={item.url}
                           >
                             {item.doc_name}
                           </NewDocumentLink>

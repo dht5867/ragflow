@@ -38,10 +38,34 @@ export const useNavigatePage = () => {
     navigate(Routes.Chat);
   }, [navigate]);
 
+  const navigateToAgentList = useCallback(() => {
+    navigate(Routes.Agents);
+  }, [navigate]);
+
+  const navigateToAgent = useCallback(
+    (id: string) => () => {
+      navigate(`${Routes.Agent}/${id}`);
+    },
+    [navigate],
+  );
+
+  const navigateToAgentTemplates = useCallback(() => {
+    navigate(Routes.AgentTemplates);
+  }, [navigate]);
+
+  const navigateToSearchList = useCallback(() => {
+    navigate(Routes.Searches);
+  }, [navigate]);
+
+  const navigateToSearch = useCallback(() => {
+    navigate(Routes.Search);
+  }, [navigate]);
+
   const navigateToChunkParsedResult = useCallback(
     (id: string, knowledgeId?: string) => () => {
       navigate(
-        `${Routes.ParsedResult}/${id}?${QueryStringMap.KnowledgeId}=${knowledgeId}`,
+        // `${Routes.ParsedResult}/${id}?${QueryStringMap.KnowledgeId}=${knowledgeId}`,
+        `${Routes.ParsedResult}/chunks?id=${knowledgeId}&doc_id=${id}`,
       );
     },
     [navigate],
@@ -71,6 +95,13 @@ export const useNavigatePage = () => {
     [getQueryString, id, navigate],
   );
 
+  const navigateToFiles = useCallback(
+    (folderId?: string) => {
+      navigate(`${Routes.Files}?folderId=${folderId}`);
+    },
+    [navigate],
+  );
+
   return {
     navigateToDatasetList,
     navigateToDataset,
@@ -81,5 +112,11 @@ export const useNavigatePage = () => {
     navigateToChunkParsedResult,
     getQueryString,
     navigateToChunk,
+    navigateToAgentList,
+    navigateToAgent,
+    navigateToAgentTemplates,
+    navigateToSearchList,
+    navigateToSearch,
+    navigateToFiles,
   };
 };

@@ -20,15 +20,19 @@ import { useTranslation } from 'react-i18next';
 
 import 'katex/dist/katex.min.css'; // `rehype-katex` does not import the CSS for you
 
-import { preprocessLaTeX, replaceThinkToSection } from '@/utils/chat';
-import { replaceTextByOldReg } from '../utils';
+import {
+  preprocessLaTeX,
+  replaceThinkToSection,
+  showImage,
+} from '@/utils/chat';
+import { currentReg, replaceTextByOldReg } from '../utils';
 
 import classNames from 'classnames';
 import { pipe } from 'lodash/fp';
 import styles from './index.less';
 
 const reg = /(~{2}\d+={2})/g;
-// const curReg = /(~{2}\d+\${2})/g;
+const curReg = /(~{2}\d+\${2})/g;
 
 const getChunkIndex = (match: string) => Number(match.slice(2, -2));
 // TODO: The display of the table is inconsistent with the display previously placed in the MessageItem.
@@ -46,6 +50,7 @@ const MarkdownContent = ({
   const { setDocumentIds, data: fileThumbnails } =
     useFetchDocumentThumbnailsByIds();
   const contentWithCursor = useMemo(() => {
+    // let text = DOMPurify.sanitize(content);
     let text = content;
     if (text === '') {
       text = t('chat.searching');
@@ -101,7 +106,7 @@ const MarkdownContent = ({
     };
   };
 
-  const getPopoverContent = useCallback(
+  const getReferenceInfo = useCallback(
     (chunkIndex: number) => {
       const chunks = reference?.chunks ?? [];
       const chunkItem = chunks[chunkIndex];
@@ -113,6 +118,32 @@ const MarkdownContent = ({
       const fileThumbnail = documentId ? fileThumbnails[documentId] : '';
       const fileExtension = documentId ? getExtension(document?.doc_name) : '';
       const imageId = chunkItem?.image_id;
+
+      return {
+        documentUrl,
+        fileThumbnail,
+        fileExtension,
+        imageId,
+        chunkItem,
+        documentId,
+        document,
+      };
+    },
+    [fileThumbnails, reference?.chunks, reference?.doc_aggs],
+  );
+
+  const getPopoverContent = useCallback(
+    (chunkIndex: number) => {
+      const {
+        documentUrl,
+        fileThumbnail,
+        fileExtension,
+        imageId,
+        chunkItem,
+        documentId,
+        document,
+      } = getReferenceInfo(chunkIndex);
+
       return (
         <div key={chunkItem?.id} className="flex gap-2">
           {imageId && (
@@ -170,14 +201,35 @@ const MarkdownContent = ({
         </div>
       );
     },
-    [reference, fileThumbnails, handleDocumentButtonClick],
+    [getReferenceInfo, handleDocumentButtonClick],
   );
 
   const renderReference = useCallback(
     (text: string) => {
-      let replacedText = reactStringReplace(text, reg, (match, i) => {
+      let replacedText = reactStringReplace(text, currentReg, (match, i) => {
         const chunkIndex = getChunkIndex(match);
-        return (
+
+        const { documentUrl, fileExtension, imageId, chunkItem, documentId } =
+          getReferenceInfo(chunkIndex);
+
+        const docType = chunkItem?.doc_type;
+
+        return showImage(docType) ? (
+          <Image
+            id={imageId}
+            className={styles.referenceInnerChunkImage}
+            onClick={
+              documentId
+                ? handleDocumentButtonClick(
+                    documentId,
+                    chunkItem,
+                    fileExtension === 'pdf',
+                    documentUrl,
+                  )
+                : () => {}
+            }
+          ></Image>
+        ) : (
           <Popover content={getPopoverContent(chunkIndex)} key={i}>
             <InfoCircleOutlined className={styles.referenceIcon} />
           </Popover>
@@ -190,7 +242,7 @@ const MarkdownContent = ({
 
       return replacedText;
     },
-    [getPopoverContent],
+    [getPopoverContent, getReferenceInfo, handleDocumentButtonClick],
   );
   const isBase64Image = (text) => {
     return /^data:image\/(png|jpeg|jpg|gif|svg|webp);base64,/.test(text.trim());

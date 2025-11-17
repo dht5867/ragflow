@@ -98,6 +98,24 @@ export const getBase64FromUploadFileList = async (fileList?: UploadFile[]) => {
   return '';
 };
 
+async function fetchDocumentBlob(id: string, mimeType?: FileMimeType) {
+  const response = await fileManagerService.getDocumentFile({}, id);
+  const blob = new Blob([response.data], {
+    type: mimeType || response.data.type,
+  });
+
+  return blob;
+}
+
+export async function previewHtmlFile(id: string) {
+  const blob = await fetchDocumentBlob(id, FileMimeType.Html);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export const downloadFileFromBlob = (blob: Blob, name?: string) => {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -116,8 +134,7 @@ export const downloadDocument = async ({
   id: string;
   filename?: string;
 }) => {
-  const response = await fileManagerService.getDocumentFile({}, id);
-  const blob = new Blob([response.data], { type: response.data.type });
+  const blob = await fetchDocumentBlob(id);
   downloadFileFromBlob(blob, filename);
 };
 
@@ -140,4 +157,27 @@ export const downloadJsonFile = async (
 ) => {
   const blob = new Blob([JSON.stringify(data)], { type: FileMimeType.Json });
   downloadFileFromBlob(blob, fileName);
+};
+
+export function transformBase64ToFileWithPreview(
+  dataUrl: string,
+  filename: string = 'file',
+) {
+  const file = transformBase64ToFile(dataUrl, filename);
+
+  (file as any).preview = dataUrl;
+
+  return file;
+}
+
+export const getBase64FromFileList = async (fileList?: File[]) => {
+  if (Array.isArray(fileList) && fileList.length > 0) {
+    const file = fileList[0];
+    if (file) {
+      const base64 = await transformFile2Base64(file);
+      return base64;
+    }
+  }
+
+  return '';
 };

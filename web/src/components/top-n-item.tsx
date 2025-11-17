@@ -1,14 +1,6 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { Form, Slider } from 'antd';
-import { useFormContext } from 'react-hook-form';
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from './ui/form';
-import { FormSlider } from './ui/slider';
+import { SliderInputFormField } from './slider-input-form-field';
 
 type FieldType = {
   top_n?: number;
@@ -41,22 +33,14 @@ interface SimilaritySliderFormFieldProps {
 }
 
 export function TopNFormField({ max = 30 }: SimilaritySliderFormFieldProps) {
-  const form = useFormContext();
   const { t } = useTranslate('chat');
 
   return (
-    <FormField
-      control={form.control}
+    <SliderInputFormField
       name={'top_n'}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{t('topN')}</FormLabel>
-          <FormControl>
-            <FormSlider {...field} max={max}></FormSlider>
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+      label={t('topN')}
+      max={max}
+      tooltip={t('topNTip')}
+    ></SliderInputFormField>
   );
 }

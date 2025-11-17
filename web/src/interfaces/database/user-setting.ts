@@ -16,6 +16,7 @@ export interface IUserInfo {
   nickname: string;
   password: string;
   status: string;
+  timezone: string;
   update_date: string;
   update_time: number;
 }
@@ -69,7 +70,8 @@ interface Es {
 }
 
 export interface ITenantUser {
-  avatar: null;
+  id: string;
+  avatar: string;
   delta_seconds: number;
   email: string;
   is_active: string;
