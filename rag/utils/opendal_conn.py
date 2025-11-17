@@ -1,11 +1,11 @@
 import opendal
 import logging
 import pymysql
-from urllib.parse import quote_plus
+import yaml
 
-from api.utils import get_base_config
 from rag.utils import singleton
 
+SERVICE_CONF_PATH = "conf/service_conf.yaml"
 
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS `{}` (
@@ -20,12 +20,15 @@ SET GLOBAL max_allowed_packet={}
 """
 
 
-def get_opendal_config():
+def get_opendal_config_from_yaml(yaml_path=SERVICE_CONF_PATH):
     try:
-        opendal_config = get_base_config('opendal', {})
-        if opendal_config.get("scheme", "mysql") == 'mysql':
-            mysql_config = get_base_config('mysql', {})
-            max_packet = mysql_config.get("max_allowed_packet", 134217728)
+        with open(yaml_path, 'r') as f:
+            config = yaml.safe_load(f)
+
+        opendal_config = config.get('opendal', {})
+        kwargs = {}
+        if opendal_config.get("scheme") == 'mysql':
+            mysql_config = config.get('mysql', {})
             kwargs = {
                 "scheme": "mysql",
                 "host": mysql_config.get("host", "127.0.0.1"),
@@ -33,10 +36,9 @@ def get_opendal_config():
                 "user": mysql_config.get("user", "root"),
                 "password": mysql_config.get("password", ""),
                 "database": mysql_config.get("name", "test_open_dal"),
-                "table": opendal_config.get("config", {}).get("oss_table", "opendal_storage"),
-                "max_allowed_packet": str(max_packet)
+                "table": opendal_config.get("config").get("table", "opendal_storage")
             }
-            kwargs["connection_string"] = f"mysql://{kwargs['user']}:{quote_plus(kwargs['password'])}@{kwargs['host']}:{kwargs['port']}/{kwargs['database']}?max_allowed_packet={max_packet}"
+            kwargs["connection_string"] = f"mysql://{kwargs['user']}:{kwargs['password']}@{kwargs['host']}:{kwargs['port']}/{kwargs['database']}"
         else:
             scheme = opendal_config.get("scheme")
             config_data = opendal_config.get("config", {})
@@ -51,7 +53,7 @@ def get_opendal_config():
 @singleton
 class OpenDALStorage:
     def __init__(self):
-        self._kwargs = get_opendal_config()
+        self._kwargs = get_opendal_config_from_yaml()
         self._scheme = self._kwargs.get('scheme', 'mysql')
         if self._scheme == 'mysql':
             self.init_db_config()

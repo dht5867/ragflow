@@ -5,19 +5,14 @@ import {
 } from '@/components/xyflow/tooltip-node';
 import { Position } from '@xyflow/react';
 import { Copy, Play, Trash2 } from 'lucide-react';
-import {
-  HTMLAttributes,
-  MouseEventHandler,
-  PropsWithChildren,
-  useCallback,
-} from 'react';
+import { MouseEventHandler, PropsWithChildren, useCallback } from 'react';
 import { Operator } from '../../constant';
 import { useDuplicateNode } from '../../hooks';
 import useGraphStore from '../../store';
 
-function IconWrapper({ children, ...props }: HTMLAttributes<HTMLDivElement>) {
+function IconWrapper({ children }: PropsWithChildren) {
   return (
-    <div className="p-1.5 bg-text-title rounded-sm cursor-pointer" {...props}>
+    <div className="p-1.5 bg-text-title rounded-sm cursor-pointer">
       {children}
     </div>
   );
@@ -27,22 +22,15 @@ type ToolBarProps = {
   selected?: boolean | undefined;
   label: string;
   id: string;
-  showRun?: boolean;
 } & PropsWithChildren;
 
-export function ToolBar({
-  selected,
-  children,
-  label,
-  id,
-  showRun = true,
-}: ToolBarProps) {
+export function ToolBar({ selected, children, label, id }: ToolBarProps) {
   const deleteNodeById = useGraphStore((store) => store.deleteNodeById);
   const deleteIterationNodeById = useGraphStore(
     (store) => store.deleteIterationNodeById,
   );
 
-  const deleteNode: MouseEventHandler<HTMLDivElement> = useCallback(
+  const deleteNode: MouseEventHandler<SVGElement> = useCallback(
     (e) => {
       e.stopPropagation();
       if (label === Operator.Iteration) {
@@ -56,7 +44,7 @@ export function ToolBar({
 
   const duplicateNode = useDuplicateNode();
 
-  const handleDuplicate: MouseEventHandler<HTMLDivElement> = useCallback(
+  const handleDuplicate: MouseEventHandler<SVGElement> = useCallback(
     (e) => {
       e.stopPropagation();
       duplicateNode(id, label);
@@ -70,16 +58,14 @@ export function ToolBar({
 
       <TooltipContent position={Position.Top}>
         <section className="flex gap-2 items-center">
-          {showRun && (
-            <IconWrapper>
-              <Play className="size-3.5" data-play />
-            </IconWrapper>
-          )}{' '}
-          <IconWrapper onClick={handleDuplicate}>
-            <Copy className="size-3.5" />
+          <IconWrapper>
+            <Play className="size-3.5" />
           </IconWrapper>
-          <IconWrapper onClick={deleteNode}>
-            <Trash2 className="size-3.5" />
+          <IconWrapper>
+            <Copy className="size-3.5" onClick={handleDuplicate} />
+          </IconWrapper>
+          <IconWrapper>
+            <Trash2 className="size-3.5" onClick={deleteNode} />
           </IconWrapper>
         </section>
       </TooltipContent>

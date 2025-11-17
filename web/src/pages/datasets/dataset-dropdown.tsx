@@ -47,7 +47,7 @@ export function DatasetDropdown({
         <DropdownMenuSeparator />
         <ConfirmDeleteDialog onOk={handleDelete}>
           <DropdownMenuItem
-            className="text-state-error"
+            className="text-text-delete-red"
             onSelect={(e) => {
               e.preventDefault();
             }}

@@ -105,9 +105,10 @@ class GraphExtractor(Extractor):
             **self._prompt_variables,
             self._input_text_key: content,
         }
+        gen_conf = {"temperature": 0.3}
         hint_prompt = perform_variable_replacements(self._extraction_prompt, variables=variables)
         async with chat_limiter:
-            response = await trio.to_thread.run_sync(lambda: self._chat(hint_prompt, [{"role": "user", "content": "Output:"}], {}))
+            response = await trio.to_thread.run_sync(lambda: self._chat(hint_prompt, [{"role": "user", "content": "Output:"}], gen_conf))
         token_count += num_tokens_from_string(hint_prompt + response)
 
         results = response or ""
@@ -117,7 +118,7 @@ class GraphExtractor(Extractor):
         for i in range(self._max_gleanings):
             history.append({"role": "user", "content": CONTINUE_PROMPT})
             async with chat_limiter:
-                response = await trio.to_thread.run_sync(lambda: self._chat("", history, {}))
+                response = await trio.to_thread.run_sync(lambda: self._chat("", history, gen_conf))
             token_count += num_tokens_from_string("\n".join([m["content"] for m in history]) + response)
             results += response or ""
 
@@ -127,7 +128,7 @@ class GraphExtractor(Extractor):
             history.append({"role": "assistant", "content": response})
             history.append({"role": "user", "content": LOOP_PROMPT})
             async with chat_limiter:
-                continuation = await trio.to_thread.run_sync(lambda: self._chat("", history))
+                continuation = await trio.to_thread.run_sync(lambda: self._chat("", history, {"temperature": 0.8}))
             token_count += num_tokens_from_string("\n".join([m["content"] for m in history]) + response)
             if continuation != "Y":
                 break

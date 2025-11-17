@@ -142,7 +142,7 @@ export function PromptEditor({
           }
           placeholder={
             <div
-              className="absolute top-10 left-2 text-text-secondary"
+              className="absolute top-10 left-2 text-text-sub-title"
               data-xxx
             >
               {placeholder || t('common.pleaseInput')}

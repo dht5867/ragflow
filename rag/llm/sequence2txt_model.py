@@ -13,31 +13,28 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-import base64
-import io
-import json
 import os
-import re
-from abc import ABC
-
 import requests
-from openai import OpenAI
 from openai.lib.azure import AzureOpenAI
-
+import io
+from abc import ABC
+from openai import OpenAI
+import json
 from rag.utils import num_tokens_from_string
+import base64
+import re
 
 
 class Base(ABC):
-    def __init__(self, key, model_name, **kwargs):
-        """
-        Abstract base class constructor.
-        Parameters are not stored; initialization is left to subclasses.
-        """
+    def __init__(self, key, model_name):
         pass
 
-    def transcription(self, audio_path, **kwargs):
-        audio_file = open(audio_path, "rb")
-        transcription = self.client.audio.transcriptions.create(model=self.model_name, file=audio_file)
+    def transcription(self, audio, **kwargs):
+        transcription = self.client.audio.transcriptions.create(
+            model=self.model_name,
+            file=audio,
+            response_format="text"
+        )
         return transcription.text.strip(), num_tokens_from_string(transcription.text.strip())
 
     def audio2base64(self, audio):
@@ -49,9 +46,7 @@ class Base(ABC):
 
 
 class GPTSeq2txt(Base):
-    _FACTORY_NAME = "OpenAI"
-
-    def __init__(self, key, model_name="whisper-1", base_url="https://api.openai.com/v1", **kwargs):
+    def __init__(self, key, model_name="whisper-1", base_url="https://api.openai.com/v1"):
         if not base_url:
             base_url = "https://api.openai.com/v1"
         self.client = OpenAI(api_key=key, base_url=base_url)
@@ -59,45 +54,31 @@ class GPTSeq2txt(Base):
 
 
 class QWenSeq2txt(Base):
-    _FACTORY_NAME = "Tongyi-Qianwen"
-
-    def __init__(self, key, model_name="qwen-audio-asr", **kwargs):
+    def __init__(self, key, model_name="paraformer-realtime-8k-v1", **kwargs):
         import dashscope
-
         dashscope.api_key = key
         self.model_name = model_name
 
-    def transcription(self, audio_path):
-        if "paraformer" in self.model_name or "sensevoice" in self.model_name:
-            return f"**ERROR**: model {self.model_name} is not suppported yet.", 0
+    def transcription(self, audio, format):
+        from http import HTTPStatus
+        from dashscope.audio.asr import Recognition
 
-        from dashscope import MultiModalConversation
+        recognition = Recognition(model=self.model_name,
+                                  format=format,
+                                  sample_rate=16000,
+                                  callback=None)
+        result = recognition.call(audio)
 
-        audio_path = f"file://{audio_path}"
-        messages = [
-            {
-                "role": "user",
-                "content": [{"audio": audio_path}],
-            }
-        ]
+        ans = ""
+        if result.status_code == HTTPStatus.OK:
+            for sentence in result.get_sentence():
+                ans += sentence.text.decode('utf-8') + '\n'
+            return ans, num_tokens_from_string(ans)
 
-        response = None
-        full_content = ""
-        try:
-            response = MultiModalConversation.call(model="qwen-audio-asr", messages=messages, result_format="message", stream=True)
-            for response in response:
-                try:
-                    full_content += response["output"]["choices"][0]["message"].content[0]["text"]
-                except Exception:
-                    pass
-            return full_content, num_tokens_from_string(full_content)
-        except Exception as e:
-            return "**ERROR**: " + str(e), 0
+        return "**ERROR**: " + result.message, 0
 
 
 class AzureSeq2txt(Base):
-    _FACTORY_NAME = "Azure-OpenAI"
-
     def __init__(self, key, model_name, lang="Chinese", **kwargs):
         self.client = AzureOpenAI(api_key=key, azure_endpoint=kwargs["base_url"], api_version="2024-02-01")
         self.model_name = model_name
@@ -105,33 +86,43 @@ class AzureSeq2txt(Base):
 
 
 class XinferenceSeq2txt(Base):
-    _FACTORY_NAME = "Xinference"
-
     def __init__(self, key, model_name="whisper-small", **kwargs):
-        self.base_url = kwargs.get("base_url", None)
+        self.base_url = kwargs.get('base_url', None)
         self.model_name = model_name
         self.key = key
 
     def transcription(self, audio, language="zh", prompt=None, response_format="json", temperature=0.7):
         if isinstance(audio, str):
-            audio_file = open(audio, "rb")
+            audio_file = open(audio, 'rb')
             audio_data = audio_file.read()
             audio_file_name = audio.split("/")[-1]
         else:
             audio_data = audio
             audio_file_name = "audio.wav"
 
-        payload = {"model": self.model_name, "language": language, "prompt": prompt, "response_format": response_format, "temperature": temperature}
+        payload = {
+            "model": self.model_name,
+            "language": language,
+            "prompt": prompt,
+            "response_format": response_format,
+            "temperature": temperature
+        }
 
-        files = {"file": (audio_file_name, audio_data, "audio/wav")}
+        files = {
+            "file": (audio_file_name, audio_data, 'audio/wav')
+        }
 
         try:
-            response = requests.post(f"{self.base_url}/v1/audio/transcriptions", files=files, data=payload)
+            response = requests.post(
+                f"{self.base_url}/v1/audio/transcriptions",
+                files=files,
+                data=payload
+            )
             response.raise_for_status()
             result = response.json()
 
-            if "text" in result:
-                transcription_text = result["text"].strip()
+            if 'text' in result:
+                transcription_text = result['text'].strip()
                 return transcription_text, num_tokens_from_string(transcription_text)
             else:
                 return "**ERROR**: Failed to retrieve transcription.", 0
@@ -141,11 +132,11 @@ class XinferenceSeq2txt(Base):
 
 
 class TencentCloudSeq2txt(Base):
-    _FACTORY_NAME = "Tencent Cloud"
-
-    def __init__(self, key, model_name="16k_zh", base_url="https://asr.tencentcloudapi.com"):
-        from tencentcloud.asr.v20190614 import asr_client
+    def __init__(
+            self, key, model_name="16k_zh", base_url="https://asr.tencentcloudapi.com"
+    ):
         from tencentcloud.common import credential
+        from tencentcloud.asr.v20190614 import asr_client
 
         key = json.loads(key)
         sid = key.get("tencent_cloud_sid", "")
@@ -155,12 +146,11 @@ class TencentCloudSeq2txt(Base):
         self.model_name = model_name
 
     def transcription(self, audio, max_retries=60, retry_interval=5):
-        import time
-
-        from tencentcloud.asr.v20190614 import models
         from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
             TencentCloudSDKException,
         )
+        from tencentcloud.asr.v20190614 import models
+        import time
 
         b64 = self.audio2base64(audio)
         try:
@@ -184,7 +174,9 @@ class TencentCloudSeq2txt(Base):
             while retries < max_retries:
                 resp = self.client.DescribeTaskStatus(req)
                 if resp.Data.StatusStr == "success":
-                    text = re.sub(r"\[\d+:\d+\.\d+,\d+:\d+\.\d+\]\s*", "", resp.Data.Result).strip()
+                    text = re.sub(
+                        r"\[\d+:\d+\.\d+,\d+:\d+\.\d+\]\s*", "", resp.Data.Result
+                    ).strip()
                     return text, num_tokens_from_string(text)
                 elif resp.Data.StatusStr == "failed":
                     return (
@@ -203,8 +195,6 @@ class TencentCloudSeq2txt(Base):
 
 
 class GPUStackSeq2txt(Base):
-    _FACTORY_NAME = "GPUStack"
-
     def __init__(self, key, model_name, base_url):
         if not base_url:
             raise ValueError("url cannot be None")
@@ -213,24 +203,3 @@ class GPUStackSeq2txt(Base):
         self.base_url = base_url
         self.model_name = model_name
         self.key = key
-
-
-class GiteeSeq2txt(Base):
-    _FACTORY_NAME = "GiteeAI"
-
-    def __init__(self, key, model_name="whisper-1", base_url="https://ai.gitee.com/v1/"):
-        if not base_url:
-            base_url = "https://ai.gitee.com/v1/"
-        self.client = OpenAI(api_key=key, base_url=base_url)
-        self.model_name = model_name
-
-
-class DeepInfraSeq2txt(Base):
-    _FACTORY_NAME = "DeepInfra"
-
-    def __init__(self, key, model_name, base_url="https://api.deepinfra.com/v1/openai", **kwargs):
-        if not base_url:
-            base_url = "https://api.deepinfra.com/v1/openai"
-
-        self.client = OpenAI(api_key=key, base_url=base_url)
-        self.model_name = model_name

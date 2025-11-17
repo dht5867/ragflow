@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 from abc import ABC
+import pandas as pd
 from agent.component.base import ComponentBase, ComponentParamBase
 
 
@@ -32,52 +33,21 @@ class IterationItem(ComponentBase, ABC):
         super().__init__(canvas, id, param)
         self._idx = 0
 
-    def _invoke(self, **kwargs):
+    def _run(self, history, **kwargs):
         parent = self.get_parent()
-        arr = self._canvas.get_variable_value(parent._param.items_ref)
-        if not isinstance(arr, list):
+        ans = parent.get_input()
+        ans = parent._param.delimiter.join(ans["content"]) if "content" in ans else ""
+        ans = [a.strip() for a in ans.split(parent._param.delimiter)]
+        if not ans:
             self._idx = -1
-            raise Exception(parent._param.items_ref + " must be an array, but its type is "+str(type(arr)))
+            return pd.DataFrame()
 
-        if self._idx > 0:
-            self.output_collation()
-
-        if self._idx >= len(arr):
-            self._idx = -1
-            return
-
-        self.set_output("item", arr[self._idx])
-        self.set_output("index", self._idx)
-
+        df = pd.DataFrame([{"content": ans[self._idx]}])
         self._idx += 1
-
-    def output_collation(self):
-        pid = self.get_parent()._id
-        for cid in self._canvas.components.keys():
-            obj = self._canvas.get_component_obj(cid)
-            p = obj.get_parent()
-            if not p:
-                continue
-            if p._id != pid:
-                continue
-
-            if p.component_name.lower() in ["categorize", "message", "switch", "userfillup", "interationitem"]:
-                continue
-
-            for k, o in p._param.outputs.items():
-                if "ref" not in o:
-                    continue
-                _cid, var = o["ref"].split("@")
-                if _cid != cid:
-                    continue
-                res = p.output(k)
-                if not res:
-                    res = []
-                res.append(obj.output(var))
-                p.set_output(k, res)
+        if self._idx >= len(ans):
+            self._idx = -1
+        return df
 
     def end(self):
         return self._idx == -1
 
-    def thoughts(self) -> str:
-        return "Next turn..."

@@ -65,8 +65,7 @@ export function useDatasetTableColumns({
       header: ({ column }) => {
         return (
           <Button
-            variant="transparent"
-            className="border-none"
+            variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             {t('name')}
@@ -104,8 +103,7 @@ export function useDatasetTableColumns({
       header: ({ column }) => {
         return (
           <Button
-            variant="transparent"
-            className="border-none"
+            variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             {t('uploadDate')}
@@ -143,7 +141,7 @@ export function useDatasetTableColumns({
     },
     {
       accessorKey: 'run',
-      header: t('Parse'),
+      header: t('parsingStatus'),
       // meta: { cellClassName: 'min-w-[20vw]' },
       cell: ({ row }) => {
         return (

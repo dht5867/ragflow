@@ -3,7 +3,7 @@ import { UseFormReturn, useWatch } from 'react-hook-form';
 import { PromptRole } from '../../constant';
 import useGraphStore from '../../store';
 
-export function useWatchFormChange(id?: string, form?: UseFormReturn<any>) {
+export function useWatchFormChange(id?: string, form?: UseFormReturn) {
   let values = useWatch({ control: form?.control });
   const updateNodeForm = useGraphStore((state) => state.updateNodeForm);
 

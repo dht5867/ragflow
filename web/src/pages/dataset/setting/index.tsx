@@ -6,7 +6,6 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs-underlined';
 import { DocumentParserType } from '@/constants/knowledge';
-import { PermissionRole } from '@/constants/permission';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -44,7 +43,7 @@ export default function DatasetSettings() {
     defaultValues: {
       name: '',
       parser_id: DocumentParserType.Naive,
-      permission: PermissionRole.Me,
+      permission: 'me',
       parser_config: {
         layout_recognize: DocumentType.DeepDOC,
         chunk_token_num: 512,
@@ -55,6 +54,10 @@ export default function DatasetSettings() {
         topn_tags: 3,
         raptor: {
           use_raptor: false,
+          max_token: 256,
+          threshold: 0.1,
+          max_cluster: 64,
+          random_seed: 0,
         },
         graphrag: {
           use_graphrag: false,
@@ -82,32 +85,31 @@ export default function DatasetSettings() {
   }
 
   return (
-    <section className="p-5 h-full flex flex-col">
+    <section className="p-5 ">
       <TopTitle
         title={t('knowledgeDetails.configuration')}
         description={t('knowledgeConfiguration.titleDescription')}
       ></TopTitle>
-      <div className="flex gap-14 flex-1 min-h-0">
+      <div className="flex gap-14">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6 flex-1"
+            className="space-y-6 basis-full min-w-[1000px] max-w-[1000px]"
           >
             <Tabs
               defaultValue="generalForm"
               onValueChange={(val) => {
                 setCurrentTab(val);
               }}
-              className="h-full flex flex-col"
             >
-              <TabsList className="grid bg-transparent grid-cols-2 rounded-none text-foreground">
+              <TabsList className="grid w-full bg-background grid-cols-2 rounded-none bg-[#161618]">
                 <TabsTrigger
                   value="generalForm"
                   className="group bg-transparent p-0 !border-transparent"
                 >
-                  <div className="flex w-full h-full justify-center	items-center">
-                    <span className="h-full group-data-[state=active]:border-b-2 border-foreground	">
-                      {t('knowledgeDetails.general')}
+                  <div className="flex w-full h-full justify-center	items-center	bg-[#161618]">
+                    <span className="h-full group-data-[state=active]:border-b-2 border-white	">
+                      General
                     </span>
                   </div>
                 </TabsTrigger>
@@ -115,23 +117,36 @@ export default function DatasetSettings() {
                   value="chunkMethodForm"
                   className="group bg-transparent p-0 !border-transparent"
                 >
-                  <div className="flex w-full h-full justify-center	items-center">
-                    <span className="h-full group-data-[state=active]:border-b-2 border-foreground	">
-                      {t('knowledgeDetails.chunkMethodTab')}
+                  <div className="flex w-full h-full justify-center	items-center	bg-[#161618]">
+                    <span className="h-full group-data-[state=active]:border-b-2 border-white	">
+                      Chunk Method
                     </span>
                   </div>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="generalForm" className="flex-1 min-h-0">
+              <TabsContent value="generalForm">
                 <GeneralForm></GeneralForm>
               </TabsContent>
-              <TabsContent value="chunkMethodForm" className="flex-1 min-h-0">
+              <TabsContent value="chunkMethodForm">
                 <ChunkMethodForm></ChunkMethodForm>
               </TabsContent>
             </Tabs>
+            {/* <div className="text-right">
+              <ButtonLoading type="submit">Submit</ButtonLoading>
+            </div> */}
           </form>
         </Form>
         <ChunkMethodLearnMore tab={currentTab} parserId={parserId} />
+        {/* <div
+          style={{
+            display: currentTab === 'chunkMethodForm' ? 'block' : 'none',
+          }}
+        >
+          <Button variant="outline">Learn More</Button>
+          <div className="bg-[#FFF]/10 p-[20px] rounded-[12px] mt-[10px]">
+            <CategoryPanel chunkMethod={parserId}></CategoryPanel>
+          </div>
+        </div> */}
       </div>
     </section>
   );

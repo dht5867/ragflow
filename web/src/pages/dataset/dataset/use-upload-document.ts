@@ -1,9 +1,5 @@
-import { UploadFormSchemaType } from '@/components/file-upload-dialog';
 import { useSetModalState } from '@/hooks/common-hooks';
-import {
-  useRunDocument,
-  useUploadNextDocument,
-} from '@/hooks/use-document-request';
+import { useUploadNextDocument } from '@/hooks/use-document-request';
 import { getUnSupportedFilesCount } from '@/utils/document-util';
 import { useCallback } from 'react';
 
@@ -14,24 +10,14 @@ export const useHandleUploadDocument = () => {
     showModal: showDocumentUploadModal,
   } = useSetModalState();
   const { uploadDocument, loading } = useUploadNextDocument();
-  const { runDocumentByIds } = useRunDocument();
 
   const onDocumentUploadOk = useCallback(
-    async ({ fileList, parseOnCreation }: UploadFormSchemaType) => {
+    async (fileList: File[]): Promise<number | undefined> => {
       if (fileList.length > 0) {
-        const ret = await uploadDocument(fileList);
+        const ret: any = await uploadDocument(fileList);
         if (typeof ret?.message !== 'string') {
           return;
         }
-
-        if (ret.code === 0 && parseOnCreation) {
-          runDocumentByIds({
-            documentIds: ret.data.map((x) => x.id),
-            run: 1,
-            shouldDelete: false,
-          });
-        }
-
         const count = getUnSupportedFilesCount(ret?.message);
         /// 500 error code indicates that some file types are not supported
         let code = ret?.code;
@@ -45,7 +31,7 @@ export const useHandleUploadDocument = () => {
         return code;
       }
     },
-    [uploadDocument, runDocumentByIds, hideDocumentUploadModal],
+    [uploadDocument, hideDocumentUploadModal],
   );
 
   return {

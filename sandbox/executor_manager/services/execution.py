@@ -82,40 +82,20 @@ const fs = require('fs');
 const path = require('path');
 
 const args = JSON.parse(process.argv[2]);
+
 const mainPath = path.join(__dirname, 'main.js');
 
-function isPromise(value) {
-    return Boolean(value && typeof value.then === 'function');
-}
-
 if (fs.existsSync(mainPath)) {
-    const mod = require(mainPath);
-    const main = typeof mod === 'function' ? mod : mod.main;
-
-    if (typeof main !== 'function') {
-        console.error('Error: main is not a function');
-        process.exit(1);
-    }
+    const { main } = require(mainPath);
 
     if (typeof args === 'object' && args !== null) {
-        try {
-            const result = main(args);
-            if (isPromise(result)) {
-                result.then(output => {
-                    if (output !== null) {
-                        console.log(output);
-                    }
-                }).catch(err => {
-                    console.error('Error in async main function:', err);
-                });
-            } else {
-                if (result !== null) {
-                    console.log(result);
-                }
+        main(args).then(result => {
+            if (result !== null) {
+                console.log(result);
             }
-        } catch (err) {
-            console.error('Error when executing main:', err);
-        }
+        }).catch(err => {
+            console.error('Error in main function:', err);
+        });
     } else {
         console.error('Error: args is not a valid object:', args);
     }

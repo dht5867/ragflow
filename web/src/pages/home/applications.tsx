@@ -7,7 +7,6 @@ import { useNavigate } from 'umi';
 import { Agents } from './agent-list';
 import { SeeAllAppCard } from './application-card';
 import { ChatList } from './chat-list';
-import { SearchList } from './search-list';
 
 const IconMap = {
   [Routes.Chats]: 'chat',
@@ -51,14 +50,12 @@ export function Applications() {
           options={options}
           value={val}
           onChange={handleChange}
-          className="bg-bg-card border border-border-button rounded-full"
-          activeClassName="bg-text-primary border-none"
+          className="bg-transparent"
         ></Segmented>
       </div>
       <div className="flex flex-wrap gap-4">
         {val === Routes.Agents && <Agents></Agents>}
         {val === Routes.Chats && <ChatList></ChatList>}
-        {val === Routes.Searches && <SearchList></SearchList>}
         {<SeeAllAppCard click={handleNavigate}></SeeAllAppCard>}
       </div>
     </section>

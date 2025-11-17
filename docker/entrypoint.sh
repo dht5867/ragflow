@@ -37,9 +37,6 @@ MCP_BASE_URL="http://127.0.0.1:9380"
 MCP_SCRIPT_PATH="/ragflow/mcp/server/server.py"
 MCP_MODE="self-host"
 MCP_HOST_API_KEY=""
-MCP_TRANSPORT_SSE_FLAG="--transport-sse-enabled"
-MCP_TRANSPORT_STREAMABLE_HTTP_FLAG="--transport-streamable-http-enabled"
-MCP_JSON_RESPONSE_FLAG="--json-response"
 
 # -----------------------------------------------------------------------------
 # Host ID logic:
@@ -92,18 +89,6 @@ for arg in "$@"; do
       ;;
     --mcp-script-path=*)
       MCP_SCRIPT_PATH="${arg#*=}"
-      shift
-      ;;
-    --no-transport-sse-enabled)
-      MCP_TRANSPORT_SSE_FLAG="--no-transport-sse-enabled"
-      shift
-      ;;
-    --no-transport-streamable-http-enabled)
-      MCP_TRANSPORT_STREAMABLE_HTTP_FLAG="--no-transport-streamable-http-enabled"
-      shift
-      ;;
-    --no-json-response)
-      MCP_JSON_RESPONSE_FLAG="--no-json-response"
       shift
       ;;
     --consumer-no-beg=*)
@@ -163,12 +148,9 @@ function start_mcp_server() {
     "$PY" "${MCP_SCRIPT_PATH}" \
         --host="${MCP_HOST}" \
         --port="${MCP_PORT}" \
-        --base-url="${MCP_BASE_URL}" \
+        --base_url="${MCP_BASE_URL}" \
         --mode="${MCP_MODE}" \
-        --api-key="${MCP_HOST_API_KEY}" \
-        "${MCP_TRANSPORT_SSE_FLAG}" \
-        "${MCP_TRANSPORT_STREAMABLE_HTTP_FLAG}" \
-        "${MCP_JSON_RESPONSE_FLAG}" &
+        --api_key="${MCP_HOST_API_KEY}" &
 }
 
 # -----------------------------------------------------------------------------

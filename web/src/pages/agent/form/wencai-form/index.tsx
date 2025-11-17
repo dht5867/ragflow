@@ -1,4 +1,3 @@
-import { FormContainer } from '@/components/form-container';
 import { TopNFormField } from '@/components/top-n-item';
 import {
   Form,
@@ -9,34 +8,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { RAGFlowSelect } from '@/components/ui/select';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { memo, useMemo } from 'react';
-import { useForm, useFormContext } from 'react-hook-form';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { z } from 'zod';
-import { initialWenCaiValues } from '../../constant';
-import { useFormValues } from '../../hooks/use-form-values';
-import { useWatchFormChange } from '../../hooks/use-watch-form-change';
+import { WenCaiQueryTypeOptions } from '../../constant';
 import { INextOperatorForm } from '../../interface';
-import { WenCaiQueryTypeOptions } from '../../options';
-import { buildOutputList } from '../../utils/build-output-list';
-import { FormWrapper } from '../components/form-wrapper';
-import { Output } from '../components/output';
-import { QueryVariable } from '../components/query-variable';
+import { DynamicInputVariable } from '../components/next-dynamic-input-variable';
 
-export const WenCaiPartialSchema = {
-  top_n: z.number(),
-  query_type: z.string(),
-};
-
-export const FormSchema = z.object({
-  ...WenCaiPartialSchema,
-  query: z.string(),
-});
-
-export function WenCaiFormWidgets() {
+const WenCaiForm = ({ form, node }: INextOperatorForm) => {
   const { t } = useTranslation();
-  const form = useFormContext();
 
   const wenCaiQueryTypeOptions = useMemo(() => {
     return WenCaiQueryTypeOptions.map((x) => ({
@@ -46,52 +25,31 @@ export function WenCaiFormWidgets() {
   }, [t]);
 
   return (
-    <>
-      <TopNFormField max={99}></TopNFormField>
-      <FormField
-        control={form.control}
-        name="query_type"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t('flow.queryType')}</FormLabel>
-            <FormControl>
-              <RAGFlowSelect {...field} options={wenCaiQueryTypeOptions} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </>
-  );
-}
-
-const outputList = buildOutputList(initialWenCaiValues.outputs);
-
-function WenCaiForm({ node }: INextOperatorForm) {
-  const defaultValues = useFormValues(initialWenCaiValues, node);
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    defaultValues,
-    resolver: zodResolver(FormSchema),
-  });
-
-  useWatchFormChange(node?.id, form);
-
-  return (
     <Form {...form}>
-      <FormWrapper>
-        <FormContainer>
-          <QueryVariable></QueryVariable>
-        </FormContainer>
-        <FormContainer>
-          <WenCaiFormWidgets></WenCaiFormWidgets>
-        </FormContainer>
-      </FormWrapper>
-      <div className="p-5">
-        <Output list={outputList}></Output>
-      </div>
+      <form
+        className="space-y-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <DynamicInputVariable node={node}></DynamicInputVariable>
+        <TopNFormField max={99}></TopNFormField>
+        <FormField
+          control={form.control}
+          name="query_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('flow.queryType')}</FormLabel>
+              <FormControl>
+                <RAGFlowSelect {...field} options={wenCaiQueryTypeOptions} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </form>
     </Form>
   );
-}
+};
 
-export default memo(WenCaiForm);
+export default WenCaiForm;

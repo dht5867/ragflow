@@ -1,7 +1,8 @@
 import { ModelVariableType } from '@/constants/knowledge';
 import { RAGFlowNodeType } from '@/interfaces/database/flow';
-import { isEmpty, isPlainObject } from 'lodash';
+import { get, isEmpty, isPlainObject, omit } from 'lodash';
 import { useMemo } from 'react';
+import { buildCategorizeListFromObject } from '../../utils';
 
 const defaultValues = {
   parameter: ModelVariableType.Precise,
@@ -20,13 +21,16 @@ export function useValues(node?: RAGFlowNodeType) {
     if (isEmpty(formData)) {
       return defaultValues;
     }
+    const items = buildCategorizeListFromObject(
+      get(node, 'data.form.category_description', {}),
+    );
     if (isPlainObject(formData)) {
-      // const nextValues = {
-      //   ...omit(formData, 'category_description'),
-      //   items,
-      // };
+      const nextValues = {
+        ...omit(formData, 'category_description'),
+        items,
+      };
 
-      return formData;
+      return nextValues;
     }
   }, [node]);
 

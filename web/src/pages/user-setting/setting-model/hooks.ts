@@ -11,7 +11,6 @@ import {
 } from '@/hooks/llm-hooks';
 import { useFetchTenantInfo } from '@/hooks/user-setting-hooks';
 import { IAddLlmRequestBody } from '@/interfaces/request/llm';
-import { getRealModelName } from '@/utils/llm-util';
 import { useCallback, useState } from 'react';
 import { ApiKeyPostBody } from '../interface';
 
@@ -21,7 +20,6 @@ export const useSubmitApiKey = () => {
   const [savingParams, setSavingParams] = useState<SavingParamsState>(
     {} as SavingParamsState,
   );
-  const [editMode, setEditMode] = useState(false);
   const { saveApiKey, loading } = useSaveApiKey();
   const {
     visible: apiKeyVisible,
@@ -38,16 +36,14 @@ export const useSubmitApiKey = () => {
 
       if (ret === 0) {
         hideApiKeyModal();
-        setEditMode(false);
       }
     },
     [hideApiKeyModal, saveApiKey, savingParams],
   );
 
   const onShowApiKeyModal = useCallback(
-    (savingParams: SavingParamsState, isEdit = false) => {
+    (savingParams: SavingParamsState) => {
       setSavingParams(savingParams);
-      setEditMode(isEdit);
       showApiKeyModal();
     },
     [showApiKeyModal, setSavingParams],
@@ -57,7 +53,6 @@ export const useSubmitApiKey = () => {
     saveApiKeyLoading: loading,
     initialApiKey: '',
     llmFactory: savingParams.llm_factory,
-    editMode,
     onApiKeySavingOk,
     apiKeyVisible,
     hideApiKeyModal,
@@ -110,10 +105,6 @@ export const useFetchSystemModelSettingOnMount = () => {
 
 export const useSubmitOllama = () => {
   const [selectedLlmFactory, setSelectedLlmFactory] = useState<string>('');
-  const [editMode, setEditMode] = useState(false);
-  const [initialValues, setInitialValues] = useState<
-    Partial<IAddLlmRequestBody> | undefined
-  >();
   const { addLlm, loading } = useAddLlm();
   const {
     visible: llmAddingVisible,
@@ -123,49 +114,21 @@ export const useSubmitOllama = () => {
 
   const onLlmAddingOk = useCallback(
     async (payload: IAddLlmRequestBody) => {
-      const cleanedPayload = { ...payload };
-      if (!cleanedPayload.api_key || cleanedPayload.api_key.trim() === '') {
-        delete cleanedPayload.api_key;
-      }
-
-      const ret = await addLlm(cleanedPayload);
+      const ret = await addLlm(payload);
       if (ret === 0) {
         hideLlmAddingModal();
-        setEditMode(false);
-        setInitialValues(undefined);
       }
     },
     [hideLlmAddingModal, addLlm],
   );
 
-  const handleShowLlmAddingModal = (
-    llmFactory: string,
-    isEdit = false,
-    modelData?: any,
-    detailedData?: any,
-  ) => {
+  const handleShowLlmAddingModal = (llmFactory: string) => {
     setSelectedLlmFactory(llmFactory);
-    setEditMode(isEdit);
-
-    if (isEdit && detailedData) {
-      const initialVals = {
-        llm_name: getRealModelName(detailedData.name),
-        model_type: detailedData.type,
-        api_base: detailedData.api_base || '',
-        max_tokens: detailedData.max_tokens || 8192,
-        api_key: '',
-      };
-      setInitialValues(initialVals);
-    } else {
-      setInitialValues(undefined);
-    }
     showLlmAddingModal();
   };
 
   return {
     llmAddingLoading: loading,
-    editMode,
-    initialValues,
     onLlmAddingOk,
     llmAddingVisible,
     hideLlmAddingModal,

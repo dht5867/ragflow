@@ -1,4 +1,3 @@
-import { UploadFormSchemaType } from '@/components/file-upload-dialog';
 import { useSetModalState } from '@/hooks/common-hooks';
 import { useUploadFile } from '@/hooks/use-file-request';
 import { useCallback } from 'react';
@@ -14,7 +13,7 @@ export const useHandleUploadFile = () => {
   const id = useGetFolderId();
 
   const onFileUploadOk = useCallback(
-    async ({ fileList }: UploadFormSchemaType): Promise<number | undefined> => {
+    async (fileList: File[]): Promise<number | undefined> => {
       if (fileList.length > 0) {
         const ret: number = await uploadFile({ fileList, parentId: id });
         if (ret === 0) {

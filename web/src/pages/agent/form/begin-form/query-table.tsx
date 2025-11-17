@@ -53,8 +53,8 @@ export function QueryTable({ data = [], deleteRecord, showModal }: IProps) {
   const columns: ColumnDef<BeginQuery>[] = [
     {
       accessorKey: 'key',
-      header: t('flow.key'),
-      meta: { cellClassName: 'max-w-30' },
+      header: 'key',
+      meta: { cellClassName: 'max-w-16' },
       cell: ({ row }) => {
         const key: string = row.getValue('key');
         return (
@@ -72,7 +72,7 @@ export function QueryTable({ data = [], deleteRecord, showModal }: IProps) {
     {
       accessorKey: 'name',
       header: t('flow.name'),
-      meta: { cellClassName: 'max-w-30' },
+      meta: { cellClassName: 'max-w-20' },
       cell: ({ row }) => {
         const name: string = row.getValue('name');
         return (
@@ -90,11 +90,7 @@ export function QueryTable({ data = [], deleteRecord, showModal }: IProps) {
     {
       accessorKey: 'type',
       header: t('flow.type'),
-      cell: ({ row }) => (
-        <div>
-          {t(`flow.${(row.getValue('type')?.toString() || '').toLowerCase()}`)}
-        </div>
-      ),
+      cell: ({ row }) => <div>{row.getValue('type')}</div>,
     },
     {
       accessorKey: 'optional',
@@ -111,16 +107,10 @@ export function QueryTable({ data = [], deleteRecord, showModal }: IProps) {
 
         return (
           <div>
-            <Button
-              className="bg-transparent text-foreground  hover:bg-muted-foreground hover:text-foreground"
-              onClick={() => showModal(idx, record)}
-            >
+            <Button variant={'ghost'} onClick={() => showModal(idx, record)}>
               <Pencil />
             </Button>
-            <Button
-              className="bg-transparent text-foreground  hover:bg-muted-foreground hover:text-foreground"
-              onClick={() => deleteRecord(idx)}
-            >
+            <Button variant={'ghost'} onClick={() => deleteRecord(idx)}>
               <Trash2 />
             </Button>
           </div>
@@ -149,7 +139,7 @@ export function QueryTable({ data = [], deleteRecord, showModal }: IProps) {
   return (
     <div className="w-full">
       <div className="rounded-md border">
-        <Table rootClassName="rounded-md">
+        <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

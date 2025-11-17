@@ -71,8 +71,6 @@ class SearchService(CommonService):
             .first()
             .to_dict()
         )
-        if not search:
-            return {}
         return search
 
     @classmethod

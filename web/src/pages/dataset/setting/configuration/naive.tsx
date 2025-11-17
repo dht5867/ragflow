@@ -23,7 +23,7 @@ export function NaiveConfiguration() {
         <ChunkMethodItem></ChunkMethodItem>
         <LayoutRecognizeFormField></LayoutRecognizeFormField>
         <EmbeddingModelItem></EmbeddingModelItem>
-        <MaxTokenNumberFormField initialValue={512}></MaxTokenNumberFormField>
+        <MaxTokenNumberFormField></MaxTokenNumberFormField>
         <DelimiterFormField></DelimiterFormField>
       </ConfigurationFormContainer>
       <ConfigurationFormContainer>

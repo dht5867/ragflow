@@ -13,7 +13,6 @@ import {
   Switch,
 } from 'antd';
 import omit from 'lodash/omit';
-import { useEffect } from 'react';
 
 type FieldType = IAddLlmRequestBody & { vision: boolean };
 
@@ -46,16 +45,16 @@ const OllamaModal = ({
   onOk,
   loading,
   llmFactory,
-  editMode = false,
-  initialValues,
-}: IModalProps<IAddLlmRequestBody> & {
-  llmFactory: string;
-  editMode?: boolean;
-  initialValues?: Partial<IAddLlmRequestBody>;
-}) => {
+}: IModalProps<IAddLlmRequestBody> & { llmFactory: string }) => {
   const [form] = Form.useForm<FieldType>();
 
   const { t } = useTranslate('setting');
+
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      await handleOk();
+    }
+  };
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -74,29 +73,6 @@ const OllamaModal = ({
 
     onOk?.(data);
   };
-
-  const handleKeyDown = async (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      await handleOk();
-    }
-  };
-
-  useEffect(() => {
-    if (visible && editMode && initialValues) {
-      const formValues = {
-        llm_name: initialValues.llm_name,
-        model_type: initialValues.model_type,
-        api_base: initialValues.api_base,
-        max_tokens: initialValues.max_tokens || 8192,
-        api_key: '',
-        ...initialValues,
-      };
-      form.setFieldsValue(formValues);
-    } else if (visible && !editMode) {
-      form.resetFields();
-    }
-  }, [visible, editMode, initialValues, form]);
-
   const url =
     llmFactoryToUrlMap[llmFactory as LlmFactory] ||
     'https://github.com/infiniflow/ragflow/blob/main/docs/guides/models/deploy_local_llm.mdx';
@@ -134,11 +110,7 @@ const OllamaModal = ({
   };
   return (
     <Modal
-      title={
-        editMode
-          ? t('editLlmTitle', { name: llmFactory })
-          : t('addLlmTitle', { name: llmFactory })
-      }
+      title={t('addLlmTitle', { name: llmFactory })}
       open={visible}
       onOk={handleOk}
       onCancel={hideModal}

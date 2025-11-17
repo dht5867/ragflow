@@ -88,7 +88,6 @@ export const useSaveFlow = () => {
     onFlowOk,
     flowSettingVisible,
     hideFlowSettingModal,
-    templateList: list,
     showFlowSettingModal: showFileRenameModal,
   };
 };

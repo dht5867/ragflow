@@ -504,12 +504,11 @@ export default {
       apiKeyTip:
         'APIキーは、対応するLLMサプライヤーに登録することで取得できます。',
       showMoreModels: 'さらにモデルを表示',
-      hideModels: 'モデルを隠す',
       baseUrl: 'ベースURL',
       baseUrlTip:
         'APIキーがOpenAIからのものであれば無視してください。他の中間プロバイダーはAPIキーと共にこのベースURLを提供します。',
       modify: '変更',
-      systemModelSettings: 'デフォルトモデルを設定する',
+      systemModelSettings: 'デフォルトモデルを設定',
       chatModel: 'チャットモデル',
       chatModelTip:
         '新しく作成されたナレッジベースが使用するデフォルトのチャットLLM。',
@@ -530,8 +529,6 @@ export default {
       workspace: 'ワークスペース',
       upgrade: 'アップグレード',
       addLlmTitle: 'LLMを追加',
-      editLlmTitle: '{{name}}モデルを編集',
-      editModel: 'モデルを編集',
       modelName: 'モデル名',
       modelID: 'モデルID',
       modelUid: 'モデルUID',
@@ -600,7 +597,7 @@ export default {
         'Google Cloudサービスアカウントキーをbase64形式で入力してください',
       addGoogleRegion: 'Google Cloudリージョン',
       GoogleRegionMessage: 'Google Cloudリージョンを入力してください',
-      modelProvidersWarn: `まず<b>設定 > モデルプロバイダー</b>で埋め込みモデルとLLMの両方を追加してください。その後、「デフォルトモデルを設定する」で設定します。`,
+      modelProvidersWarn: `まず<b>設定 > モデルプロバイダー</b>で埋め込みモデルとLLMの両方を追加してください。その後、「システムモデル設定」で設定します。`,
       apiVersion: 'APIバージョン',
       apiVersionMessage: 'APIバージョンを入力してください',
       add: '追加',

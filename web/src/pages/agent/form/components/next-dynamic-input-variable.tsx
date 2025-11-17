@@ -1,6 +1,6 @@
 'use client';
 
-import { SideDown } from '@/assets/icon/next-icon';
+import { SideDown } from '@/assets/icon/Icon';
 import { Button } from '@/components/ui/button';
 import {
   Collapsible,

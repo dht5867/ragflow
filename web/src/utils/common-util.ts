@@ -7,7 +7,7 @@ export const isFormData = (data: unknown): data is FormData => {
   return data instanceof FormData;
 };
 
-const excludedFields = ['img2txt_id', 'mcpServers'];
+const excludedFields = ['img2txt_id'];
 
 const isExcludedField = (key: string) => {
   return excludedFields.includes(key);
@@ -43,7 +43,6 @@ const orderFactoryList = [
   LLMFactory.ZhipuAI,
   LLMFactory.Ollama,
   LLMFactory.Xinference,
-  LLMFactory.Ai302,
 ];
 
 export const sortLLmFactoryListBySpecifiedOrder = (list: IFactory[]) => {

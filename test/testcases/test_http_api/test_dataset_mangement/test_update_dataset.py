@@ -300,22 +300,20 @@ class TestDatasetUpdate:
     @pytest.mark.parametrize(
         "name, embedding_model",
         [
-            ("empty", ""),
-            ("space", " "),
             ("missing_at", "BAAI/bge-large-zh-v1.5BAAI"),
             ("missing_model_name", "@BAAI"),
             ("missing_provider", "BAAI/bge-large-zh-v1.5@"),
             ("whitespace_only_model_name", " @BAAI"),
             ("whitespace_only_provider", "BAAI/bge-large-zh-v1.5@ "),
         ],
-        ids=["empty", "space", "missing_at", "empty_model_name", "empty_provider", "whitespace_only_model_name", "whitespace_only_provider"],
+        ids=["missing_at", "empty_model_name", "empty_provider", "whitespace_only_model_name", "whitespace_only_provider"],
     )
     def test_embedding_model_format(self, HttpApiAuth, add_dataset_func, name, embedding_model):
         dataset_id = add_dataset_func
         payload = {"name": name, "embedding_model": embedding_model}
         res = update_dataset(HttpApiAuth, dataset_id, payload)
         assert res["code"] == 101, res
-        if name in ["empty", "space", "missing_at"]:
+        if name == "missing_at":
             assert "Embedding model identifier must follow <model_name>@<provider> format" in res["message"], res
         else:
             assert "Both model_name and provider must be non-empty strings" in res["message"], res
@@ -325,11 +323,8 @@ class TestDatasetUpdate:
         dataset_id = add_dataset_func
         payload = {"embedding_model": None}
         res = update_dataset(HttpApiAuth, dataset_id, payload)
-        assert res["code"] == 0, res
-
-        res = list_datasets(HttpApiAuth)
-        assert res["code"] == 0, res
-        assert res["data"][0]["embedding_model"] == "BAAI/bge-large-zh-v1.5@BAAI", res
+        assert res["code"] == 101, res
+        assert "Input should be a valid string" in res["message"], res
 
     @pytest.mark.p1
     @pytest.mark.parametrize(
@@ -337,8 +332,11 @@ class TestDatasetUpdate:
         [
             "me",
             "team",
+            "ME",
+            "TEAM",
+            " ME ",
         ],
-        ids=["me", "team"],
+        ids=["me", "team", "me_upercase", "team_upercase", "whitespace"],
     )
     def test_permission(self, HttpApiAuth, add_dataset_func, permission):
         dataset_id = add_dataset_func
@@ -357,11 +355,8 @@ class TestDatasetUpdate:
             "",
             "unknown",
             list(),
-            "ME",
-            "TEAM",
-            " ME ",
         ],
-        ids=["empty", "unknown", "type_error", "me_upercase", "team_upercase", "whitespace"],
+        ids=["empty", "unknown", "type_error"],
     )
     def test_permission_invalid(self, HttpApiAuth, add_dataset_func, permission):
         dataset_id = add_dataset_func
@@ -623,57 +618,57 @@ class TestDatasetUpdate:
         [
             ({"auto_keywords": -1}, "Input should be greater than or equal to 0"),
             ({"auto_keywords": 33}, "Input should be less than or equal to 32"),
-            ({"auto_keywords": 3.14}, "Input should be a valid integer"),
-            ({"auto_keywords": "string"}, "Input should be a valid integer"),
+            ({"auto_keywords": 3.14}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"auto_keywords": "string"}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"auto_questions": -1}, "Input should be greater than or equal to 0"),
             ({"auto_questions": 11}, "Input should be less than or equal to 10"),
-            ({"auto_questions": 3.14}, "Input should be a valid integer"),
-            ({"auto_questions": "string"}, "Input should be a valid integer"),
+            ({"auto_questions": 3.14}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"auto_questions": "string"}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"chunk_token_num": 0}, "Input should be greater than or equal to 1"),
             ({"chunk_token_num": 2049}, "Input should be less than or equal to 2048"),
-            ({"chunk_token_num": 3.14}, "Input should be a valid integer"),
-            ({"chunk_token_num": "string"}, "Input should be a valid integer"),
+            ({"chunk_token_num": 3.14}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"chunk_token_num": "string"}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"delimiter": ""}, "String should have at least 1 character"),
-            ({"html4excel": "string"}, "Input should be a valid boolean"),
+            ({"html4excel": "string"}, "Input should be a valid boolean, unable to interpret input"),
             ({"tag_kb_ids": "1,2"}, "Input should be a valid list"),
             ({"tag_kb_ids": [1, 2]}, "Input should be a valid string"),
             ({"topn_tags": 0}, "Input should be greater than or equal to 1"),
             ({"topn_tags": 11}, "Input should be less than or equal to 10"),
-            ({"topn_tags": 3.14}, "Input should be a valid integer"),
-            ({"topn_tags": "string"}, "Input should be a valid integer"),
+            ({"topn_tags": 3.14}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"topn_tags": "string"}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"filename_embd_weight": -1}, "Input should be greater than or equal to 0"),
             ({"filename_embd_weight": 1.1}, "Input should be less than or equal to 1"),
-            ({"filename_embd_weight": "string"}, "Input should be a valid number"),
+            ({"filename_embd_weight": "string"}, "Input should be a valid number, unable to parse string as a number"),
             ({"task_page_size": 0}, "Input should be greater than or equal to 1"),
-            ({"task_page_size": 3.14}, "Input should be a valid integer"),
-            ({"task_page_size": "string"}, "Input should be a valid integer"),
+            ({"task_page_size": 3.14}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"task_page_size": "string"}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"pages": "1,2"}, "Input should be a valid list"),
             ({"pages": ["1,2"]}, "Input should be a valid list"),
-            ({"pages": [["string1", "string2"]]}, "Input should be a valid integer"),
-            ({"graphrag": {"use_graphrag": "string"}}, "Input should be a valid boolean"),
+            ({"pages": [["string1", "string2"]]}, "Input should be a valid integer, unable to parse string as an integer"),
+            ({"graphrag": {"use_graphrag": "string"}}, "Input should be a valid boolean, unable to interpret input"),
             ({"graphrag": {"entity_types": "1,2"}}, "Input should be a valid list"),
             ({"graphrag": {"entity_types": [1, 2]}}, "nput should be a valid string"),
             ({"graphrag": {"method": "unknown"}}, "Input should be 'light' or 'general'"),
             ({"graphrag": {"method": None}}, "Input should be 'light' or 'general'"),
-            ({"graphrag": {"community": "string"}}, "Input should be a valid boolean"),
-            ({"graphrag": {"resolution": "string"}}, "Input should be a valid boolean"),
-            ({"raptor": {"use_raptor": "string"}}, "Input should be a valid boolean"),
+            ({"graphrag": {"community": "string"}}, "Input should be a valid boolean, unable to interpret input"),
+            ({"graphrag": {"resolution": "string"}}, "Input should be a valid boolean, unable to interpret input"),
+            ({"raptor": {"use_raptor": "string"}}, "Input should be a valid boolean, unable to interpret input"),
             ({"raptor": {"prompt": ""}}, "String should have at least 1 character"),
             ({"raptor": {"prompt": " "}}, "String should have at least 1 character"),
             ({"raptor": {"max_token": 0}}, "Input should be greater than or equal to 1"),
             ({"raptor": {"max_token": 2049}}, "Input should be less than or equal to 2048"),
-            ({"raptor": {"max_token": 3.14}}, "Input should be a valid integer"),
-            ({"raptor": {"max_token": "string"}}, "Input should be a valid integer"),
+            ({"raptor": {"max_token": 3.14}}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"raptor": {"max_token": "string"}}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"raptor": {"threshold": -0.1}}, "Input should be greater than or equal to 0"),
             ({"raptor": {"threshold": 1.1}}, "Input should be less than or equal to 1"),
-            ({"raptor": {"threshold": "string"}}, "Input should be a valid number"),
+            ({"raptor": {"threshold": "string"}}, "Input should be a valid number, unable to parse string as a number"),
             ({"raptor": {"max_cluster": 0}}, "Input should be greater than or equal to 1"),
             ({"raptor": {"max_cluster": 1025}}, "Input should be less than or equal to 1024"),
-            ({"raptor": {"max_cluster": 3.14}}, "Input should be a valid integer"),
-            ({"raptor": {"max_cluster": "string"}}, "Input should be a valid integer"),
+            ({"raptor": {"max_cluster": 3.14}}, "Input should be a valid integer, got a number with a fractional par"),
+            ({"raptor": {"max_cluster": "string"}}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"raptor": {"random_seed": -1}}, "Input should be greater than or equal to 0"),
-            ({"raptor": {"random_seed": 3.14}}, "Input should be a valid integer"),
-            ({"raptor": {"random_seed": "string"}}, "Input should be a valid integer"),
+            ({"raptor": {"random_seed": 3.14}}, "Input should be a valid integer, got a number with a fractional part"),
+            ({"raptor": {"random_seed": "string"}}, "Input should be a valid integer, unable to parse string as an integer"),
             ({"delimiter": "a" * 65536}, "Parser config exceeds size limit (max 65,535 characters)"),
         ],
         ids=[
@@ -750,12 +745,11 @@ class TestDatasetUpdate:
         res = list_datasets(HttpApiAuth)
         assert res["code"] == 0, res
         assert res["data"][0]["parser_config"] == {
-            "chunk_token_num": 512,
+            "chunk_token_num": 128,
             "delimiter": r"\n",
             "html4excel": False,
             "layout_recognize": "DeepDOC",
             "raptor": {"use_raptor": False},
-            "graphrag": {"use_graphrag": False},
         }, res
 
     @pytest.mark.p3
@@ -768,12 +762,11 @@ class TestDatasetUpdate:
         res = list_datasets(HttpApiAuth, {"id": dataset_id})
         assert res["code"] == 0, res
         assert res["data"][0]["parser_config"] == {
-            "chunk_token_num": 512,
+            "chunk_token_num": 128,
             "delimiter": r"\n",
             "html4excel": False,
             "layout_recognize": "DeepDOC",
             "raptor": {"use_raptor": False},
-            "graphrag": {"use_graphrag": False},
         }, res
 
     @pytest.mark.p3
@@ -785,7 +778,7 @@ class TestDatasetUpdate:
 
         res = list_datasets(HttpApiAuth)
         assert res["code"] == 0, res
-        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}, "graphrag": {"use_graphrag": False}}, res
+        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}}, res
 
     @pytest.mark.p3
     def test_parser_config_unset_with_chunk_method_change(self, HttpApiAuth, add_dataset_func):
@@ -796,7 +789,7 @@ class TestDatasetUpdate:
 
         res = list_datasets(HttpApiAuth)
         assert res["code"] == 0, res
-        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}, "graphrag": {"use_graphrag": False}}, res
+        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}}, res
 
     @pytest.mark.p3
     def test_parser_config_none_with_chunk_method_change(self, HttpApiAuth, add_dataset_func):
@@ -807,7 +800,7 @@ class TestDatasetUpdate:
 
         res = list_datasets(HttpApiAuth, {"id": dataset_id})
         assert res["code"] == 0, res
-        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}, "graphrag": {"use_graphrag": False}}, res
+        assert res["data"][0]["parser_config"] == {"raptor": {"use_raptor": False}}, res
 
     @pytest.mark.p2
     @pytest.mark.parametrize(

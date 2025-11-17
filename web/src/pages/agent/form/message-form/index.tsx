@@ -10,17 +10,15 @@ import {
 } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
-import { memo } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { INextOperatorForm } from '../../interface';
-import { FormWrapper } from '../components/form-wrapper';
 import { PromptEditor } from '../components/prompt-editor';
 import { useValues } from './use-values';
 import { useWatchFormChange } from './use-watch-change';
 
-function MessageForm({ node }: INextOperatorForm) {
+const MessageForm = ({ node }: INextOperatorForm) => {
   const { t } = useTranslation();
 
   const values = useValues(node);
@@ -49,7 +47,13 @@ function MessageForm({ node }: INextOperatorForm) {
 
   return (
     <Form {...form}>
-      <FormWrapper>
+      <form
+        className="space-y-5 px-5 "
+        autoComplete="off"
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
         <FormContainer>
           <FormItem>
             <FormLabel tooltip={t('flow.msgTip')}>{t('flow.msg')}</FormLabel>
@@ -93,9 +97,9 @@ function MessageForm({ node }: INextOperatorForm) {
             <FormMessage />
           </FormItem>
         </FormContainer>
-      </FormWrapper>
+      </form>
     </Form>
   );
-}
+};
 
-export default memo(MessageForm);
+export default MessageForm;

@@ -1,19 +1,17 @@
 import {
   BaseEdge,
-  Edge,
   EdgeLabelRenderer,
   EdgeProps,
   getBezierPath,
 } from '@xyflow/react';
-import { memo } from 'react';
 import useGraphStore from '../../store';
 
+import { useTheme } from '@/components/theme-provider';
 import { useFetchAgent } from '@/hooks/use-agent-request';
-import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
-import { NodeHandleId, Operator } from '../../constant';
+import styles from './index.less';
 
-function InnerButtonEdge({
+export function ButtonEdge({
   id,
   sourceX,
   sourceY,
@@ -26,9 +24,7 @@ function InnerButtonEdge({
   style = {},
   markerEnd,
   selected,
-  data,
-  sourceHandleId,
-}: EdgeProps<Edge<{ isHovered: boolean }>>) {
+}: EdgeProps) {
   const deleteEdgeById = useGraphStore((state) => state.deleteEdgeById);
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -38,8 +34,9 @@ function InnerButtonEdge({
     targetY,
     targetPosition,
   });
+  const { theme } = useTheme();
   const selectedStyle = useMemo(() => {
-    return selected ? { strokeWidth: 1, stroke: 'rgba(76, 164, 231, 1)' } : {};
+    return selected ? { strokeWidth: 2, stroke: '#1677ff' } : {};
   }, [selected]);
 
   const onEdgeClick = () => {
@@ -69,20 +66,11 @@ function InnerButtonEdge({
       // The set of elements following source
       const slicedGraphPath = graphPath.slice(idx + 1);
       if (slicedGraphPath.some((x) => x === target)) {
-        return { strokeWidth: 1, stroke: 'red' };
+        return { strokeWidth: 2, stroke: 'red' };
       }
     }
     return {};
   }, [source, target, graphPath]);
-
-  const visible = useMemo(() => {
-    return (
-      data?.isHovered &&
-      sourceHandleId !== NodeHandleId.Tool &&
-      sourceHandleId !== NodeHandleId.AgentBottom && // The connection between the agent node and the tool node does not need to display the delete button
-      !target.startsWith(Operator.Tool)
-    );
-  }, [data?.isHovered, sourceHandleId, target]);
 
   return (
     <>
@@ -90,9 +78,7 @@ function InnerButtonEdge({
         path={edgePath}
         markerEnd={markerEnd}
         style={{ ...style, ...selectedStyle, ...highlightStyle }}
-        className="text-text-secondary"
       />
-
       <EdgeLabelRenderer>
         <div
           style={{
@@ -107,11 +93,9 @@ function InnerButtonEdge({
           className="nodrag nopan"
         >
           <button
-            className={cn(
-              'size-3.5 border border-state-error text-state-error rounded-full leading-none',
-              'invisible',
-              { visible },
-            )}
+            className={
+              theme === 'dark' ? styles.edgeButtonDark : styles.edgeButton
+            }
             type="button"
             onClick={onEdgeClick}
           >
@@ -122,5 +106,3 @@ function InnerButtonEdge({
     </>
   );
 }
-
-export const ButtonEdge = memo(InnerButtonEdge);

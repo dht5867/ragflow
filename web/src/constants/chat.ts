@@ -22,7 +22,6 @@ export const variableEnabledFieldMap = {
 export enum SharedFrom {
   Agent = 'agent',
   Chat = 'chat',
-  Search = 'search',
 }
 
 export enum ChatSearchParams {
@@ -32,9 +31,3 @@ export enum ChatSearchParams {
 }
 
 export const EmptyConversationId = 'empty';
-
-export enum DatasetMetadata {
-  Disabled = 'disabled',
-  Automatic = 'automatic',
-  Manual = 'manual',
-}

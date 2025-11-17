@@ -50,7 +50,7 @@ export function BeginDynamicOptions() {
         );
       })}
       <BlockButton onClick={() => append({ value: '' })} type="button">
-        {t('flow.addField')}
+        {t('flow.addVariable')}
       </BlockButton>
     </div>
   );

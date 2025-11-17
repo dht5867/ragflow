@@ -1,3 +1,4 @@
+import { Edge } from '@xyflow/react';
 import pick from 'lodash/pick';
 import { useCallback, useEffect } from 'react';
 import { IOperatorForm } from '../../interface';
@@ -20,8 +21,8 @@ export const useBuildRelevantOptions = () => {
   return buildRelevantOptions;
 };
 
-// const getTargetOfEdge = (edges: Edge[], sourceHandle: string) =>
-//   edges.find((x) => x.sourceHandle === sourceHandle)?.target;
+const getTargetOfEdge = (edges: Edge[], sourceHandle: string) =>
+  edges.find((x) => x.sourceHandle === sourceHandle)?.target;
 
 /**
  *  monitor changes in the connection and synchronize the target to the yes and no fields of the form
@@ -29,7 +30,7 @@ export const useBuildRelevantOptions = () => {
  * @param param0
  */
 export const useWatchConnectionChanges = ({ nodeId, form }: IOperatorForm) => {
-  // const edges = useGraphStore((state) => state.edges);
+  const edges = useGraphStore((state) => state.edges);
   const getNode = useGraphStore((state) => state.getNode);
   const node = getNode(nodeId);
 
@@ -39,12 +40,12 @@ export const useWatchConnectionChanges = ({ nodeId, form }: IOperatorForm) => {
     }
   }, [node, form]);
 
-  // const watchConnectionChanges = useCallback(() => {
-  //   const edgeList = edges.filter((x) => x.source === nodeId);
-  //   const yes = getTargetOfEdge(edgeList, 'yes');
-  //   const no = getTargetOfEdge(edgeList, 'no');
-  //   form?.setFieldsValue({ yes, no });
-  // }, [edges, nodeId, form]);
+  const watchConnectionChanges = useCallback(() => {
+    const edgeList = edges.filter((x) => x.source === nodeId);
+    const yes = getTargetOfEdge(edgeList, 'yes');
+    const no = getTargetOfEdge(edgeList, 'no');
+    form?.setFieldsValue({ yes, no });
+  }, [edges, nodeId, form]);
 
   useEffect(() => {
     watchFormChanges();

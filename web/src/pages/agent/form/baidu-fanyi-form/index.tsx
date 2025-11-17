@@ -1,11 +1,11 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { Form, Input, Select } from 'antd';
 import { useMemo } from 'react';
-import { IOperatorForm } from '../../interface';
 import {
   BaiduFanyiDomainOptions,
   BaiduFanyiSourceLangOptions,
-} from '../../options';
+} from '../../constant';
+import { IOperatorForm } from '../../interface';
 import DynamicInputVariable from '../components/dynamic-input-variable';
 
 const BaiduFanyiForm = ({ onValuesChange, form, node }: IOperatorForm) => {

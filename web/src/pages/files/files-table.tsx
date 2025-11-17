@@ -213,7 +213,6 @@ export function FilesTable({
       id: 'actions',
       header: t('action'),
       enableHiding: false,
-      enablePinning: true,
       cell: ({ row }) => {
         return (
           <ActionCell
@@ -260,56 +259,51 @@ export function FilesTable({
   });
 
   return (
-    <>
-      <div className="w-full">
-        <Table rootClassName="max-h-[calc(100vh-242px)] overflow-auto">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  );
-                })}
+    <div className="w-full">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <TableSkeleton columnsLength={columns.length}></TableSkeleton>
+          ) : table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && 'selected'}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cell.column.columnDef.meta?.cellClassName}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <TableSkeleton columnsLength={columns.length}></TableSkeleton>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className="group"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cell.column.columnDef.meta?.cellClassName}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableEmpty columnsLength={columns.length}></TableEmpty>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          ) : (
+            <TableEmpty columnsLength={columns.length}></TableEmpty>
+          )}
+        </TableBody>
+      </Table>
+
       <div className="flex items-center justify-end py-4">
         <div className="space-x-2">
           <RAGFlowPagination
@@ -337,6 +331,6 @@ export function FilesTable({
           loading={fileRenameLoading}
         ></RenameDialog>
       )}
-    </>
+    </div>
   );
 }

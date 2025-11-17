@@ -104,7 +104,7 @@ export function AddModelCard() {
           <Button variant="secondary" size="icon">
             <MoreVertical className="h-4 w-4" />
           </Button>
-          <Button>
+          <Button variant={'tertiary'}>
             <Key /> API
           </Button>
         </div>
@@ -126,7 +126,7 @@ export function ModelLibraryCard() {
         <p>LLM,TEXT EMBEDDING, SPEECH2TEXT, MODERATION</p>
 
         <div className="text-right">
-          <Button>
+          <Button variant={'tertiary'}>
             <Plus /> Add
           </Button>
         </div>

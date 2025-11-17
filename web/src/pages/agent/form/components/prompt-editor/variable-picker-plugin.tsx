@@ -67,6 +67,7 @@ function VariablePickerMenuItem({
     option: VariableOption | VariableInnerOption,
   ) => void;
 }) {
+  console.info('xxxx');
   return (
     <li
       key={option.key}
@@ -220,10 +221,6 @@ export default function VariablePickerMenuPlugin({
       }
 
       $getRoot().clear().append(paragraph);
-
-      if ($isRangeSelection($getSelection())) {
-        $getRoot().selectEnd();
-      }
     },
     [findLabelByValue],
   );
@@ -248,10 +245,11 @@ export default function VariablePickerMenuPlugin({
       options={buildNextOptions()}
       menuRenderFn={(anchorElementRef, { selectOptionAndCleanUp }) => {
         const nextOptions = buildNextOptions();
+        console.log('🚀 ~ nextOptions:', nextOptions);
         return anchorElementRef.current && nextOptions.length
           ? ReactDOM.createPortal(
               <div className="typeahead-popover w-[200px] p-2">
-                <ul className="overflow-y-auto !scrollbar-thin overflow-x-hidden">
+                <ul>
                   {nextOptions.map((option, i: number) => (
                     <VariablePickerMenuItem
                       index={i}

@@ -21,6 +21,6 @@ export interface IFetchKnowledgeListRequestParams {
 }
 
 export interface IFetchDocumentListRequestBody {
-  suffix?: string[];
+  types?: string[];
   run_status?: string[];
 }

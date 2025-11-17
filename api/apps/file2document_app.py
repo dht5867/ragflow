@@ -14,8 +14,6 @@
 #  limitations under the License
 #
 
-from pathlib import Path
-
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
 
@@ -84,7 +82,6 @@ def convert():
                         "created_by": current_user.id,
                         "type": file.type,
                         "name": file.name,
-                        "suffix": Path(file.name).suffix.lstrip("."),
                         "location": file.location,
                         "size": file.size
                     })

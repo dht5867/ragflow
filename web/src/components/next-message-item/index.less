@@ -9,7 +9,6 @@
   .messageItemContent {
     display: inline-flex;
     gap: 20px;
-    width: 100%;
   }
   .messageItemContentReverse {
     flex-direction: row-reverse;
@@ -25,11 +24,13 @@
   .messageText {
     .chunkText();
     .messageTextBase();
+    background-color: #e6f4ff;
     word-break: break-word;
   }
   .messageTextDark {
     .chunkText();
     .messageTextBase();
+    background-color: #1668dc;
     word-break: break-word;
     :global(section.think) {
       color: rgb(166, 166, 166);
@@ -40,6 +41,7 @@
   .messageUserText {
     .chunkText();
     .messageTextBase();
+    background-color: rgba(255, 255, 255, 0.3);
     word-break: break-word;
     text-align: justify;
   }

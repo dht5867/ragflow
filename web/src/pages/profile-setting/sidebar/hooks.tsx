@@ -1,5 +1,8 @@
+import {
+  ProfileSettingBaseKey,
+  ProfileSettingRouteKey,
+} from '@/constants/setting';
 import { useLogout } from '@/hooks/login-hooks';
-import { Routes } from '@/routes';
 import { useCallback } from 'react';
 import { useNavigate } from 'umi';
 
@@ -8,11 +11,11 @@ export const useHandleMenuClick = () => {
   const { logout } = useLogout();
 
   const handleMenuClick = useCallback(
-    (key: Routes) => () => {
-      if (key === Routes.Logout) {
+    (key: ProfileSettingRouteKey) => () => {
+      if (key === ProfileSettingRouteKey.Logout) {
         logout();
       } else {
-        navigate(`${Routes.ProfileSetting}${key}`);
+        navigate(`/${ProfileSettingBaseKey}/${key}`);
       }
     },
     [logout, navigate],

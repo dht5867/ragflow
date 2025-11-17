@@ -15,7 +15,7 @@ export function InnerLogicNode({
 }: NodeProps<ILogicNode>) {
   return (
     <ToolBar selected={selected} id={id} label={data.label}>
-      <NodeWrapper selected={selected}>
+      <NodeWrapper>
         <CommonHandle
           id="c"
           type="source"

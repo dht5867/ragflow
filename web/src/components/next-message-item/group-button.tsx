@@ -1,4 +1,4 @@
-import { PromptIcon } from '@/assets/icon/next-icon';
+import { PromptIcon } from '@/assets/icon/Icon';
 import CopyToClipboard from '@/components/copy-to-clipboard';
 import { useSetModalState } from '@/hooks/common-hooks';
 import { IRemoveMessageById } from '@/hooks/logic-hooks';
@@ -27,7 +27,6 @@ interface IProps {
   showLikeButton: boolean;
   audioBinary?: string;
   showLoudspeaker?: boolean;
-  showLog?: boolean;
 }
 
 export const AssistantGroupButton = ({
@@ -37,7 +36,6 @@ export const AssistantGroupButton = ({
   audioBinary,
   showLikeButton,
   showLoudspeaker = true,
-  showLog = true,
 }: IProps) => {
   const { visible, hideModal, showModal, onFeedbackOk, loading } =
     useSendFeedback(messageId);
@@ -93,12 +91,68 @@ export const AssistantGroupButton = ({
             <PromptIcon style={{ fontSize: '16px' }} />
           </Radio.Button>
         )}
-        {showLog && (
-          <ToggleGroupItem value="f" onClick={handleShowLogSheet}>
-            <NotebookText className="size-4" />
-          </ToggleGroupItem>
-        )}
+        <ToggleGroupItem value="f" onClick={handleShowLogSheet}>
+          <NotebookText className="size-4" />
+        </ToggleGroupItem>
       </ToggleGroup>
+      {visible && (
+        <FeedbackModal
+          visible={visible}
+          hideModal={hideModal}
+          onOk={onFeedbackOk}
+          loading={loading}
+        ></FeedbackModal>
+      )}
+      {promptVisible && (
+        <PromptModal
+          visible={promptVisible}
+          hideModal={hidePromptModal}
+          prompt={prompt}
+        ></PromptModal>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <Radio.Group size="small">
+        <Radio.Button value="a">
+          <CopyToClipboard text={content}></CopyToClipboard>
+        </Radio.Button>
+        {showLoudspeaker && (
+          <Radio.Button value="b" onClick={handleRead}>
+            <Tooltip title={t('chat.read')}>
+              {isPlaying ? <PauseCircleOutlined /> : <SoundOutlined />}
+            </Tooltip>
+            <audio src="" ref={ref}></audio>
+          </Radio.Button>
+        )}
+        {showLikeButton && (
+          <>
+            <Radio.Button value="c" onClick={handleLike}>
+              <LikeOutlined />
+            </Radio.Button>
+            <Radio.Button value="d" onClick={showModal}>
+              <DislikeOutlined />
+            </Radio.Button>
+          </>
+        )}
+        {prompt && (
+          <Radio.Button value="e" onClick={showPromptModal}>
+            <PromptIcon style={{ fontSize: '16px' }} />
+          </Radio.Button>
+        )}
+        <Radio.Button
+          value="f"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleShowLogSheet();
+          }}
+        >
+          <NotebookText className="size-4" />
+        </Radio.Button>
+      </Radio.Group>
       {visible && (
         <FeedbackModal
           visible={visible}

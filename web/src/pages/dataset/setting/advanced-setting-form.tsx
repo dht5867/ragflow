@@ -148,7 +148,12 @@ export default function AdvancedSettingForm() {
             </FormItem>
           )}
         />
-        <Button size={'sm'} type="submit" className="w-2/5">
+        <Button
+          variant={'tertiary'}
+          size={'sm'}
+          type="submit"
+          className="w-2/5"
+        >
           Test
         </Button>
       </form>

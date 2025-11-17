@@ -31,7 +31,6 @@ from api.db.services.file_service import FileService
 from api import settings
 from api.utils.api_utils import get_json_result
 from api.utils.file_utils import filename_type
-from api.utils.web_utils import CONTENT_TYPE_MAP
 from rag.utils.storage_factory import STORAGE_IMPL
 
 
@@ -100,7 +99,6 @@ def upload():
                 FileService.query,
                 name=file_obj_names[file_len - 1],
                 parent_id=last_folder.id)
-            STORAGE_IMPL.put(last_folder.id, location, blob)
             file = {
                 "id": get_uuid(),
                 "parent_id": last_folder.id,
@@ -112,6 +110,7 @@ def upload():
                 "size": len(blob),
             }
             file = FileService.insert(file)
+            STORAGE_IMPL.put(last_folder.id, location, blob)
             file_res.append(file.to_json())
         return get_json_result(data=file_res)
     except Exception as e:
@@ -335,14 +334,15 @@ def get(file_id):
             blob = STORAGE_IMPL.get(b, n)
 
         response = flask.make_response(blob)
-        ext = re.search(r"\.([^.]+)$", file.name.lower())
-        ext = ext.group(1) if ext else None
+        ext = re.search(r"\.([^.]+)$", file.name)
         if ext:
             if file.type == FileType.VISUAL.value:
-                content_type = CONTENT_TYPE_MAP.get(ext, f"image/{ext}")
+                response.headers.set('Content-Type', 'image/%s' % ext.group(1))
             else:
-                content_type = CONTENT_TYPE_MAP.get(ext, f"application/{ext}")
-            response.headers.set("Content-Type", content_type)
+                response.headers.set(
+                    'Content-Type',
+                    'application/%s' %
+                    ext.group(1))
         return response
     except Exception as e:
         return server_error_response(e)

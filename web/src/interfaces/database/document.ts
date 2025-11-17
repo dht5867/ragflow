@@ -12,7 +12,7 @@ export interface IDocumentInfo {
   parser_config: IParserConfig;
   parser_id: string;
   process_begin_at?: string;
-  process_duration: number;
+  process_duation: number;
   progress: number;
   progress_msg: string;
   run: RunningStatus;
@@ -47,8 +47,3 @@ interface GraphRag {
   resolution?: boolean;
   use_graphrag?: boolean;
 }
-
-export type IDocumentInfoFilter = {
-  run_status: Record<number, number>;
-  suffix: Record<string, number>;
-};

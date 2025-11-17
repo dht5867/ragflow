@@ -53,7 +53,7 @@ class RAGFlow:
         name: str,
         avatar: Optional[str] = None,
         description: Optional[str] = None,
-        embedding_model: Optional[str] = None,
+        embedding_model: Optional[str] = "BAAI/bge-large-zh-v1.5@BAAI",
         permission: str = "me",
         chunk_method: str = "naive",
         parser_config: Optional[DataSet.ParserConfig] = None,
@@ -143,7 +143,7 @@ class RAGFlow:
                 },
             )
             if prompt.opener is None:
-                prompt.opener = "Hi! I'm your assistant. What can I do for you?"
+                prompt.opener = "Hi! I'm your assistant, what can I do for you?"
             if prompt.prompt is None:
                 prompt.prompt = (
                     "You are an intelligent assistant. Please summarize the content of the knowledge base to answer the question. "
@@ -197,7 +197,6 @@ class RAGFlow:
         top_k=1024,
         rerank_id: str | None = None,
         keyword: bool = False,
-        cross_languages: list[str]|None = None
     ):
         if document_ids is None:
             document_ids = []
@@ -212,7 +211,6 @@ class RAGFlow:
             "question": question,
             "dataset_ids": dataset_ids,
             "document_ids": document_ids,
-            "cross_languages": cross_languages
         }
         # Send a POST request to the backend service (using requests library as an example, actual implementation may vary)
         res = self.post("/retrieval", json=data_json)

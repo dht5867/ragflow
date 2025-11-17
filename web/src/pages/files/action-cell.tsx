@@ -61,40 +61,24 @@ export function ActionCell({
   }, [record, showMoveFileModal]);
 
   return (
-    <section className="flex gap-4 items-center text-text-sub-title-invert opacity-0 group-hover:opacity-100 transition-opacity">
+    <section className="flex gap-4 items-center text-text-sub-title-invert">
       <Button
-        variant="transparent"
-        className="border-none hover:bg-bg-card text-text-primary"
+        variant="ghost"
         size={'sm'}
         onClick={handleShowConnectToKnowledgeModal}
       >
         <Link2 />
       </Button>
-      <Button
-        variant="transparent"
-        className="border-none hover:bg-bg-card text-text-primary"
-        size={'sm'}
-        onClick={handleShowMoveFileModal}
-      >
+      <Button variant="ghost" size={'sm'} onClick={handleShowMoveFileModal}>
         <FolderInput />
       </Button>
 
-      <Button
-        variant="transparent"
-        className="border-none hover:bg-bg-card text-text-primary"
-        size={'sm'}
-        onClick={handleShowFileRenameModal}
-      >
+      <Button variant="ghost" size={'sm'} onClick={handleShowFileRenameModal}>
         <FolderPen />
       </Button>
 
       {isFolder || (
-        <Button
-          variant="transparent"
-          className="border-none hover:bg-bg-card text-text-primary"
-          size={'sm'}
-          onClick={onDownloadDocument}
-        >
+        <Button variant={'ghost'} size={'sm'} onClick={onDownloadDocument}>
           <ArrowDownToLine />
         </Button>
       )}
@@ -105,11 +89,7 @@ export function ActionCell({
           documentName={record.name}
           className="text-text-sub-title-invert"
         >
-          <Button
-            variant="transparent"
-            className="border-none hover:bg-bg-card text-text-primary"
-            size={'sm'}
-          >
+          <Button variant={'ghost'} size={'sm'}>
             <Eye />
           </Button>
         </NewDocumentLink>
@@ -117,8 +97,7 @@ export function ActionCell({
 
       {/* <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="transparent"
-        className="border-none" size={'sm'}>
+          <Button variant="ghost" size={'sm'}>
             <EllipsisVertical />
           </Button>
         </DropdownMenuTrigger>
@@ -139,11 +118,7 @@ export function ActionCell({
         </DropdownMenuContent>
       </DropdownMenu> */}
       <ConfirmDeleteDialog>
-        <Button
-          variant="transparent"
-          className="border-none hover:bg-bg-card text-text-primary"
-          size={'sm'}
-        >
+        <Button variant="ghost" size={'sm'}>
           <Trash2 />
         </Button>
       </ConfirmDeleteDialog>

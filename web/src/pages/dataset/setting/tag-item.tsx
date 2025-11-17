@@ -1,4 +1,3 @@
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
 import { SliderInputFormField } from '@/components/slider-input-form-field';
 import {
   FormControl,
@@ -9,7 +8,8 @@ import {
 } from '@/components/ui/form';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { useFetchKnowledgeList } from '@/hooks/knowledge-hooks';
-import { Flex, Form, InputNumber, Select, Slider, Space } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
+import { Avatar, Flex, Form, InputNumber, Select, Slider, Space } from 'antd';
 import DOMPurify from 'dompurify';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -27,11 +27,8 @@ export const TagSetItem = () => {
       value: x.id,
       icon: () => (
         <Space>
-          <RAGFlowAvatar
-            name={x.name}
-            avatar={x.avatar}
-            className="size-4"
-          ></RAGFlowAvatar>
+          <Avatar size={20} icon={<UserOutlined />} src={x.avatar} />
+          {x.name}
         </Space>
       ),
     }));
@@ -64,7 +61,7 @@ export const TagSetItem = () => {
                   onValueChange={field.onChange}
                   placeholder={t('chat.knowledgeBasesMessage')}
                   variant="inverted"
-                  maxCount={10}
+                  maxCount={0}
                   {...field}
                 />
               </FormControl>

@@ -1,33 +1,12 @@
-import { FormContainer } from '@/components/form-container';
-import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { TopNFormField } from '@/components/top-n-item';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
+import TopNItem from '@/components/top-n-item';
 import { useTranslate } from '@/hooks/common-hooks';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { DatePicker, DatePickerProps } from 'antd';
+import { DatePicker, DatePickerProps, Form, Select, Switch } from 'antd';
 import dayjs from 'dayjs';
-import { memo, useCallback, useMemo } from 'react';
-import { useForm, useFormContext } from 'react-hook-form';
-import { z } from 'zod';
-import { initialGoogleScholarValues } from '../../constant';
+import { useCallback, useMemo } from 'react';
 import { useBuildSortOptions } from '../../form-hooks';
-import { useFormValues } from '../../hooks/use-form-values';
-import { useWatchFormChange } from '../../hooks/use-watch-form-change';
-import { INextOperatorForm } from '../../interface';
-import { buildOutputList } from '../../utils/build-output-list';
-import { FormWrapper } from '../components/form-wrapper';
-import { Output } from '../components/output';
-import { QueryVariable } from '../components/query-variable';
+import { IOperatorForm } from '../../interface';
+import DynamicInputVariable from '../components/dynamic-input-variable';
 
-// TODO: To be replaced
 const YearPicker = ({
   onChange,
   value,
@@ -53,114 +32,44 @@ const YearPicker = ({
   return <DatePicker picker="year" onChange={handleChange} value={nextValue} />;
 };
 
-export function GoogleScholarFormWidgets() {
-  const form = useFormContext();
+const GoogleScholarForm = ({ onValuesChange, form, node }: IOperatorForm) => {
   const { t } = useTranslate('flow');
 
   const options = useBuildSortOptions();
 
   return (
-    <>
-      <TopNFormField></TopNFormField>
-      <FormField
-        control={form.control}
-        name={`sort_by`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{t('sortBy')}</FormLabel>
-            <FormControl>
-              <SelectWithSearch {...field} options={options}></SelectWithSearch>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`year_low`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{t('yearLow')}</FormLabel>
-            <FormControl>
-              <YearPicker {...field}></YearPicker>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`year_high`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{t('yearHigh')}</FormLabel>
-            <FormControl>
-              <YearPicker {...field}></YearPicker>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`patents`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{t('patents')}</FormLabel>
-            <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              ></Switch>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </>
-  );
-}
-
-export const GoogleScholarFormPartialSchema = {
-  top_n: z.number(),
-  sort_by: z.string(),
-  year_low: z.number(),
-  year_high: z.number(),
-  patents: z.boolean(),
-};
-
-export const FormSchema = z.object({
-  ...GoogleScholarFormPartialSchema,
-  query: z.string(),
-});
-
-const outputList = buildOutputList(initialGoogleScholarValues.outputs);
-
-function GoogleScholarForm({ node }: INextOperatorForm) {
-  const defaultValues = useFormValues(initialGoogleScholarValues, node);
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    defaultValues,
-    resolver: zodResolver(FormSchema),
-  });
-
-  useWatchFormChange(node?.id, form);
-
-  return (
-    <Form {...form}>
-      <FormWrapper>
-        <FormContainer>
-          <QueryVariable></QueryVariable>
-        </FormContainer>
-        <FormContainer>
-          <GoogleScholarFormWidgets></GoogleScholarFormWidgets>
-        </FormContainer>
-      </FormWrapper>
-      <div className="p-5">
-        <Output list={outputList}></Output>
-      </div>
+    <Form
+      name="basic"
+      autoComplete="off"
+      form={form}
+      onValuesChange={onValuesChange}
+      layout={'vertical'}
+    >
+      <DynamicInputVariable node={node}></DynamicInputVariable>
+      <TopNItem initialValue={5}></TopNItem>
+      <Form.Item
+        label={t('sortBy')}
+        name={'sort_by'}
+        initialValue={'relevance'}
+      >
+        <Select options={options}></Select>
+      </Form.Item>
+      <Form.Item label={t('yearLow')} name={'year_low'}>
+        <YearPicker />
+      </Form.Item>
+      <Form.Item label={t('yearHigh')} name={'year_high'}>
+        <YearPicker />
+      </Form.Item>
+      <Form.Item
+        label={t('patents')}
+        name={'patents'}
+        valuePropName="checked"
+        initialValue={true}
+      >
+        <Switch></Switch>
+      </Form.Item>
     </Form>
   );
-}
+};
 
-export default memo(GoogleScholarForm);
+export default GoogleScholarForm;

@@ -17,11 +17,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { RAGFlowSelect, RAGFlowSelectOptionType } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useTranslate } from '@/hooks/common-hooks';
 import { IModalProps } from '@/interfaces/common';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isEmpty } from 'lodash';
-import { ChangeEvent, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -42,7 +41,6 @@ function ParameterForm({
   otherThanCurrentQuery,
   submit,
 }: ModalFormProps) {
-  const { t } = useTranslate('flow');
   const FormSchema = z.object({
     type: z.string(),
     key: z
@@ -86,7 +84,7 @@ function ParameterForm({
                 <Icon
                   className={`size-${cur === BeginQueryType.Options ? 4 : 5}`}
                 ></Icon>
-                {t(cur.toLowerCase())}
+                {cur}
               </div>
             ),
             value: cur,
@@ -118,13 +116,6 @@ function ParameterForm({
     submit(values);
   }
 
-  const handleKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const name = form.getValues().name || '';
-    form.setValue('key', e.target.value.trim());
-    if (!name) {
-      form.setValue('name', e.target.value.trim());
-    }
-  };
   return (
     <Form {...form}>
       <form
@@ -138,7 +129,7 @@ function ParameterForm({
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('type')}</FormLabel>
+              <FormLabel>Type</FormLabel>
               <FormControl>
                 <RAGFlowSelect {...field} options={options} />
               </FormControl>
@@ -151,9 +142,9 @@ function ParameterForm({
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('key')}</FormLabel>
+              <FormLabel>Key</FormLabel>
               <FormControl>
-                <Input {...field} autoComplete="off" onBlur={handleKeyChange} />
+                <Input {...field} autoComplete="off" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -164,7 +155,7 @@ function ParameterForm({
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('name')}</FormLabel>
+              <FormLabel>Name</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -177,7 +168,7 @@ function ParameterForm({
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('optional')}</FormLabel>
+              <FormLabel>Optional</FormLabel>
               <FormControl>
                 <Switch
                   checked={field.value}
@@ -217,7 +208,7 @@ export function ParameterDialog({
         ></ParameterForm>
         <DialogFooter>
           <Button type="submit" form={FormId}>
-            {t('modal.okText')}
+            Confirm
           </Button>
         </DialogFooter>
       </DialogContent>

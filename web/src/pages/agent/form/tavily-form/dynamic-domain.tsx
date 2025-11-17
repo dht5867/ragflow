@@ -7,7 +7,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { t } from 'i18next';
 import { X } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
@@ -52,9 +51,7 @@ export const DynamicDomain = ({ name, label }: DynamicDomainProps) => {
         ))}
       </div>
       <FormMessage />
-      <BlockButton onClick={() => append({ value: '' })}>
-        {t('common.add')}
-      </BlockButton>
+      <BlockButton onClick={() => append({ value: '' })}>Add</BlockButton>
     </FormItem>
   );
 };

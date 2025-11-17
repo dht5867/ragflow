@@ -7,5 +7,4 @@ export interface IFeedbackRequestBody {
 export interface IAskRequestBody {
   question: string;
   kb_ids: string[];
-  search_id?: string;
 }

@@ -1,14 +1,14 @@
 import { cn } from '@/lib/utils';
-import { HTMLAttributes } from 'react';
+import { HTMLAttributes, PropsWithChildren } from 'react';
 
-type IProps = HTMLAttributes<HTMLDivElement> & { selected?: boolean };
-
-export function NodeWrapper({ children, className, selected }: IProps) {
+export function NodeWrapper({
+  children,
+  className,
+}: PropsWithChildren & HTMLAttributes<HTMLDivElement>) {
   return (
     <section
       className={cn(
-        'bg-text-title-invert p-2.5 rounded-sm w-[200px] text-xs',
-        { 'border border-accent-primary': selected },
+        'bg-background-header-bar p-2.5 rounded-md w-[200px] text-xs',
         className,
       )}
     >

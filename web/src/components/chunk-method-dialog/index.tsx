@@ -80,6 +80,7 @@ export function ChunkMethodDialog({
   hideModal,
   onOk,
   parserId,
+  documentId,
   documentExtension,
   visible,
   parserConfig,
@@ -317,11 +318,7 @@ export function ChunkMethodDialog({
               </FormContainer>
             )}
             {showGraphRagItems(selectedTag as DocumentParserType) &&
-              useGraphRag && (
-                <FormContainer>
-                  <UseGraphRagFormField></UseGraphRagFormField>
-                </FormContainer>
-              )}
+              useGraphRag && <UseGraphRagFormField></UseGraphRagFormField>}
             {showEntityTypes && <EntityTypesFormField></EntityTypesFormField>}
           </form>
         </Form>

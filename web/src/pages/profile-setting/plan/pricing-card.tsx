@@ -38,7 +38,10 @@ export function PricingCard({
       <CardHeader className=" justify-between p-0 pb-3 h-52">
         <section>
           <div className="flex items-center justify-between mb-2">
-            <Badge className="text-xs">
+            <Badge
+              variant={isFree ? 'secondary' : 'tertiary'}
+              className="text-xs"
+            >
               {isPro && <Zap className="mr-2 h-4 w-4" />}
               {isEnterprise && <Mail className="mr-2 h-4 w-4" />}
               {title}
@@ -56,6 +59,7 @@ export function PricingCard({
             )}
           </div>
           <Button
+            variant={isFree ? 'secondary' : 'tertiary'}
             className={cn('w-full', {
               'bg-colors-text-core-standard': !isFree,
             })}

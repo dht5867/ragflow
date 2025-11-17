@@ -3,17 +3,9 @@ import { LlmIcon } from '@/components/svg-icon';
 import { useTheme } from '@/components/theme-provider';
 import { LLMFactory } from '@/constants/llm';
 import { useSetModalState, useTranslate } from '@/hooks/common-hooks';
-import {
-  LlmItem,
-  useFetchMyLlmListDetailed,
-  useSelectLlmList,
-} from '@/hooks/llm-hooks';
+import { LlmItem, useSelectLlmList } from '@/hooks/llm-hooks';
 import { getRealModelName } from '@/utils/llm-util';
-import {
-  CloseCircleOutlined,
-  EditOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+import { CloseCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
@@ -34,6 +26,7 @@ import { CircleHelp } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import SettingTitle from '../components/setting-title';
 import { isLocalLlmFactory } from '../utils';
+import TencentCloudModal from './Tencent-modal';
 import ApiKeyModal from './api-key-modal';
 import AzureOpenAIModal from './azure-openai-modal';
 import BedrockModal from './bedrock-modal';
@@ -57,7 +50,6 @@ import {
 } from './hooks';
 import HunyuanModal from './hunyuan-modal';
 import styles from './index.less';
-import TencentCloudModal from './next-tencent-modal';
 import OllamaModal from './ollama-modal';
 import SparkModal from './spark-modal';
 import SystemModelSettingModal from './system-model-setting-modal';
@@ -68,10 +60,9 @@ const { Text } = Typography;
 interface IModelCardProps {
   item: LlmItem;
   clickApiKey: (llmFactory: string) => void;
-  handleEditModel: (model: any, factory: LlmItem) => void;
 }
 
-const ModelCard = ({ item, clickApiKey, handleEditModel }: IModelCardProps) => {
+const ModelCard = ({ item, clickApiKey }: IModelCardProps) => {
   const { visible, switchVisible } = useSetModalState();
   const { t } = useTranslate('setting');
   const { theme } = useTheme();
@@ -121,7 +112,7 @@ const ModelCard = ({ item, clickApiKey, handleEditModel }: IModelCardProps) => {
               </Button>
               <Button onClick={handleShowMoreClick}>
                 <Flex align="center" gap={4}>
-                  {visible ? t('hideModels') : t('showMoreModels')}
+                  {t('showMoreModels')}
                   <MoreModelIcon />
                 </Flex>
               </Button>
@@ -138,23 +129,13 @@ const ModelCard = ({ item, clickApiKey, handleEditModel }: IModelCardProps) => {
             size="small"
             dataSource={item.llm}
             className={styles.llmList}
-            renderItem={(model) => (
+            renderItem={(item) => (
               <List.Item>
                 <Space>
-                  {getRealModelName(model.name)}
-                  <Tag color="#b8b8b8">{model.type}</Tag>
-                  {isLocalLlmFactory(item.name) && (
-                    <Tooltip title={t('edit', { keyPrefix: 'common' })}>
-                      <Button
-                        type={'text'}
-                        onClick={() => handleEditModel(model, item)}
-                      >
-                        <EditOutlined style={{ color: '#1890ff' }} />
-                      </Button>
-                    </Tooltip>
-                  )}
+                  {getRealModelName(item.name)}
+                  <Tag color="#b8b8b8">{item.type}</Tag>
                   <Tooltip title={t('delete', { keyPrefix: 'common' })}>
-                    <Button type={'text'} onClick={handleDeleteLlm(model.name)}>
+                    <Button type={'text'} onClick={handleDeleteLlm(item.name)}>
                       <CloseCircleOutlined style={{ color: '#D92D20' }} />
                     </Button>
                   </Tooltip>
@@ -170,13 +151,11 @@ const ModelCard = ({ item, clickApiKey, handleEditModel }: IModelCardProps) => {
 
 const UserSettingModel = () => {
   const { factoryList, myLlmList: llmList, loading } = useSelectLlmList();
-  const { data: detailedLlmList } = useFetchMyLlmListDetailed();
   const { theme } = useTheme();
   const {
     saveApiKeyLoading,
     initialApiKey,
     llmFactory,
-    editMode,
     onApiKeySavingOk,
     apiKeyVisible,
     hideApiKeyModal,
@@ -196,8 +175,6 @@ const UserSettingModel = () => {
     showLlmAddingModal,
     onLlmAddingOk,
     llmAddingLoading,
-    editMode: llmEditMode,
-    initialValues: llmInitialValues,
     selectedLlmFactory,
   } = useSubmitOllama();
 
@@ -311,32 +288,6 @@ const UserSettingModel = () => {
     [showApiKeyModal, showLlmAddingModal, ModalMap],
   );
 
-  const handleEditModel = useCallback(
-    (model: any, factory: LlmItem) => {
-      if (factory) {
-        const detailedFactory = detailedLlmList[factory.name];
-        const detailedModel = detailedFactory?.llm?.find(
-          (m: any) => m.name === model.name,
-        );
-
-        const editData = {
-          llm_factory: factory.name,
-          llm_name: model.name,
-          model_type: model.type,
-        };
-
-        if (isLocalLlmFactory(factory.name)) {
-          showLlmAddingModal(factory.name, true, editData, detailedModel);
-        } else if (factory.name in ModalMap) {
-          ModalMap[factory.name as keyof typeof ModalMap]();
-        } else {
-          showApiKeyModal(editData, true);
-        }
-      }
-    },
-    [showApiKeyModal, showLlmAddingModal, ModalMap, detailedLlmList],
-  );
-
   const items: CollapseProps['items'] = [
     {
       key: '1',
@@ -346,11 +297,7 @@ const UserSettingModel = () => {
           grid={{ gutter: 16, column: 1 }}
           dataSource={llmList}
           renderItem={(item) => (
-            <ModelCard
-              item={item}
-              clickApiKey={handleAddModel}
-              handleEditModel={handleEditModel}
-            ></ModelCard>
+            <ModelCard item={item} clickApiKey={handleAddModel}></ModelCard>
           )}
         />
       ),
@@ -437,7 +384,6 @@ const UserSettingModel = () => {
         hideModal={hideApiKeyModal}
         loading={saveApiKeyLoading}
         initialValue={initialApiKey}
-        editMode={editMode}
         onOk={onApiKeySavingOk}
         llmFactory={llmFactory}
       ></ApiKeyModal>
@@ -454,8 +400,6 @@ const UserSettingModel = () => {
         hideModal={hideLlmAddingModal}
         onOk={onLlmAddingOk}
         loading={llmAddingLoading}
-        editMode={llmEditMode}
-        initialValues={llmInitialValues}
         llmFactory={selectedLlmFactory}
       ></OllamaModal>
       <VolcEngineModal

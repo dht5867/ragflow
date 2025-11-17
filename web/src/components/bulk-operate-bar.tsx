@@ -13,23 +13,15 @@ export type BulkOperateItemType = {
   onClick(): void;
 };
 
-type BulkOperateBarProps = {
-  list: BulkOperateItemType[];
-  count: number;
-  className?: string;
-};
+type BulkOperateBarProps = { list: BulkOperateItemType[]; count: number };
 
-export function BulkOperateBar({
-  list,
-  count,
-  className,
-}: BulkOperateBarProps) {
+export function BulkOperateBar({ list, count }: BulkOperateBarProps) {
   const isDeleteItem = useCallback((id: string) => {
     return id === 'delete';
   }, []);
 
   return (
-    <Card className={cn('mb-4', className)}>
+    <Card className="mb-4">
       <CardContent className="p-1 pl-5 flex items-center gap-6">
         <section className="text-text-sub-title-invert flex items-center gap-2">
           <span>Selected: {count} Files</span>
@@ -40,7 +32,7 @@ export function BulkOperateBar({
           {list.map((x) => (
             <li
               key={x.id}
-              className={cn({ ['text-state-error']: isDeleteItem(x.id) })}
+              className={cn({ ['text-text-delete-red']: isDeleteItem(x.id) })}
             >
               <ConfirmDeleteDialog
                 hidden={!isDeleteItem(x.id)}

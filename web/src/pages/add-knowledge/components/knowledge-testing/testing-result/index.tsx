@@ -1,6 +1,6 @@
 import { ReactComponent as SelectedFilesCollapseIcon } from '@/assets/svg/selected-files-collapse.svg';
 import { useTranslate } from '@/hooks/common-hooks';
-import { ITestingChunk, ITestingResult } from '@/interfaces/database/knowledge';
+import { ITestingChunk } from '@/interfaces/database/knowledge';
 import {
   Card,
   Collapse,
@@ -14,6 +14,12 @@ import {
 import camelCase from 'lodash/camelCase';
 import SelectFiles from './select-files';
 
+import {
+  useAllTestingResult,
+  useAllTestingSuccess,
+  useSelectIsTestingSuccess,
+  useSelectTestingResult,
+} from '@/hooks/knowledge-hooks';
 import { useGetPaginationWithRouter } from '@/hooks/logic-hooks';
 import { api_host } from '@/utils/api';
 import { showImage } from '@/utils/chat';
@@ -46,20 +52,19 @@ interface IProps {
   handleTesting: (documentIds?: string[]) => Promise<any>;
   selectedDocumentIds: string[];
   setSelectedDocumentIds: (ids: string[]) => void;
-  data?: ITestingResult;
-  loading?: boolean;
 }
 
 const TestingResult = ({
   handleTesting,
   selectedDocumentIds,
   setSelectedDocumentIds,
-  data,
-  loading,
 }: IProps) => {
-  const { documents, chunks, total } = data || {};
+  const { documents, chunks, total } = useSelectTestingResult();
+  const { documents: documentsAll, total: totalAll } = useAllTestingResult();
   const { t } = useTranslate('knowledgeDetails');
   const { pagination, setPagination } = useGetPaginationWithRouter();
+  const isSuccess = useSelectIsTestingSuccess();
+  const isAllSuccess = useAllTestingSuccess();
 
   const onChange: PaginationProps['onChange'] = (pageNumber, pageSize) => {
     pagination.onChange?.(pageNumber, pageSize);
@@ -92,7 +97,8 @@ const TestingResult = ({
               >
                 <Space>
                   <span>
-                    {selectedDocumentIds?.length ?? 0}/{documents?.length ?? 0}
+                    {selectedDocumentIds?.length ?? 0}/
+                    {documentsAll?.length ?? 0}
                   </span>
                   {t('filesSelected')}
                 </Space>
@@ -115,7 +121,7 @@ const TestingResult = ({
         flex={1}
         className={styles.selectFilesCollapse}
       >
-        {loading === false && chunks && chunks.length > 0 ? (
+        {isSuccess && chunks.length > 0 ? (
           chunks?.map((x) => (
             <Card key={x.chunk_id} title={<ChunkTitle item={x}></ChunkTitle>}>
               <div className="flex justify-center">
@@ -130,7 +136,7 @@ const TestingResult = ({
               <div className="pt-4">{x.content_with_weight}</div>
             </Card>
           ))
-        ) : loading === false && chunks && chunks.length === 0 ? (
+        ) : isSuccess && chunks.length === 0 ? (
           <Empty></Empty>
         ) : null}
       </Flex>

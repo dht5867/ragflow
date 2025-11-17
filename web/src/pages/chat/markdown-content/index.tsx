@@ -28,11 +28,10 @@ import {
 import { currentReg, replaceTextByOldReg } from '../utils';
 
 import classNames from 'classnames';
-import { omit } from 'lodash';
 import { pipe } from 'lodash/fp';
 import styles from './index.less';
 
-const getChunkIndex = (match: string) => Number(match);
+const getChunkIndex = (match: string) => Number(match.slice(2, -2));
 // TODO: The display of the table is inconsistent with the display previously placed in the MessageItem.
 const MarkdownContent = ({
   reference,
@@ -122,7 +121,7 @@ const MarkdownContent = ({
         document,
       };
     },
-    [fileThumbnails, reference],
+    [fileThumbnails, reference?.chunks, reference?.doc_aggs],
   );
 
   const getPopoverContent = useCallback(
@@ -248,12 +247,11 @@ const MarkdownContent = ({
           'custom-typography': ({ children }: { children: string }) =>
             renderReference(children),
           code(props: any) {
-            const { children, className, ...rest } = props;
-            const restProps = omit(rest, 'node');
+            const { children, className, node, ...rest } = props;
             const match = /language-(\w+)/.exec(className || '');
             return match ? (
               <SyntaxHighlighter
-                {...restProps}
+                {...rest}
                 PreTag="div"
                 language={match[1]}
                 wrapLongLines
@@ -261,10 +259,7 @@ const MarkdownContent = ({
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code
-                {...restProps}
-                className={classNames(className, 'text-wrap')}
-              >
+              <code {...rest} className={classNames(className, 'text-wrap')}>
                 {children}
               </code>
             );

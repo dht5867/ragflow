@@ -1,9 +1,5 @@
 import { useHandleFilterSubmit } from '@/components/list-filter-bar/use-handle-filter-submit';
-import { ResponseType } from '@/interfaces/database/base';
-import {
-  IDocumentInfo,
-  IDocumentInfoFilter,
-} from '@/interfaces/database/document';
+import { IDocumentInfo } from '@/interfaces/database/document';
 import {
   IChangeParserConfigRequestBody,
   IDocumentMetaRequestBody,
@@ -14,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from 'ahooks';
 import { message } from 'antd';
 import { get } from 'lodash';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 import { useParams } from 'umi';
 import {
   useGetPaginationWithRouter,
@@ -34,7 +30,7 @@ export const enum DocumentApiAction {
   SaveDocumentName = 'saveDocumentName',
   SetDocumentParser = 'setDocumentParser',
   SetDocumentMeta = 'setDocumentMeta',
-  FetchDocumentFilter = 'fetchDocumentFilter',
+  FetchAllDocumentList = 'fetchAllDocumentList',
   CreateDocument = 'createDocument',
 }
 
@@ -46,9 +42,9 @@ export const useUploadNextDocument = () => {
     data,
     isPending: loading,
     mutateAsync,
-  } = useMutation<ResponseType<IDocumentInfo[]>, Error, File[]>({
+  } = useMutation({
     mutationKey: [DocumentApiAction.UploadDocument],
-    mutationFn: async (fileList) => {
+    mutationFn: async (fileList: File[]) => {
       const formData = new FormData();
       formData.append('kb_id', id!);
       fileList.forEach((file: any) => {
@@ -85,10 +81,6 @@ export const useFetchDocumentList = () => {
   const { id } = useParams();
   const debouncedSearchString = useDebounce(searchString, { wait: 500 });
   const { filterValue, handleFilterSubmit } = useHandleFilterSubmit();
-  const [docs, setDocs] = useState<IDocumentInfo[]>([]);
-  const isLoop = useMemo(() => {
-    return docs.some((doc) => doc.run === '1');
-  }, [docs]);
 
   const { data, isFetching: loading } = useQuery<{
     docs: IDocumentInfo[];
@@ -101,7 +93,7 @@ export const useFetchDocumentList = () => {
       filterValue,
     ],
     initialData: { docs: [], total: 0 },
-    refetchInterval: isLoop ? 5000 : false,
+    // refetchInterval: 15000,
     enabled: !!knowledgeId || !!id,
     queryFn: async () => {
       const ret = await listDocument(
@@ -112,7 +104,7 @@ export const useFetchDocumentList = () => {
           page: pagination.current,
         },
         {
-          suffix: filterValue.type,
+          types: filterValue.type,
           run_status: filterValue.run,
         },
       );
@@ -126,9 +118,7 @@ export const useFetchDocumentList = () => {
       };
     },
   });
-  useMemo(() => {
-    setDocs(data.docs);
-  }, [data.docs]);
+
   const onInputChange: React.ChangeEventHandler<HTMLInputElement> = useCallback(
     (e) => {
       setPagination({ page: 1 });
@@ -149,48 +139,34 @@ export const useFetchDocumentList = () => {
   };
 };
 
-// get document filter
-export const useGetDocumentFilter = (): {
-  filter: IDocumentInfoFilter;
-  onOpenChange: (open: boolean) => void;
-} => {
-  const { knowledgeId } = useGetKnowledgeSearchParams();
-  const { searchString } = useHandleSearchChange();
+export function useFetchAllDocumentList() {
   const { id } = useParams();
-  const debouncedSearchString = useDebounce(searchString, { wait: 500 });
-  const [open, setOpen] = useState<number>(0);
-  const { data } = useQuery({
-    queryKey: [
-      DocumentApiAction.FetchDocumentFilter,
-      debouncedSearchString,
-      knowledgeId,
-      open,
-    ],
+  const { data, isFetching: loading } = useQuery<{
+    docs: IDocumentInfo[];
+    total: number;
+  }>({
+    queryKey: [DocumentApiAction.FetchAllDocumentList],
+    initialData: { docs: [], total: 0 },
+    refetchInterval: 15000,
+    enabled: !!id,
     queryFn: async () => {
-      const { data } = await kbService.documentFilter({
-        kb_id: knowledgeId || id,
-        keywords: debouncedSearchString,
+      const ret = await listDocument({
+        kb_id: id,
       });
-      if (data.code === 0) {
-        return data.data;
+      if (ret.data.code === 0) {
+        return ret.data.data;
       }
+
+      return {
+        docs: [],
+        total: 0,
+      };
     },
   });
-  const handleOnpenChange = (e: boolean) => {
-    if (e) {
-      const currentOpen = open + 1;
-      setOpen(currentOpen);
-    }
-  };
-  return {
-    filter: data?.filter || {
-      run_status: {},
-      suffix: {},
-    },
-    onOpenChange: handleOnpenChange,
-  };
-};
-// update document status
+
+  return { data, loading };
+}
+
 export const useSetDocumentStatus = () => {
   const queryClient = useQueryClient();
 
@@ -205,11 +181,10 @@ export const useSetDocumentStatus = () => {
       documentId,
     }: {
       status: boolean;
-      documentId: string | string[];
+      documentId: string;
     }) => {
-      const ids = Array.isArray(documentId) ? documentId : [documentId];
       const { data } = await kbService.document_change_status({
-        doc_ids: ids,
+        doc_id: documentId,
         status: Number(status),
       });
       if (data.code === 0) {
@@ -225,7 +200,6 @@ export const useSetDocumentStatus = () => {
   return { setDocumentStatus: mutateAsync, data, loading };
 };
 
-// This hook is used to run a document by its IDs
 export const useRunDocument = () => {
   const queryClient = useQueryClient();
 

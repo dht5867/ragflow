@@ -243,51 +243,8 @@ class JsonSerializedField(SerializedField):
         super(JsonSerializedField, self).__init__(serialized_type=SerializedType.JSON, object_hook=object_hook, object_pairs_hook=object_pairs_hook, **kwargs)
 
 
-class RetryingPooledMySQLDatabase(PooledMySQLDatabase):
-    def __init__(self, *args, **kwargs):
-        self.max_retries = kwargs.pop('max_retries', 5)
-        self.retry_delay = kwargs.pop('retry_delay', 1)
-        super().__init__(*args, **kwargs)
-
-    def execute_sql(self, sql, params=None, commit=True):
-        from peewee import OperationalError
-        for attempt in range(self.max_retries + 1):
-            try:
-                return super().execute_sql(sql, params, commit)
-            except OperationalError as e:
-                if e.args[0] in (2013, 2006) and attempt < self.max_retries:
-                    logging.warning(
-                        f"Lost connection (attempt {attempt+1}/{self.max_retries}): {e}"
-                    )
-                    self._handle_connection_loss()
-                    time.sleep(self.retry_delay * (2 ** attempt))
-                else:
-                    logging.error(f"DB execution failure: {e}")
-                    raise
-        return None
-
-    def _handle_connection_loss(self):
-        self.close_all()
-        self.connect()
-
-    def begin(self):
-        from peewee import OperationalError
-        for attempt in range(self.max_retries + 1):
-            try:
-                return super().begin()
-            except OperationalError as e:
-                if e.args[0] in (2013, 2006) and attempt < self.max_retries:
-                    logging.warning(
-                        f"Lost connection during transaction (attempt {attempt+1}/{self.max_retries})"
-                    )
-                    self._handle_connection_loss()
-                    time.sleep(self.retry_delay * (2 ** attempt))
-                else:
-                    raise
-
-
 class PooledDatabase(Enum):
-    MYSQL = RetryingPooledMySQLDatabase
+    MYSQL = PooledMySQLDatabase
     POSTGRES = PooledPostgresqlDatabase
 
 
@@ -463,7 +420,6 @@ class DataBaseModel(BaseModel):
 
 
 @DB.connection_context()
-@DB.lock("init_database_tables", 60)
 def init_database_tables(alter_fields=[]):
     members = inspect.getmembers(sys.modules[__name__], inspect.isclass)
     table_objs = []
@@ -475,7 +431,7 @@ def init_database_tables(alter_fields=[]):
             if not obj.table_exists():
                 logging.debug(f"start create table {obj.__name__}")
                 try:
-                    obj.create_table(safe=True)
+                    obj.create_table()
                     logging.debug(f"create table success: {obj.__name__}")
                 except Exception as e:
                     logging.exception(e)
@@ -676,9 +632,8 @@ class Document(DataBaseModel):
     progress = FloatField(default=0, index=True)
     progress_msg = TextField(null=True, help_text="process message", default="")
     process_begin_at = DateTimeField(null=True, index=True)
-    process_duration = FloatField(default=0)
+    process_duation = FloatField(default=0)
     meta_fields = JSONField(null=True, default={})
-    suffix = CharField(max_length=32, null=False, help_text="The real file extension suffix", index=True)
 
     run = CharField(max_length=1, null=True, help_text="start to run processing or cancel.(1: run it; 2: cancel)", default="0", index=True)
     status = CharField(max_length=1, null=True, help_text="is it validate(0: wasted, 1: validate)", default="1", index=True)
@@ -720,7 +675,7 @@ class Task(DataBaseModel):
     priority = IntegerField(default=0)
 
     begin_at = DateTimeField(null=True, index=True)
-    process_duration = FloatField(default=0)
+    process_duation = FloatField(default=0)
 
     progress = FloatField(default=0, index=True)
     progress_msg = TextField(null=True, help_text="process message", default="")
@@ -742,9 +697,8 @@ class Dialog(DataBaseModel):
     prompt_type = CharField(max_length=16, null=False, default="simple", help_text="simple|advanced", index=True)
     prompt_config = JSONField(
         null=False,
-        default={"system": "", "prologue": "Hi! I'm your assistant. What can I do for you?", "parameters": [], "empty_response": "Sorry! No relevant content was found in the knowledge base!"},
+        default={"system": "", "prologue": "Hi! I'm your assistant, what can I do for you?", "parameters": [], "empty_response": "Sorry! No relevant content was found in the knowledge base!"},
     )
-    meta_data_filter = JSONField(null=True, default={})
 
     similarity_threshold = FloatField(default=0.2)
     vector_similarity_weight = FloatField(default=0.3)
@@ -800,7 +754,6 @@ class API4Conversation(DataBaseModel):
     duration = FloatField(default=0, index=True)
     round = IntegerField(default=0, index=True)
     thumb_up = IntegerField(default=0, index=True)
-    errors = TextField(null=True, help_text="errors")
 
     class Meta:
         db_table = "api_4_conversation"
@@ -824,8 +777,9 @@ class UserCanvas(DataBaseModel):
 class CanvasTemplate(DataBaseModel):
     id = CharField(max_length=32, primary_key=True)
     avatar = TextField(null=True, help_text="avatar base64 string")
-    title = JSONField(null=True, default=dict, help_text="Canvas title")
-    description = JSONField(null=True, default=dict, help_text="Canvas description")
+    title = CharField(max_length=255, null=True, help_text="Canvas title")
+
+    description = TextField(null=True, help_text="Canvas description")
     canvas_type = CharField(max_length=32, null=True, help_text="Canvas type", index=True)
     dsl = JSONField(null=True, default={})
 
@@ -845,20 +799,6 @@ class UserCanvasVersion(DataBaseModel):
         db_table = "user_canvas_version"
 
 
-class MCPServer(DataBaseModel):
-    id = CharField(max_length=32, primary_key=True)
-    name = CharField(max_length=255, null=False, help_text="MCP Server name")
-    tenant_id = CharField(max_length=32, null=False, index=True)
-    url = CharField(max_length=2048, null=False, help_text="MCP Server URL")
-    server_type = CharField(max_length=32, null=False, help_text="MCP Server type")
-    description = TextField(null=True, help_text="MCP Server description")
-    variables = JSONField(null=True, default=dict, help_text="MCP Server variables")
-    headers = JSONField(null=True, default=dict, help_text="MCP Server additional request headers")
-
-    class Meta:
-        db_table = "mcp_server"
-
-
 class Search(DataBaseModel):
     id = CharField(max_length=32, primary_key=True)
     avatar = TextField(null=True, help_text="avatar base64 string")
@@ -871,7 +811,7 @@ class Search(DataBaseModel):
         default={
             "kb_ids": [],
             "doc_ids": [],
-            "similarity_threshold": 0.2,
+            "similarity_threshold": 0.0,
             "vector_similarity_weight": 0.3,
             "use_kg": False,
             # rerank settings
@@ -880,12 +820,11 @@ class Search(DataBaseModel):
             # chat settings
             "summary": False,
             "chat_id": "",
-            # Leave it here for reference, don't need to set default values
             "llm_setting": {
-                # "temperature": 0.1,
-                # "top_p": 0.3,
-                # "frequency_penalty": 0.7,
-                # "presence_penalty": 0.4,
+                "temperature": 0.1,
+                "top_p": 0.3,
+                "frequency_penalty": 0.7,
+                "presence_penalty": 0.4,
             },
             "chat_settingcross_languages": [],
             "highlight": False,
@@ -905,7 +844,6 @@ class Search(DataBaseModel):
 
 
 def migrate_db():
-    logging.disable(logging.ERROR)
     migrator = DatabaseMigrator[settings.DATABASE_TYPE.upper()].value(DB)
     try:
         migrate(migrator.add_column("file", "source_type", CharField(max_length=128, null=False, default="", help_text="where dose this document come from", index=True)))
@@ -996,37 +934,3 @@ def migrate_db():
         migrate(migrator.add_column("llm", "is_tools", BooleanField(null=False, help_text="support tools", default=False)))
     except Exception:
         pass
-    try:
-        migrate(migrator.add_column("mcp_server", "variables", JSONField(null=True, help_text="MCP Server variables", default=dict)))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.rename_column("task", "process_duation", "process_duration"))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.rename_column("document", "process_duation", "process_duration"))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.add_column("document", "suffix", CharField(max_length=32, null=False, default="", help_text="The real file extension suffix", index=True)))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.add_column("api_4_conversation", "errors", TextField(null=True, help_text="errors")))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.add_column("dialog", "meta_data_filter", JSONField(null=True, default={})))
-    except Exception:
-        pass
-
-    try:
-        migrate(migrator.alter_column_type("canvas_template", "title", JSONField(null=True, default=dict, help_text="Canvas title")))
-    except Exception:
-        pass
-    try:
-        migrate(migrator.alter_column_type("canvas_template", "description", JSONField(null=True, default=dict, help_text="Canvas description")))
-    except Exception:
-        pass
-    logging.disable(logging.NOTSET)

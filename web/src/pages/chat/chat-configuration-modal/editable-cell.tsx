@@ -1,5 +1,4 @@
 import { Form, FormInstance, Input, InputRef } from 'antd';
-import { omit } from 'lodash';
 import React, { useContext, useEffect, useRef, useState } from 'react';
 
 const EditableContext = React.createContext<FormInstance<any> | null>(null);
@@ -15,12 +14,15 @@ interface Item {
   address: string;
 }
 
-export const EditableRow: React.FC<EditableRowProps> = ({ ...props }) => {
+export const EditableRow: React.FC<EditableRowProps> = ({
+  index,
+  ...props
+}) => {
   const [form] = Form.useForm();
   return (
     <Form form={form} component={false}>
       <EditableContext.Provider value={form}>
-        <tr {...omit(props, 'index')} />
+        <tr {...props} />
       </EditableContext.Provider>
     </Form>
   );

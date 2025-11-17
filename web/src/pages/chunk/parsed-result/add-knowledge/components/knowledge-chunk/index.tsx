@@ -1,13 +1,12 @@
-import {
-  useFetchNextChunkList,
-  useSwitchChunk,
-} from '@/hooks/use-chunk-request';
+import { useFetchNextChunkList, useSwitchChunk } from '@/hooks/chunk-hooks';
+import type { PaginationProps } from 'antd';
+import { Flex, Pagination, Space, Spin, message } from 'antd';
 import classNames from 'classnames';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ChunkCard from './components/chunk-card';
 import CreatingModal from './components/chunk-creating-modal';
-import DocumentPreview from './components/document-preview';
+import DocumentPreview from './components/document-preview/preview';
 import {
   useChangeChunkTextMode,
   useDeleteChunkByIds,
@@ -20,27 +19,6 @@ import ChunkResultBar from './components/chunk-result-bar';
 import CheckboxSets from './components/chunk-result-bar/checkbox-sets';
 import DocumentHeader from './components/document-preview/document-header';
 
-import { PageHeader } from '@/components/page-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import message from '@/components/ui/message';
-import {
-  RAGFlowPagination,
-  RAGFlowPaginationType,
-} from '@/components/ui/ragflow-pagination';
-import { Spin } from '@/components/ui/spin';
-import {
-  QueryStringMap,
-  useNavigatePage,
-} from '@/hooks/logic-hooks/navigate-hooks';
-import { useFetchKnowledgeBaseConfiguration } from '@/hooks/use-knowledge-request';
-import { useGetDocumentUrl } from '../../../knowledge-chunk/components/document-preview/hooks';
 import styles from './index.less';
 
 const Chunk = () => {
@@ -57,12 +35,10 @@ const Chunk = () => {
   } = useFetchNextChunkList();
   const { handleChunkCardClick, selectedChunkId } = useHandleChunkCardClick();
   const isPdf = documentInfo?.type === 'pdf';
-  const { data: dataset } = useFetchKnowledgeBaseConfiguration();
 
   const { t } = useTranslation();
   const { changeChunkTextMode, textMode } = useChangeChunkTextMode();
   const { switchChunk } = useSwitchChunk();
-  const [chunkList, setChunkList] = useState(data);
   const {
     chunkUpdatingLoading,
     onChunkUpdatingOk,
@@ -72,13 +48,8 @@ const Chunk = () => {
     chunkUpdatingVisible,
     documentId,
   } = useUpdateChunk();
-  const { navigateToDataset, getQueryString, navigateToDatasetList } =
-    useNavigatePage();
-  const fileUrl = useGetDocumentUrl();
-  useEffect(() => {
-    setChunkList(data);
-  }, [data]);
-  const onPaginationChange: RAGFlowPaginationType['onChange'] = (
+
+  const onPaginationChange: PaginationProps['onShowSizeChange'] = (
     page,
     size,
   ) => {
@@ -140,100 +111,59 @@ const Chunk = () => {
         available_int: available,
         doc_id: documentId,
       });
-      if (ids?.length && resCode === 0) {
-        chunkList.forEach((x: any) => {
-          if (ids.indexOf(x['chunk_id']) > -1) {
-            x['available_int'] = available;
-          }
-        });
-        setChunkList(chunkList);
+      if (!chunkIds && resCode === 0) {
       }
     },
-    [
-      switchChunk,
-      documentId,
-      selectedChunkIds,
-      showSelectedChunkWarning,
-      chunkList,
-    ],
+    [switchChunk, documentId, selectedChunkIds, showSelectedChunkWarning],
   );
 
   const { highlights, setWidthAndHeight } =
     useGetChunkHighlights(selectedChunkId);
 
-  const fileType = useMemo(() => {
-    switch (documentInfo?.type) {
-      case 'doc':
-        return documentInfo?.name.split('.').pop() || 'doc';
-      case 'visual':
-      case 'docx':
-      case 'txt':
-      case 'md':
-      case 'pdf':
-        return documentInfo?.type;
-    }
-    return 'unknown';
-  }, [documentInfo]);
-
   return (
     <>
-      <PageHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink onClick={navigateToDatasetList}>
-                {t('knowledgeDetails.dataset')}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                onClick={navigateToDataset(
-                  getQueryString(QueryStringMap.id) as string,
-                )}
-              >
-                {dataset.name}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{documentInfo.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </PageHeader>
       <div className={styles.chunkPage}>
-        <div className="flex flex-1 gap-8">
-          <div className="w-2/5">
+        {/* <ChunkToolBar
+          selectAllChunk={selectAllChunk}
+          createChunk={showChunkUpdatingModal}
+          removeChunk={handleRemoveChunk}
+          checked={selectedChunkIds.length === data.length}
+          switchChunk={handleSwitchChunk}
+          changeChunkTextMode={changeChunkTextMode}
+          searchString={searchString}
+          handleInputChange={handleInputChange}
+          available={available}
+          handleSetAvailable={handleSetAvailable}
+        ></ChunkToolBar> */}
+        {/* <Divider></Divider> */}
+        <Flex flex={1} gap={'middle'}>
+          <div className="w-[40%]">
             <div className="h-[100px] flex flex-col justify-end pb-[5px]">
               <DocumentHeader {...documentInfo} />
             </div>
-            <section className={styles.documentPreview}>
-              <DocumentPreview
-                className={styles.documentPreview}
-                fileType={fileType}
-                highlights={highlights}
-                setWidthAndHeight={setWidthAndHeight}
-                url={fileUrl}
-              ></DocumentPreview>
-            </section>
-          </div>
-          <div
-            className={classNames(
-              { [styles.pagePdfWrapper]: isPdf },
-              'flex flex-col w-3/5',
+            {isPdf && (
+              <section className={styles.documentPreview}>
+                <DocumentPreview
+                  highlights={highlights}
+                  setWidthAndHeight={setWidthAndHeight}
+                ></DocumentPreview>
+              </section>
             )}
+          </div>
+          <Flex
+            vertical
+            className={isPdf ? styles.pagePdfWrapper : styles.pageWrapper}
           >
             <Spin spinning={loading} className={styles.spin} size="large">
               <div className="h-[100px] flex flex-col justify-end pb-[5px]">
                 <div>
-                  <h2 className="text-[24px]">{t('chunk.chunkResult')}</h2>
+                  <h2 className="text-[24px]">Chunk Result</h2>
                   <div className="text-[14px] text-[#979AAB]">
-                    {t('chunk.chunkResultTip')}
+                    View the chunked segments used for embedding and retrieval.
                   </div>
                 </div>
               </div>
-              <div className=" rounded-[16px] bg-[#FFF]/10 pl-[20px] pb-[20px] pt-[20px] box-border	mb-2">
+              <div className=" rounded-[16px] bg-[#FFF]/10 pl-[20px] pb-[20px] pt-[20px] box-border	">
                 <ChunkResultBar
                   handleInputChange={handleInputChange}
                   searchString={searchString}
@@ -246,22 +176,18 @@ const Chunk = () => {
                 <div className="pt-[5px] pb-[5px]">
                   <CheckboxSets
                     selectAllChunk={selectAllChunk}
-                    switchChunk={handleSwitchChunk}
-                    removeChunk={handleRemoveChunk}
                     checked={selectedChunkIds.length === data.length}
                   />
                 </div>
                 <div className={styles.pageContent}>
-                  <div
-                    className={classNames(
-                      styles.chunkContainer,
-                      {
-                        [styles.chunkOtherContainer]: !isPdf,
-                      },
-                      'flex flex-col gap-4',
-                    )}
+                  <Space
+                    direction="vertical"
+                    size={'middle'}
+                    className={classNames(styles.chunkContainer, {
+                      [styles.chunkOtherContainer]: !isPdf,
+                    })}
                   >
-                    {chunkList.map((item) => (
+                    {data.map((item) => (
                       <ChunkCard
                         item={item}
                         key={item.chunk_id}
@@ -276,22 +202,20 @@ const Chunk = () => {
                         textMode={textMode}
                       ></ChunkCard>
                     ))}
-                  </div>
-                </div>
-                <div className={styles.pageFooter}>
-                  <RAGFlowPagination
-                    pageSize={pagination.pageSize}
-                    current={pagination.current}
-                    total={total}
-                    onChange={(page, pageSize) => {
-                      onPaginationChange(page, pageSize);
-                    }}
-                  ></RAGFlowPagination>
+                  </Space>
                 </div>
               </div>
             </Spin>
-          </div>
-        </div>
+            <div className={styles.pageFooter}>
+              <Pagination
+                {...pagination}
+                total={total}
+                size={'small'}
+                onChange={onPaginationChange}
+              />
+            </div>
+          </Flex>
+        </Flex>
       </div>
       {chunkUpdatingVisible && (
         <CreatingModal

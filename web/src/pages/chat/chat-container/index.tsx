@@ -34,8 +34,7 @@ const ChatContainer = ({ controller }: IProps) => {
 
   const {
     value,
-    scrollRef,
-    messageContainerRef,
+    ref,
     loading,
     sendLoading,
     derivedMessages,
@@ -58,12 +57,7 @@ const ChatContainer = ({ controller }: IProps) => {
   return (
     <>
       <Flex flex={1} className={styles.chatContainer} vertical>
-        <Flex
-          flex={1}
-          vertical
-          className={styles.messageContainer}
-          ref={messageContainerRef}
-        >
+        <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
@@ -96,7 +90,7 @@ const ChatContainer = ({ controller }: IProps) => {
               })}
             </Spin>
           </div>
-          <div ref={scrollRef} />
+          <div ref={ref} />
         </Flex>
         <MessageInput
           disabled={disabled}

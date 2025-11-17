@@ -1,6 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { t } from 'i18next';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import CategoryPanel from './category-panel';
@@ -12,26 +10,24 @@ export default ({
   tab: 'generalForm' | 'chunkMethodForm';
   parserId: string;
 }) => {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   return (
     <div
-      className={cn('hidden flex-1', {
-        'flex flex-col': tab === 'chunkMethodForm',
-      })}
+      style={{
+        display: tab === 'chunkMethodForm' ? 'block' : 'none',
+      }}
     >
-      <div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setVisible(!visible);
-          }}
-        >
-          {t('knowledgeDetails.learnMore')}
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setVisible(!visible);
+        }}
+      >
+        Learn More
+      </Button>
       <div
-        className="bg-[#FFF]/10 p-[20px] rounded-[12px] mt-[10px] relative flex-1 overflow-auto"
+        className="bg-[#FFF]/10 p-[20px] rounded-[12px] mt-[10px] relative"
         style={{ display: visible ? 'block' : 'none' }}
       >
         <CategoryPanel chunkMethod={parserId}></CategoryPanel>

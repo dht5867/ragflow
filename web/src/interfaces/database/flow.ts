@@ -32,7 +32,7 @@ export declare interface IFlow {
   canvas_type: null;
   create_date: string;
   create_time: number;
-  description: string;
+  description: null;
   dsl: DSL;
   id: string;
   title: string;

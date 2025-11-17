@@ -17,6 +17,7 @@ import asyncio
 import contextlib
 import os
 from queue import Empty, Queue
+from threading import Lock
 
 from models.enums import SupportLanguage
 from util import env_setting_enabled, is_valid_memory_limit
@@ -25,22 +26,18 @@ from utils.common import async_run_command
 from core.logger import logger
 
 _CONTAINER_QUEUES: dict[SupportLanguage, Queue] = {}
-_CONTAINER_LOCK: asyncio.Lock = asyncio.Lock()
-_CONTAINER_EXECUTION_SEMAPHORES: dict[SupportLanguage, asyncio.Semaphore] = {}
+_CONTAINER_LOCK: Lock = Lock()
 
 
 async def init_containers(size: int) -> tuple[int, int]:
     global _CONTAINER_QUEUES
     _CONTAINER_QUEUES = {SupportLanguage.PYTHON: Queue(), SupportLanguage.NODEJS: Queue()}
 
-    async with _CONTAINER_LOCK:
+    with _CONTAINER_LOCK:
         while not _CONTAINER_QUEUES[SupportLanguage.PYTHON].empty():
             _CONTAINER_QUEUES[SupportLanguage.PYTHON].get_nowait()
         while not _CONTAINER_QUEUES[SupportLanguage.NODEJS].empty():
             _CONTAINER_QUEUES[SupportLanguage.NODEJS].get_nowait()
-
-    for language in SupportLanguage:
-        _CONTAINER_EXECUTION_SEMAPHORES[language] = asyncio.Semaphore(size)
 
     create_tasks = []
     for i in range(size):
@@ -59,7 +56,7 @@ async def init_containers(size: int) -> tuple[int, int]:
 
 
 async def teardown_containers():
-    async with _CONTAINER_LOCK:
+    with _CONTAINER_LOCK:
         while not _CONTAINER_QUEUES[SupportLanguage.PYTHON].empty():
             name = _CONTAINER_QUEUES[SupportLanguage.PYTHON].get_nowait()
             await async_run_command("docker", "rm", "-f", name, timeout=5)
@@ -154,7 +151,7 @@ async def recreate_container(name: str, language: SupportLanguage) -> bool:
 
 async def release_container(name: str, language: SupportLanguage):
     """Asynchronously release a container"""
-    async with _CONTAINER_LOCK:
+    with _CONTAINER_LOCK:
         if await container_is_running(name):
             _CONTAINER_QUEUES[language].put(name)
             logger.info(f"🟢 Released container: {name} (remaining available: {_CONTAINER_QUEUES[language].qsize()})")
@@ -171,7 +168,7 @@ async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> 
     while asyncio.get_running_loop().time() - start_time < timeout:
         try:
             name = _CONTAINER_QUEUES[language].get_nowait()
-            async with _CONTAINER_LOCK:
+            with _CONTAINER_LOCK:
                 if not await container_is_running(name) and not await recreate_container(name, language):
                     continue
 

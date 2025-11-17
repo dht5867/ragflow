@@ -180,9 +180,7 @@ export const useCreateChunk = () => {
       const { data } = await service(payload);
       if (data.code === 0) {
         message.success(t('message.created'));
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['fetchChunkList'] });
-        }, 1000); // Delay to ensure the list is updated
+        queryClient.invalidateQueries({ queryKey: ['fetchChunkList'] });
       }
       return data?.code;
     },

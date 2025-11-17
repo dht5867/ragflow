@@ -1,4 +1,3 @@
-import { FormLayout } from '@/constants/form';
 import { useTranslate } from '@/hooks/common-hooks';
 import { SliderInputFormField } from './slider-input-form-field';
 
@@ -7,7 +6,7 @@ interface IProps {
   max?: number;
 }
 
-export function MaxTokenNumberFormField({ max = 2048, initialValue }: IProps) {
+export function MaxTokenNumberFormField({ max = 2048 }: IProps) {
   const { t } = useTranslate('knowledgeConfiguration');
 
   return (
@@ -15,8 +14,6 @@ export function MaxTokenNumberFormField({ max = 2048, initialValue }: IProps) {
       name={'parser_config.chunk_token_num'}
       label={t('chunkTokenNumber')}
       max={max}
-      defaultValue={initialValue ?? 0}
-      layout={FormLayout.Horizontal}
     ></SliderInputFormField>
   );
 }

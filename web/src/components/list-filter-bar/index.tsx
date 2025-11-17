@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Funnel } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import React, {
   ChangeEventHandler,
   PropsWithChildren,
@@ -25,20 +25,20 @@ export const FilterButton = React.forwardRef<
 >(({ count = 0, ...props }, ref) => {
   return (
     <Button variant="secondary" {...props} ref={ref}>
-      {/* <span
+      <span
         className={cn({
-          'text-text-primary': count > 0,
+          'text-text-title': count > 0,
           'text-text-sub-title-invert': count === 0,
         })}
       >
         Filter
-      </span> */}
+      </span>
       {count > 0 && (
         <span className="rounded-full bg-text-badge px-1 text-xs ">
           {count}
         </span>
       )}
-      <Funnel />
+      <ChevronDown />
     </Button>
   );
 });
@@ -52,7 +52,6 @@ export default function ListFilterBar({
   leftPanel,
   value,
   onChange,
-  onOpenChange,
   filters,
   className,
   icon,
@@ -80,12 +79,7 @@ export default function ListFilterBar({
       </div>
       <div className="flex gap-5 items-center">
         {showFilter && (
-          <FilterPopover
-            value={value}
-            onChange={onChange}
-            filters={filters}
-            onOpenChange={onOpenChange}
-          >
+          <FilterPopover value={value} onChange={onChange} filters={filters}>
             <FilterButton count={filterCount}></FilterButton>
           </FilterPopover>
         )}

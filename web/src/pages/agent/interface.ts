@@ -33,10 +33,3 @@ export interface BeginQuery {
   name: string;
   options: (number | string | boolean)[];
 }
-
-export type IInputs = {
-  avatar: string;
-  title: string;
-  inputs: Record<string, BeginQuery>;
-  prologue: string;
-};
