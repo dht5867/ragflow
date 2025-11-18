@@ -1,0 +1,237 @@
+{
+	"nodes": [
+        {
+		"data": {
+			"label": "Begin",
+			"name": "opening"
+		},
+		"dragging": false,
+		"height": 44,
+		"id": "begin",
+		"measured": {
+			"height": 44,
+			"width": 200
+		},
+		"position": {
+			"x": -1469.1118402678153,
+			"y": -138.55389910599428
+		},
+		"positionAbsolute": {
+			"x": -1379.627471412851,
+			"y": -135.63593055637585
+		},
+		"selected": false,
+		"sourcePosition": "left",
+		"targetPosition": "right",
+		"type": "beginNode"
+	}, 
+    {
+		"data": {
+			"form": {},
+			"label": "Answer",
+			"name": "interface"
+		},
+		"dragging": false,
+		"height": 44,
+		"id": "Answer:PoorMapsCover",
+		"measured": {
+			"height": 44,
+			"width": 200
+		},
+		"position": {
+			"x": -1172.8677760724227,
+			"y": -134.7856818291531
+		},
+		"positionAbsolute": {
+			"x": -1172.8677760724227,
+			"y": -134.7856818291531
+		},
+		"selected": false,
+		"sourcePosition": "right",
+		"targetPosition": "left",
+		"type": "logicNode",
+		"width": 200
+	}, 
+    {
+		"data": {
+			"form": {
+				"cite": true,
+				"frequencyPenaltyEnabled": true,
+				"frequency_penalty": 0.7,
+				"llm_id": "deepseek-r1:14b@Ollama",
+				"maxTokensEnabled": false,
+				"max_tokens": 256,
+				"message_history_window_size": 12,
+				"parameter": "Precise",
+				"parameters": [],
+				"presencePenaltyEnabled": true,
+				"presence_penalty": 0.4,
+				"prompt": "角色： 你是一名天气预报助手。\n\n任务： 与用户进行聊天，并基于提供的天气内容回答用户的问题。\n\n要求：\n根据 用户的提问内容 和 weather 内容中有相关信息，提醒用户注意天气。\n\n当 weather 内容中没有相关信息时，不得编造答案。\n\n用户的提问内容：\n {Answer:PoorMapsCover}\n提供的 weather 内容：\n {QWeather:ModernWallsShake}\n",
+				"temperature": 0.1,
+				"temperatureEnabled": true,
+				"topPEnabled": true,
+				"top_p": 0.3
+			},
+			"label": "Generate",
+			"name": "LLM"
+		},
+		"dragging": false,
+		"id": "Generate:ItchyRiversDrum",
+		"measured": {
+			"height": 108,
+			"width": 200
+		},
+		"position": {
+			"x": -498.3296491413432,
+			"y": 254.12819970456945
+		},
+		"selected": false,
+		"sourcePosition": "right",
+		"targetPosition": "left",
+		"type": "generateNode"
+	}, {
+		"data": {
+			"form": {
+				"query": [{
+					"component_id": "Generate:NewMailsWish",
+					"type": "reference"
+				}],
+				"time_period": "3d",
+				"type": "weather",
+				"user_type": "free",
+				"web_apikey": "5ea2b337a6eb46699591dd67e0e94695"
+			},
+			"label": "QWeather",
+			"name": "weather"
+		},
+		"dragging": false,
+		"id": "QWeather:ModernWallsShake",
+		"measured": {
+			"height": 64,
+			"width": 200
+		},
+		"position": {
+			"x": -90,
+			"y": -360
+		},
+		"selected": false,
+		"sourcePosition": "right",
+		"targetPosition": "left",
+		"type": "ragNode"
+	}, {
+		"data": {
+			"form": {
+				"cite": true,
+				"frequencyPenaltyEnabled": false,
+				"frequency_penalty": 0.7,
+				"llm_id": "qwen2.5:14b@Ollama",
+				"maxTokensEnabled": false,
+				"max_tokens": 256,
+				"message_history_window_size": 12,
+				"parameter": "Precise",
+				"parameters": [],
+				"presencePenaltyEnabled": true,
+				"presence_penalty": 0.4,
+				"prompt": "角色：\n\n你是一个专业的智能助手。\n\n任务：\n\n从用户提供的内容中识别城市名称。\n\n输出要求：\n\n\n\n只输出城市名称（例如：北京、商家）。\n\n不添加任何解释、标点或额外文字。\n\n限制：\n\n不要猜测不存在或不确定的城市。",
+				"temperature": 0.1,
+				"temperatureEnabled": true,
+				"topPEnabled": true,
+				"top_p": 0.3
+			},
+			"label": "Generate",
+			"name": "getCity"
+		},
+		"dragging": false,
+		"id": "Generate:NewMailsWish",
+		"measured": {
+			"height": 108,
+			"width": 200
+		},
+		"position": {
+			"x": -480,
+			"y": -496.51835516779556
+		},
+		"selected": false,
+		"sourcePosition": "right",
+		"targetPosition": "left",
+		"type": "generateNode"
+	}],
+	"edges": [{
+		"id": "reactflow__edge-begin-Answer:PoorMapsCoverc",
+		"markerEnd": "logo",
+		"source": "begin",
+		"sourceHandle": null,
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "Answer:PoorMapsCover",
+		"targetHandle": "c",
+		"type": "buttonEdge"
+	}, {
+		"id": "xy-edge__Generate:ItchyRiversDrumc-Answer:PoorMapsCoverc",
+		"markerEnd": "logo",
+		"source": "Generate:ItchyRiversDrum",
+		"sourceHandle": "c",
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "Answer:PoorMapsCover",
+		"targetHandle": "c",
+		"type": "buttonEdge",
+		"zIndex": 1001
+	}, {
+		"id": "xy-edge__QWeather:ModernWallsShakeb-Generate:ItchyRiversDrumb",
+		"markerEnd": "logo",
+		"source": "QWeather:ModernWallsShake",
+		"sourceHandle": "b",
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "Generate:ItchyRiversDrum",
+		"targetHandle": "b",
+		"type": "buttonEdge",
+		"zIndex": 1001
+	}, {
+		"id": "xy-edge__Answer:PoorMapsCoverb-Generate:NewMailsWishc",
+		"markerEnd": "logo",
+		"source": "Answer:PoorMapsCover",
+		"sourceHandle": "b",
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "Generate:NewMailsWish",
+		"targetHandle": "c",
+		"type": "buttonEdge",
+		"zIndex": 1001
+	}, {
+		"id": "xy-edge__Generate:NewMailsWishb-QWeather:ModernWallsShakec",
+		"markerEnd": "logo",
+		"source": "Generate:NewMailsWish",
+		"sourceHandle": "b",
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "QWeather:ModernWallsShake",
+		"targetHandle": "c",
+		"type": "buttonEdge",
+		"zIndex": 1001
+	}, {
+		"id": "xy-edge__Answer:PoorMapsCoverb-Generate:ItchyRiversDrumb",
+		"markerEnd": "logo",
+		"source": "Answer:PoorMapsCover",
+		"sourceHandle": "b",
+		"style": {
+			"stroke": "rgb(202 197 245)",
+			"strokeWidth": 2
+		},
+		"target": "Generate:ItchyRiversDrum",
+		"targetHandle": "b",
+		"type": "buttonEdge",
+		"zIndex": 1001
+	}]
+}

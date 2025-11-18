@@ -332,7 +332,7 @@ export const duplicateNodeForm = (nodeData?: RAGFlowNodeType['data']) => {
 };
 
 export const getDrawerWidth = () => {
-  return window.innerWidth > 1278 ? '40%' : 470;
+  return window.innerWidth > 1278 ? '45%' : 470;
 };
 
 export const needsSingleStepDebugging = (label: string) => {
