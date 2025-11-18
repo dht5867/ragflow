@@ -53,6 +53,7 @@ class QWeatherParam(ComponentParamBase):
                                 'he', 'is', 'nb'])
         self.check_valid_value(self.time_period, "Time period", ['now', '3d', '7d', '10d', '15d', '30d'])
 
+import logging
 
 class QWeather(ComponentBase, ABC):
     component_name = "QWeather"
@@ -62,20 +63,27 @@ class QWeather(ComponentBase, ABC):
         ans = "".join(ans["content"]) if "content" in ans else ""
         if not ans:
             return QWeather.be_output("")
-
+        logging.info("QWeather ans: " + ans)
+        logging.info("web_apikey: " + self._param.web_apikey)
+        logging.info("type: " + self._param.type)
         try:
-            response = requests.get(
-                url="https://geoapi.qweather.com/v2/city/lookup?location=" + ans + "&key=" + self._param.web_apikey).json()
+            headers = {
+                "X-QW-Api-Key": f"{self._param.web_apikey}",
+                # 或者使用其他认证方式，根据 API 文档要求
+                # "X-API-Key": self._param.web_apikey,
+            }
+            response = requests.get(url="https://m77fc26jmp.re.qweatherapi.com/geo/v2/city/lookup?location=" + ans,headers=headers).json()
             if response["code"] == "200":
                 location_id = response["location"][0]["id"]
+                print(location_id)
+                logging.info("location_id: " + location_id)
             else:
                 return QWeather.be_output("**Error**" + self._param.error_code[response["code"]])
-
-            base_url = "https://api.qweather.com/v7/" if self._param.user_type == 'paid' else "https://devapi.qweather.com/v7/"
+            base_url = "https://m77fc26jmp.re.qweatherapi.com/v7/" if self._param.user_type == 'paid' else "https://m77fc26jmp.re.qweatherapi.com/v7/"
 
             if self._param.type == "weather":
-                url = base_url + "weather/" + self._param.time_period + "?location=" + location_id + "&key=" + self._param.web_apikey + "&lang=" + self._param.lang
-                response = requests.get(url=url).json()
+                url = base_url + "weather/" + self._param.time_period + "?location=" + location_id  + "&lang=" + self._param.lang
+                response = requests.get(url=url,headers=headers).json()
                 if response["code"] == "200":
                     if self._param.time_period == "now":
                         return QWeather.be_output(str(response["now"]))
@@ -85,13 +93,14 @@ class QWeather(ComponentBase, ABC):
                             return QWeather.be_output("")
 
                         df = pd.DataFrame(qweather_res)
+                        logging.info("QWeather: " + str(df))
                         return df
                 else:
                     return QWeather.be_output("**Error**" + self._param.error_code[response["code"]])
 
             elif self._param.type == "indices":
-                url = base_url + "indices/1d?type=0&location=" + location_id + "&key=" + self._param.web_apikey + "&lang=" + self._param.lang
-                response = requests.get(url=url).json()
+                url = base_url + "indices/1d?type=0&location=" + location_id + "&lang=" + self._param.lang
+                response = requests.get(url=url,headers=headers).json()
                 if response["code"] == "200":
                     indices_res = response["daily"][0]["date"] + "\n" + "\n".join(
                         [i["name"] + ": " + i["category"] + ", " + i["text"] for i in response["daily"]])
@@ -101,8 +110,8 @@ class QWeather(ComponentBase, ABC):
                     return QWeather.be_output("**Error**" + self._param.error_code[response["code"]])
 
             elif self._param.type == "airquality":
-                url = base_url + "air/now?location=" + location_id + "&key=" + self._param.web_apikey + "&lang=" + self._param.lang
-                response = requests.get(url=url).json()
+                url = base_url + "air/now?location=" + location_id  + "&lang=" + self._param.lang
+                response = requests.get(url=url,headers=headers).json()
                 if response["code"] == "200":
                     return QWeather.be_output(str(response["now"]))
                 else:

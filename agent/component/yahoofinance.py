@@ -55,10 +55,11 @@ class YahooFinance(ComponentBase, ABC):
         ans = "".join(ans["content"]) if "content" in ans else ""
         if not ans:
             return YahooFinance.be_output("")
-
+        logging.info(ans)
         yohoo_res = []
         try:
             msft = yf.Ticker(ans)
+            logging.info(msft)
             if self._param.info:
                 yohoo_res.append({"content": "info:\n" + pd.Series(msft.info).to_markdown() + "\n"})
             if self._param.history:
@@ -82,3 +83,9 @@ class YahooFinance(ComponentBase, ABC):
             return YahooFinance.be_output("")
 
         return pd.DataFrame(yohoo_res)
+
+if __name__ == "__main__":
+
+    msft = yf.Ticker('IBM')
+    logging.info(msft)
+    pass

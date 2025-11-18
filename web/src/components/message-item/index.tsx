@@ -5,7 +5,7 @@ import { IChunk } from '@/interfaces/database/knowledge';
 import { IReference, IReferenceChunk } from '@/interfaces/database/chat';
 import classNames from 'classnames';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-
+import { useLocation } from "react-router-dom";
 import {
   useFetchDocumentInfosByIds,
   useFetchDocumentThumbnailsByIds,
@@ -86,8 +86,22 @@ const MessageItem = ({
     return loading ? text?.concat('~~2$$') : text;
   }, [item.content, loading, t]);
 
+  const flowPath = useLocation();
+
   const skill = useMemo(() => {
-    console.log('selectedSkill:', selectedSkill); // 合并日志输出
+    const isFlow = flowPath.pathname.includes("flow");
+    console.log(flowPath.pathname)
+    console.log(isFlow)
+    if (isFlow){
+      if ( i18n.language === 'zh' ){
+        return '智能体'
+      }
+      if ( i18n.language === 'en' ){
+        return 'Agents'
+      }
+      return 'Agents'
+    }
+  
 
     // 优化条件判断，减少冗余逻辑
     if (item.selectedSkill && item.selectedSkill.trim() !== '') {
